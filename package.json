@@ -9,13 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@mostafawaheed00/react-jvectormap-core": "^1.0.5",
     "@mostafawaheed00/react-jvectormap-world": "^1.1.2",
-    "@react-jvectormap/core": "^1.0.4",
-    "@react-jvectormap/world": "^1.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "jquery": "^4.0.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
     "radix-ui": "^1.4.3",
