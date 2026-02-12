@@ -34,7 +34,6 @@ const nav = [
   { label: "Goals & Planning", href: "/dashboard/goals", icon: Target },
   { label: "Assets", href: "/dashboard/assets", icon: Briefcase },
   { label: "Cash Flow", href: "/dashboard/cash-flow", icon: DollarSign },
-  { label: "Insurance", href: "/dashboard/insurance", icon: Shield },
   { label: "Retirement", href: "/dashboard/retirement", icon: Umbrella },
   { label: "AI Insights", href: "/dashboard/ai-insights", icon: Brain },
   { label: "Advisor", href: "/dashboard/advisor", icon: Users },
