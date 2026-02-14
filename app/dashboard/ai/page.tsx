@@ -217,7 +217,7 @@ export default function AIInsightsIntelligencePage() {
         {/* Header (matches your other page) */}
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">
-            AI Insights &amp; Intelligence
+            Celerey Insights &amp; Intelligence
           </h1>
           <p className="text-sm text-muted-foreground">
             Personalized recommendations for your financial strategy.

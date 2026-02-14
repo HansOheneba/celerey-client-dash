@@ -125,7 +125,6 @@ export function ControlsCard({
   projectedNestEgg,
   requiredAmount,
   setActual,
-  setSim,
   onSaveActual,
   onCancelEditActual,
   onCopyToSimulation,

@@ -17,14 +17,12 @@ import {
 import {
   LayoutDashboard,
   Users,
-  FileText,
   LifeBuoy,
   LogOut,
   Target,
   Umbrella,
   Briefcase,
   DollarSign,
-  Shield,
   Brain,
 } from "lucide-react";
 
@@ -35,7 +33,7 @@ const nav = [
   { label: "Assets", href: "/dashboard/assets", icon: Briefcase },
   { label: "Cash Flow", href: "/dashboard/cash-flow", icon: DollarSign },
   { label: "Retirement", href: "/dashboard/retirement", icon: Umbrella },
-  { label: "AI Insights", href: "/dashboard/ai", icon: Brain },
+  { label: "Celerey Insights", href: "/dashboard/ai", icon: Brain },
   { label: "Advisor", href: "/dashboard/advisor", icon: Users },
   // { label: "Documents", href: "/dashboard/documents", icon: FileText },
 ];

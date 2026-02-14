@@ -20,7 +20,7 @@ import {
   SettingsDialog,
   type CashFlowSettings,
 } from "@/components/dashboard/cash-flow/settings-dialog";
-import { AIInsights } from "@/components/dashboard/cash-flow/ai-insights";
+import { CelereyInsights } from "@/components/dashboard/cash-flow/celerey-insights";
 import {
   DeleteConfirmDialog,
   type EditMode,
@@ -54,7 +54,7 @@ export default function CashFlowPage() {
     { id: "i_salary", name: "Salary", amount: 22000 },
     { id: "i_rent", name: "Rental Income", amount: 2800 },
     { id: "i_div", name: "Dividends", amount: 2500 },
-    { id: "i_side", name: "Side Business", amount: 1200 },
+    { id: "i_side", name: "Passive Income", amount: 1200 },
   ]);
 
   const [expenses, setExpenses] = React.useState<MoneyRow[]>([
@@ -283,8 +283,8 @@ export default function CashFlowPage() {
           </Card>
         </div>
 
-        {/* AI insights */}
-        <AIInsights />
+        {/* Celerey insights */}
+        <CelereyInsights />
       </div>
 
       {/* Dialogs */}

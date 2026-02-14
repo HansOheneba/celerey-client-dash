@@ -137,7 +137,7 @@ export default function RetirementProjectionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen from-background to-muted/20">
       <div className="mx-auto w-full px-4 py-8 md:px-6">
         {/* Header */}
         <motion.div

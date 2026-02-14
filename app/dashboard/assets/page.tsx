@@ -5,9 +5,9 @@ import * as React from "react";
 import { MiniStat } from "@/components/dashboard/assets/mini-stat";
 import { AllocationDonut } from "@/components/dashboard/assets/allocation-donut";
 import {
-  AIInsights,
+  CelereyInsights,
   type Insight,
-} from "@/components/dashboard/assets/ai-insights";
+} from "@/components/dashboard/assets/celerey-insights";
 import {
   WealthDistribution,
   type LocationKey,
@@ -177,7 +177,7 @@ export default function PortfolioAndAssetsPage() {
           />
         </div>
 
-        {/* Middle: allocation + AI insights */}
+        {/* Middle: allocation + Celerey insights */}
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <AllocationDonut
             title="Asset Allocation"
@@ -185,7 +185,7 @@ export default function PortfolioAndAssetsPage() {
             centerLabel="Investments"
           />
 
-          <AIInsights insights={DEFAULT_INSIGHTS} />
+          <CelereyInsights insights={DEFAULT_INSIGHTS} />
         </div>
 
         {/* Wealth by location */}
