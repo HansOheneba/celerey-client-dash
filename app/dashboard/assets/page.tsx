@@ -19,6 +19,7 @@ import {
   type PropertyAsset,
 } from "@/components/dashboard/assets/property-row";
 import { PropertyAnalysis } from "@/components/dashboard/assets/property-analysis";
+import { portfolioData } from "@/lib/client-data";
 
 type AllocationItem = {
   key: "equities" | "fixed_income" | "alternatives" | "cash" | "crypto";
@@ -35,13 +36,28 @@ const LOCATIONS: LocationOption[] = [
   { key: "uk_london", label: "London, UK" },
 ];
 
-const DEFAULT_ALLOCATIONS: AllocationItem[] = [
-  { key: "equities", label: "Equities", value: 925000 },
-  { key: "fixed_income", label: "Fixed Income", value: 370000 },
-  { key: "alternatives", label: "Alternatives", value: 277500 },
-  { key: "cash", label: "Cash", value: 185000 },
-  { key: "crypto", label: "Crypto", value: 92500 },
+// Build allocations from client data
+const buildAllocations = (): AllocationItem[] => [
+  {
+    key: "equities",
+    label: "Equities",
+    value: portfolioData.allocation.stocks.value,
+  },
+  {
+    key: "fixed_income",
+    label: "Fixed Income",
+    value: portfolioData.allocation.bonds.value,
+  },
+  {
+    key: "alternatives",
+    label: "Alternatives",
+    value: portfolioData.allocation.alternatives.value,
+  },
+  { key: "cash", label: "Cash", value: portfolioData.allocation.cash.value },
+  { key: "crypto", label: "Crypto", value: 0 }, // Can be added to client-data if needed
 ];
+
+const DEFAULT_ALLOCATIONS = buildAllocations();
 
 const DEFAULT_INSIGHTS: Insight[] = [
   {
@@ -58,26 +74,23 @@ const DEFAULT_INSIGHTS: Insight[] = [
   },
 ];
 
-const DEFAULT_PROPERTIES: PropertyAsset[] = [
-  {
-    id: "pr",
-    name: "Primary Residence",
-    location: "Sydney, Australia",
-    value: 1200000,
-    loan: 380000,
-    equity: 820000,
-    lvr: 32,
-  },
-  {
-    id: "iu",
-    name: "Investment Unit",
-    location: "Melbourne, Australia",
-    value: 650000,
-    loan: 22500,
-    equity: 627500,
-    monthlyRent: 2800,
-  },
-];
+// Build properties from client data
+const buildProperties = (): PropertyAsset[] =>
+  portfolioData.properties.map((prop) => ({
+    id: prop.id,
+    name: prop.name,
+    location:
+      prop.name === "Primary Residence"
+        ? "Sydney, Australia"
+        : "Melbourne, Australia",
+    value: prop.value,
+    loan: prop.mortgage,
+    equity: prop.equity,
+    lvr: Math.round((prop.mortgage / prop.value) * 100),
+    monthlyRent: prop.name === "Rental Property" ? 2800 : undefined,
+  }));
+
+const DEFAULT_PROPERTIES = buildProperties();
 
 const DEFAULT_LOCATION_DISTRIBUTION: LocationDistributionItem[] = [
   { locationKey: "ghana_accra", label: "Accra, Ghana", value: 320000 },

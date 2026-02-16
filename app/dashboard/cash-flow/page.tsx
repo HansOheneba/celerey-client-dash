@@ -26,6 +26,7 @@ import {
   type EditMode,
   type DeleteTarget,
 } from "@/components/dashboard/cash-flow/delete-confirm-dialog";
+import { cashFlowData } from "@/lib/client-data";
 
 type RowMode = "create" | "edit";
 
@@ -49,26 +50,14 @@ function uid(): string {
 }
 
 export default function CashFlowPage() {
-  // Demo state (wire to your API later)
-  const [income, setIncome] = React.useState<MoneyRow[]>([
-    { id: "i_salary", name: "Salary", amount: 22000 },
-    { id: "i_rent", name: "Rental Income", amount: 2800 },
-    { id: "i_div", name: "Dividends", amount: 2500 },
-    { id: "i_side", name: "Passive Income", amount: 1200 },
-  ]);
-
-  const [expenses, setExpenses] = React.useState<MoneyRow[]>([
-    { id: "e_housing", name: "Housing", amount: 4200 },
-    { id: "e_living", name: "Living", amount: 3500 },
-    { id: "e_ins", name: "Insurance", amount: 1230 },
-    { id: "e_child", name: "Children", amount: 2100 },
-    { id: "e_disc", name: "Discretionary", amount: 1800 },
-    { id: "e_other", name: "Other", amount: 1370 },
-  ]);
-
-  const [settings, setSettings] = React.useState<CashFlowSettings>({
-    emergencyFundMonths: 6,
-  });
+  // Initialize from client data lib
+  const [income, setIncome] = React.useState<MoneyRow[]>(cashFlowData.income);
+  const [expenses, setExpenses] = React.useState<MoneyRow[]>(
+    cashFlowData.expenses,
+  );
+  const [settings, setSettings] = React.useState<CashFlowSettings>(
+    cashFlowData.settings,
+  );
 
   // dialogs
   const [settingsOpen, setSettingsOpen] = React.useState(false);

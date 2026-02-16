@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { aiInsights } from "@/lib/client-data";
 
 type Priority = "high" | "medium" | "low";
 type InsightKind = "opportunity" | "risk" | "milestone" | "action";
@@ -172,44 +173,10 @@ function InsightRow({ insight }: { insight: Insight }) {
 }
 
 export default function AIInsightsIntelligencePage() {
-  const insights: Insight[] = [
-    {
-      id: "optimize-tax",
-      kind: "opportunity",
-      title: "Optimize Tax Position",
-      description:
-        "You could save approximately $12,400 annually by restructuring your investment income through a family trust.",
-      priority: "high",
-      cta: { label: "Discuss with Advisor" },
-    },
-    {
-      id: "concentration",
-      kind: "risk",
-      title: "Portfolio Concentration",
-      description:
-        "Technology stocks represent 35% of your equity allocation. Consider diversifying to reduce sector risk.",
-      priority: "medium",
-      cta: { label: "Review Portfolio" },
-    },
-    {
-      id: "milestone",
-      kind: "milestone",
-      title: "Goal Milestone Reached",
-      description:
-        "Your vacation home fund has crossed the 40% threshold. You're 6 months ahead of schedule.",
-      priority: "low",
-      cta: { label: "View Details" },
-    },
-    {
-      id: "insurance",
-      kind: "action",
-      title: "Insurance Review Due",
-      description:
-        "Your home insurance hasn't been reviewed in 18 months. Property values have increased significantly.",
-      priority: "medium",
-      cta: { label: "Schedule Review" },
-    },
-  ];
+  const insights: Insight[] = aiInsights.map((insight) => ({
+    ...insight,
+    cta: insight.cta ? { ...insight.cta, onClick: () => {} } : undefined,
+  }));
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">

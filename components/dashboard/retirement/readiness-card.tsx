@@ -6,7 +6,10 @@ import { Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { StatusTone } from "@/components/dashboard/retirement/types";
+import {
+  StatusTone,
+  AdjustmentRecommendations,
+} from "@/components/dashboard/retirement/types";
 import { clamp, formatCurrency } from "@/components/dashboard/retirement/utils";
 
 function ProgressBar({
@@ -40,6 +43,7 @@ type ReadinessCardProps = {
   simulationMode: boolean;
   projectedSurplus: number;
   reduceMotion: boolean;
+  adjustments?: AdjustmentRecommendations;
 };
 
 export function ReadinessCard({
@@ -48,6 +52,7 @@ export function ReadinessCard({
   simulationMode,
   projectedSurplus,
   reduceMotion,
+  adjustments,
 }: ReadinessCardProps) {
   return (
     <Card className="border-muted/60 bg-background/60 shadow-sm">
@@ -107,6 +112,72 @@ export function ReadinessCard({
             </div>
           </motion.div>
         </AnimatePresence>
+
+        {adjustments && fundedPct < 100 && (
+          <AnimatePresence mode="wait">
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: reduceMotion ? 0 : 0.25 }}
+              className="rounded-xl border border-blue-200/60 bg-blue-50/60 p-4 space-y-3"
+            >
+              <div className="text-sm font-semibold text-blue-900">
+                To reach the safe zone, consider:
+              </div>
+
+              <div className="space-y-2 text-sm">
+                {adjustments.monthlySavingsIncrease > 0 && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-700 font-medium">•</span>
+                    <span className="text-muted-foreground">
+                      Increase monthly savings by{" "}
+                      <span className="font-medium text-foreground">
+                        {formatCurrency(adjustments.monthlySavingsIncrease)}
+                      </span>
+                    </span>
+                  </div>
+                )}
+
+                {adjustments.retirementAgeDelay > 0 && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-700 font-medium">•</span>
+                    <span className="text-muted-foreground">
+                      Delay retirement by{" "}
+                      <span className="font-medium text-foreground">
+                        {adjustments.retirementAgeDelay.toFixed(1)} years
+                      </span>
+                    </span>
+                  </div>
+                )}
+
+                {adjustments.monthlyIncomeReduction > 0 && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-700 font-medium">•</span>
+                    <span className="text-muted-foreground">
+                      Reduce desired monthly income by{" "}
+                      <span className="font-medium text-foreground">
+                        {formatCurrency(adjustments.monthlyIncomeReduction)}
+                      </span>
+                    </span>
+                  </div>
+                )}
+
+                {adjustments.currentInvestmentBoost > 0 && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-700 font-medium">•</span>
+                    <span className="text-muted-foreground">
+                      Boost current investments by{" "}
+                      <span className="font-medium text-foreground">
+                        {formatCurrency(adjustments.currentInvestmentBoost)}
+                      </span>
+                    </span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        )}
 
         <div className="flex items-start gap-2 rounded-xl bg-muted/30 p-4">
           <Info className="mt-0.5 h-4 w-4 text-muted-foreground" />

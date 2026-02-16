@@ -13,3 +13,10 @@ export type StatusTone = {
   tone: "good" | "warn";
   title: string;
 };
+
+export type AdjustmentRecommendations = {
+  monthlySavingsIncrease: number;
+  retirementAgeDelay: number;
+  monthlyIncomeReduction: number;
+  currentInvestmentBoost: number;
+};

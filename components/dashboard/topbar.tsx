@@ -3,10 +3,10 @@
 import * as React from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import Breadcrumbs from "./breadcrumbs";
+import { personalData } from "@/lib/client-data";
 
 function getGreeting() {
   const hour = new Date().getHours();
- console.log(hour)
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   if (hour < 21) return "Good evening";
@@ -26,7 +26,9 @@ export default function AdminTopbar() {
         <SidebarTrigger />
         <Breadcrumbs />
       </div>
-      <div className="text-sm text-muted-foreground">{greeting} Client</div>
+      <div className="text-sm text-muted-foreground">
+        {greeting} {personalData.name}
+      </div>
     </div>
   );
 }

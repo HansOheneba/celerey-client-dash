@@ -11,11 +11,14 @@ import { SummaryCard } from "@/components/dashboard/retirement/summary-card";
 import {
   ProjectionInputs,
   StatusTone,
+  AdjustmentRecommendations,
 } from "@/components/dashboard/retirement/types";
 import {
   compoundFutureValue,
   requiredNestEgg,
+  calculateAdjustmentsToReachTarget,
 } from "@/components/dashboard/retirement/utils";
+import { getRetirementProjectionInputs } from "@/lib/client-data";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 8 },
@@ -25,17 +28,11 @@ const fadeUp = {
 export default function RetirementProjectionsPage() {
   const reduceMotion = useReducedMotion();
 
+  // Initialize from client data lib
+  const initialData = getRetirementProjectionInputs();
+
   // "Actual" = what's saved in the user's profile (what backend will plug into)
-  const [actual, setActual] = React.useState<ProjectionInputs>({
-    currentAge: 42,
-    retirementAge: 55,
-    currentInvested: 1250000,
-    monthlySavings: 14300,
-    expectedReturnPct: 7,
-    inflationPct: 3,
-    safeWithdrawalRatePct: 4,
-    desiredMonthlyIncome: 18500,
-  });
+  const [actual, setActual] = React.useState<ProjectionInputs>(initialData);
 
   // "Simulation" = adjustable scenario (starts as a copy of actual)
   const [sim, setSim] = React.useState<ProjectionInputs>(() => ({ ...actual }));
@@ -113,6 +110,34 @@ export default function RetirementProjectionsPage() {
       title: "You're behind target — consider adjustments",
     };
   }, [fundedPct]);
+
+  const adjustments = React.useMemo<AdjustmentRecommendations>(() => {
+    return calculateAdjustmentsToReachTarget({
+      currentInvested: active.currentInvested,
+      monthlySavings: active.monthlySavings,
+      yearsToRetirement,
+      expectedReturnPct: active.expectedReturnPct,
+      requiredAmount,
+      projectedNestEgg,
+      currentAge: active.currentAge,
+      retirementAge: active.retirementAge,
+      desiredMonthlyIncome: active.desiredMonthlyIncome,
+      inflationPct: active.inflationPct,
+      safeWithdrawalRatePct: active.safeWithdrawalRatePct,
+    });
+  }, [
+    active.currentInvested,
+    active.monthlySavings,
+    yearsToRetirement,
+    active.expectedReturnPct,
+    requiredAmount,
+    projectedNestEgg,
+    active.currentAge,
+    active.retirementAge,
+    active.desiredMonthlyIncome,
+    active.inflationPct,
+    active.safeWithdrawalRatePct,
+  ]);
 
   // Slider helpers (Simulation only)
   function setRetirementAge(v: number[]) {
@@ -197,6 +222,7 @@ export default function RetirementProjectionsPage() {
             simulationMode={simulationMode}
             projectedSurplus={projectedSurplus}
             reduceMotion={!!reduceMotion}
+            adjustments={adjustments}
           />
 
           <ControlsCard

@@ -17,6 +17,7 @@ import {
   RequestTopic,
   RequestUrgency,
 } from "@/components/dashboard/advisor/types";
+import { advisorData } from "@/lib/client-data";
 
 const pageEnter = {
   hidden: { opacity: 0, y: 8 },
@@ -38,66 +39,13 @@ const item = {
 };
 
 export default function AdvisorPage() {
-  const advisor: Advisor = {
-    initials: "JA",
-    name: "Jude Addo",
-    title: "Senior Wealth Advisor",
-    credentials: ["CFP®", "CFA"],
-    location: "New York, USA",
-    email: "j.addo@celerey.co",
-    phone: "+1 (555) 012-9090",
-    availability: "limited",
-    bio: "James supports high-net-worth families with long-term portfolio strategy, tax-aware planning, and risk management. His style is structured and calm — focusing on clear decisions, measurable outcomes, and fewer surprises.",
-    specialties: [
-      "Tax-aware investing",
-      "Retirement & longevity planning",
-      "Trust & estate coordination",
-      "Concentrated equity mitigation",
-    ],
-    philosophy:
-      "Build a portfolio you can stick with. We aim for durable plans: resilient in drawdowns, sensible in good years, and aligned with the life you want.",
-  };
+  const advisor = advisorData.advisor;
+  const upcoming = advisorData.upcomingMeeting;
 
-  const upcoming: Meeting = {
-    title: "Quarterly Review",
-    dateLabel: "Jan 18, 2024 at 10:00 AM",
-    type: "review",
-    status: "scheduled",
-  };
-
-  const [items, setItems] = React.useState<ActionItem[]>([
-    {
-      id: "a1",
-      label: "Review trust structure proposal",
-      dueLabel: "Due Jan 20, 2026",
-      done: false,
-    },
-    {
-      id: "a2",
-      label: "Update risk profile questionnaire",
-      dueLabel: "Due Jan 25, 2026",
-      done: false,
-    },
-    {
-      id: "a3",
-      label: "Confirm updated IPS",
-      dueLabel: "Due Jan 10, 2026",
-      done: true,
-    },
-  ]);
-
-  const notes: Note[] = [
-    {
-      id: "n1",
-      dateLabel: "Jan 5, 2024",
-      text: "Discussed tax optimization strategies. Alexandra to review trust structure documentation.",
-    },
-    {
-      id: "n2",
-      dateLabel: "Dec 15, 2023",
-      text: "Annual review completed. All goals on track. Adjusted retirement projections based on salary increase.",
-    },
-  ];
+  const [items, setItems] = React.useState<ActionItem[]>(
+    advisorData.actionItems,
+  );
+  const notes = advisorData.notes;
 
   // Request conversation dialog (logic placeholder)
   const [open, setOpen] = React.useState(false);
