@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cashFlowData, savingsData } from "@/lib/client-data";
 
 type GoalForm = {
   title: string;
@@ -75,11 +76,11 @@ export default function NewGoalPage() {
     update(key, formatNumberWithCommas(value));
   }
 
-  const currentNum = React.useMemo(
-    () => toNumber(form.current),
-    [form.current],
-  );
-  const targetNum = React.useMemo(() => toNumber(form.target), [form.target]);
+  const currentRaw = form.current;
+  const targetRaw = form.target;
+
+  const currentNum = React.useMemo(() => toNumber(currentRaw), [currentRaw]);
+  const targetNum = React.useMemo(() => toNumber(targetRaw), [targetRaw]);
   const progress = React.useMemo(
     () => pct(currentNum, targetNum),
     [currentNum, targetNum],
@@ -109,52 +110,145 @@ export default function NewGoalPage() {
     return Math.ceil(remaining / months);
   }, [remaining, yearsRemaining]);
 
-  const tone = React.useMemo(() => {
-    // simple, readable heuristics (you can replace later with smarter model)
-    if (targetNum > 0 && currentNum >= targetNum) return "complete";
-    if (!targetNum || !timelineValueNum) return "neutral";
-    if (progress >= 60) return "good";
-    if (progress >= 30) return "ok";
-    return "risk";
-  }, [targetNum, currentNum, timelineValueNum, progress]);
+  /* ── Cash-flow context ─────────────────────────────────────────── */
+  const monthlyIncome = React.useMemo(
+    () => cashFlowData.income.reduce((s, r) => s + r.amount, 0),
+    [],
+  );
+  const monthlyExpenses = React.useMemo(
+    () => cashFlowData.expenses.reduce((s, r) => s + r.amount, 0),
+    [],
+  );
+  const monthlySurplus = monthlyIncome - monthlyExpenses;
+  const monthlySavings = savingsData.monthlySavings;
 
-  const statusLabel = React.useMemo(() => {
-    if (tone === "complete") return "Completed";
-    if (tone === "good") return "On track";
-    if (tone === "ok") return "Making progress";
-    if (tone === "risk") return "Needs attention";
-    return "Draft";
-  }, [tone]);
+  // What's the max target achievable in the given timeline?
+  // (used to compute recommended comfort target below)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const maxReachable = React.useMemo(() => {
+    if (!yearsRemaining) return 0;
+    return currentNum + monthlySavings * yearsRemaining * 12;
+  }, [currentNum, monthlySavings, yearsRemaining]);
+
+  // How many months would the remaining actually take at current savings rate?
+  const monthsNeeded = React.useMemo(() => {
+    if (remaining <= 0 || monthlySavings <= 0) return 0;
+    return Math.ceil(remaining / monthlySavings);
+  }, [remaining, monthlySavings]);
+
+  // Ratio: required-per-month vs surplus
+  const savingsRatio = React.useMemo(() => {
+    if (monthlySurplus <= 0 || requiredPerMonth <= 0) return 0;
+    return requiredPerMonth / monthlySurplus;
+  }, [requiredPerMonth, monthlySurplus]);
+
+  /* ── Tone + contextual insight ─────────────────────────────────── */
+  type Insight = {
+    tone: "complete" | "good" | "ok" | "stretch" | "neutral";
+    label: string;
+    message: string;
+  };
+
+  const insight: Insight = React.useMemo(() => {
+    if (targetNum > 0 && currentNum >= targetNum) {
+      return {
+        tone: "complete",
+        label: "Completed",
+        message: "You've already reached this target — nice work.",
+      };
+    }
+    if (!targetNum || !timelineValueNum) {
+      return {
+        tone: "neutral",
+        label: "Draft",
+        message:
+          "Fill in the amounts and timeline to see personalised guidance.",
+      };
+    }
+
+    // Can they cover it comfortably?
+    if (savingsRatio <= 0.3) {
+      return {
+        tone: "good",
+        label: "On track",
+        message: `At your current savings rate (GHS ${currency(monthlySavings)}/mo), you can reach this comfortably within ${timelineValueNum} ${form.timelineUnit}.`,
+      };
+    }
+    if (savingsRatio <= 0.6) {
+      return {
+        tone: "ok",
+        label: "Achievable",
+        message: `This would take about ${Math.round(savingsRatio * 100)}% of your monthly surplus. It's doable, just keep the pace steady.`,
+      };
+    }
+    if (savingsRatio <= 1) {
+      const suggestedTimeline =
+        monthsNeeded > 0
+          ? monthsNeeded >= 12
+            ? `${(monthsNeeded / 12).toFixed(1)} years`
+            : `${monthsNeeded} months`
+          : null;
+      return {
+        tone: "stretch",
+        label: "Ambitious",
+        message: suggestedTimeline
+          ? `Based on your cash flow, you'd need GHS ${currency(requiredPerMonth)}/mo, that's ${Math.round(savingsRatio * 100)}% of your surplus. A more comfortable timeline would be around ${suggestedTimeline}.`
+          : `This would require most of your monthly surplus. Consider a longer timeline or a smaller target.`,
+      };
+    }
+    // savingsRatio > 1
+    const comfortTarget =
+      currentNum + monthlySavings * yearsRemaining * 12 * 0.5; // 50 % of surplus
+    const suggestedTimeline =
+      monthsNeeded >= 12
+        ? `${(monthsNeeded / 12).toFixed(1)} years`
+        : `${monthsNeeded} months`;
+    return {
+      tone: "stretch",
+      label: "Needs a bigger runway",
+      message: `At GHS ${currency(monthlySavings)}/mo savings, reaching GHS ${currency(targetNum)} would take ~${suggestedTimeline}. To stay within ${timelineValueNum} ${form.timelineUnit}, we'd recommend a target closer to GHS ${currency(comfortTarget)}.`,
+    };
+  }, [
+    targetNum,
+    currentNum,
+    timelineValueNum,
+    savingsRatio,
+    monthlySavings,
+    requiredPerMonth,
+    monthsNeeded,
+    yearsRemaining,
+    form.timelineUnit,
+  ]);
 
   const statusPillClass = React.useMemo(() => {
-    switch (tone) {
+    switch (insight.tone) {
       case "complete":
         return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
       case "good":
         return "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300";
       case "ok":
         return "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300";
-      case "risk":
-        return "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300";
+      case "stretch":
+        return "border-orange-500/20 bg-orange-500/10 text-orange-700 dark:text-orange-300";
       default:
         return "border-muted bg-muted/40 text-muted-foreground";
     }
-  }, [tone]);
+  }, [insight.tone]);
 
   const progressBarClass = React.useMemo(() => {
-    switch (tone) {
+    switch (insight.tone) {
       case "complete":
         return "bg-emerald-500";
       case "good":
         return "bg-sky-500";
       case "ok":
         return "bg-amber-500";
-      case "risk":
-        return "bg-rose-500";
+      case "stretch":
+        return "bg-orange-500";
       default:
         return "bg-foreground/60";
     }
-  }, [tone]);
+  }, [insight.tone]);
 
   const isValid =
     form.title.trim().length > 0 &&
@@ -194,7 +288,7 @@ export default function NewGoalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen bg-linear-to-b from-background to-muted/20">
       <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6">
         {/* Header */}
         <div className="mb-6 flex items-start justify-between gap-4">
@@ -218,26 +312,7 @@ export default function NewGoalPage() {
             </div>
           </div>
 
-          <div className="hidden items-center gap-2 md:flex">
-            <div
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs",
-                statusPillClass,
-              )}
-            >
-              {tone === "complete" ? (
-                <CheckCircle2 className="h-4 w-4" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              <span className="font-medium">{statusLabel}</span>
-              {targetNum > 0 && timelineValueNum > 0 ? (
-                <span className="text-muted-foreground">
-                  • {Math.round(progress)}%
-                </span>
-              ) : null}
-            </div>
-          </div>
+          <div className="hidden items-center gap-2 md:flex"></div>
         </div>
 
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
@@ -259,12 +334,12 @@ export default function NewGoalPage() {
                     statusPillClass,
                   )}
                 >
-                  {tone === "complete" ? (
+                  {insight.tone === "complete" ? (
                     <CheckCircle2 className="h-4 w-4" />
                   ) : (
                     <Sparkles className="h-4 w-4" />
                   )}
-                  <span className="font-medium">{statusLabel}</span>
+                  <span className="font-medium">{insight.label}</span>
                   {targetNum > 0 && timelineValueNum > 0 ? (
                     <span className="text-muted-foreground">
                       • {Math.round(progress)}%
@@ -469,9 +544,6 @@ export default function NewGoalPage() {
             <Card className="border-muted/60 bg-background/70 shadow-sm backdrop-blur">
               <CardHeader className="space-y-1">
                 <CardTitle className="text-base">Summary</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  This updates as you type.
-                </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-3">
@@ -485,7 +557,7 @@ export default function NewGoalPage() {
                         statusPillClass,
                       )}
                     >
-                      {statusLabel}
+                      {insight.label}
                     </span>
                   </div>
 
@@ -530,43 +602,35 @@ export default function NewGoalPage() {
                         : "—"}
                     </span>
                   </div>
+
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm text-muted-foreground">
+                      Your surplus
+                    </span>
+                    <span className="text-sm font-semibold">
+                      GHS {currency(monthlySurplus)}/mo
+                    </span>
+                  </div>
                 </div>
 
-                <div className="rounded-xl border bg-muted/20 p-3 text-xs text-muted-foreground">
-                  Tip: If the monthly amount feels too high, increase the
-                  timeline or reduce the target.
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-muted/60 bg-background/70 shadow-sm backdrop-blur">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-base">Quick UX polish</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Small details that make it feel premium.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-muted-foreground">
-                <div className="flex items-start gap-2">
-                  <div className="mt-1 h-1.5 w-1.5 rounded-full bg-foreground/50" />
-                  <p>
-                    Currency prefix (GHS) is pinned inside inputs so users don’t
-                    guess units.
-                  </p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="mt-1 h-1.5 w-1.5 rounded-full bg-foreground/50" />
-                  <p>
-                    Live summary shows “needed per month” to make the goal feel
-                    actionable.
-                  </p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="mt-1 h-1.5 w-1.5 rounded-full bg-foreground/50" />
-                  <p>
-                    Status changes visually as users type, which feels
-                    responsive and “smart”.
-                  </p>
+                {/* Contextual insight instead of generic tip */}
+                <div
+                  className={cn(
+                    "rounded-xl border p-3 text-xs leading-relaxed",
+                    insight.tone === "good"
+                      ? "border-sky-500/20 bg-sky-500/5 text-sky-800 dark:text-sky-300"
+                      : insight.tone === "ok"
+                        ? "border-amber-500/20 bg-amber-500/5 text-amber-800 dark:text-amber-300"
+                        : insight.tone === "stretch"
+                          ? "border-orange-500/20 bg-orange-500/5 text-orange-800 dark:text-orange-300"
+                          : insight.tone === "complete"
+                            ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-800 dark:text-emerald-300"
+                            : "border-muted bg-muted/20 text-muted-foreground",
+                  )}
+                >
+                  <div className="flex items-start gap-2">
+                    <span>{insight.message}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
