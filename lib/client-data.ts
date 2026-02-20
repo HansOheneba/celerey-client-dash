@@ -1,3 +1,5 @@
+import { mockUser, getUserAge, getUserFullName } from "@/lib/user-data";
+
 // ============================================================================
 // PORTFOLIO DATA (Assets Page)
 // ============================================================================
@@ -45,8 +47,10 @@ export const portfolioData = {
 // PERSONAL DATA
 // ============================================================================
 export const personalData = {
-  name: "John Doe",
-  currentAge: 42,
+  name: getUserFullName(mockUser),
+  get currentAge() {
+    return getUserAge(mockUser);
+  },
   retirementAge: 55,
   lifeExpectancy: 95,
 };
@@ -143,14 +147,8 @@ export function updateRetirementAge(age: number) {
     personalData.retirementAge - personalData.currentAge;
 }
 
-/**
- * Update current age and recalculate years to retirement
- */
-export function updateCurrentAge(age: number) {
-  personalData.currentAge = age;
-  computedData.yearsToRetirement =
-    personalData.retirementAge - personalData.currentAge;
-}
+// Current age is now automatically derived from the user's date of birth.
+// No manual update needed — it stays in sync with the User profile.
 
 /**
  * Update desired monthly income
@@ -181,6 +179,8 @@ export function getRetirementProjectionInputs() {
     inflationPct: investmentAssumptions.inflationPct,
     safeWithdrawalRatePct: investmentAssumptions.safeWithdrawalRatePct,
     desiredMonthlyIncome: retirementLifestyle.desiredMonthlyIncome,
+    existingPensionBalance: 185000,
+    monthlyPensionContribution: 3200,
   };
 }
 

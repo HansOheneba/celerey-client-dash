@@ -58,15 +58,20 @@ export default function RetirementProjectionsPage() {
   }, [active.retirementAge, active.currentAge]);
 
   const projectedNestEgg = React.useMemo(() => {
+    // Combine investments + pension into one future-value projection
+    const totalPV = active.currentInvested + active.existingPensionBalance;
+    const totalPMT = active.monthlySavings + active.monthlyPensionContribution;
     return compoundFutureValue({
-      pv: active.currentInvested,
-      pmt: active.monthlySavings,
+      pv: totalPV,
+      pmt: totalPMT,
       years: yearsToRetirement,
       annualRate: active.expectedReturnPct / 100,
     });
   }, [
     active.currentInvested,
+    active.existingPensionBalance,
     active.monthlySavings,
+    active.monthlyPensionContribution,
     yearsToRetirement,
     active.expectedReturnPct,
   ]);
@@ -112,9 +117,11 @@ export default function RetirementProjectionsPage() {
   }, [fundedPct]);
 
   const adjustments = React.useMemo<AdjustmentRecommendations>(() => {
+    const totalPV = active.currentInvested + active.existingPensionBalance;
+    const totalPMT = active.monthlySavings + active.monthlyPensionContribution;
     return calculateAdjustmentsToReachTarget({
-      currentInvested: active.currentInvested,
-      monthlySavings: active.monthlySavings,
+      currentInvested: totalPV,
+      monthlySavings: totalPMT,
       yearsToRetirement,
       expectedReturnPct: active.expectedReturnPct,
       requiredAmount,
@@ -127,7 +134,9 @@ export default function RetirementProjectionsPage() {
     });
   }, [
     active.currentInvested,
+    active.existingPensionBalance,
     active.monthlySavings,
+    active.monthlyPensionContribution,
     yearsToRetirement,
     active.expectedReturnPct,
     requiredAmount,

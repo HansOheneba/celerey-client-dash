@@ -26,8 +26,11 @@ export function RetirementHeader({
         <h1 className="text-2xl font-semibold tracking-tight">
           Retirement &amp; Future Projections
         </h1>
-        <p className="text-sm text-muted-foreground">
-          View your current plan, then explore scenarios with simulation.
+        <p className="max-w-xl text-sm text-muted-foreground leading-relaxed">
+          See how your current savings, pension, and monthly contributions stack
+          up against the nest egg you&apos;ll need. Edit your actuals to keep
+          things accurate, or flip on the simulation to explore
+          &quot;what-if&quot; scenarios.
         </p>
       </div>
 

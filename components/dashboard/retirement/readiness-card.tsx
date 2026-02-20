@@ -58,7 +58,13 @@ export function ReadinessCard({
     <Card className="border-muted/60 bg-background/60 shadow-sm">
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
-          <CardTitle className="text-base">Retirement Readiness</CardTitle>
+          <div>
+            <CardTitle className="text-base">Retirement Readiness</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              How close you are to having enough saved for your retirement
+              income goal.
+            </p>
+          </div>
           <Badge variant="secondary" className="tabular-nums">
             {fundedPct.toFixed(0)}% funded
           </Badge>
@@ -78,6 +84,11 @@ export function ReadinessCard({
             </span>
             <span className="tabular-nums">{fundedPct.toFixed(0)}%</span>
           </div>
+          <p className="text-[11px] text-muted-foreground/80 leading-snug">
+            {fundedPct >= 100
+              ? "100% means your projected nest egg fully covers your retirement income target."
+              : `At ${fundedPct.toFixed(0)}%, you're projected to accumulate ${(100 - fundedPct).toFixed(0)}% less than what's needed for your target monthly income.`}
+          </p>
         </div>
 
         <AnimatePresence mode="wait">
@@ -120,42 +131,54 @@ export function ReadinessCard({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: reduceMotion ? 0 : 0.25 }}
-              className="rounded-xl border border-blue-200/60 bg-blue-50/60 p-4 space-y-3"
+              className="rounded-xl border border-blue-200/60 bg-blue-50/60 dark:border-blue-800/40 dark:bg-blue-950/20 p-4 space-y-3"
             >
-              <div className="text-sm font-semibold text-blue-900">
-                To reach the safe zone, consider:
+              <div className="text-sm font-semibold text-blue-900 dark:text-blue-300">
+                Ways to close the gap
               </div>
+              <p className="text-[11px] text-blue-700/80 dark:text-blue-400/80 leading-snug">
+                You don&apos;t need to do all of these — any single change (or
+                combination) can get you to 100%.
+              </p>
 
               <div className="space-y-2 text-sm">
                 {adjustments.monthlySavingsIncrease > 0 && (
                   <div className="flex items-start gap-2">
-                    <span className="text-blue-700 font-medium">•</span>
+                    <span className="text-blue-700 dark:text-blue-400 font-medium">
+                      •
+                    </span>
                     <span className="text-muted-foreground">
-                      Increase monthly savings by{" "}
+                      Save an extra{" "}
                       <span className="font-medium text-foreground">
                         {formatCurrency(adjustments.monthlySavingsIncrease)}
-                      </span>
+                      </span>{" "}
+                      per month
                     </span>
                   </div>
                 )}
 
                 {adjustments.retirementAgeDelay > 0 && (
                   <div className="flex items-start gap-2">
-                    <span className="text-blue-700 font-medium">•</span>
+                    <span className="text-blue-700 dark:text-blue-400 font-medium">
+                      •
+                    </span>
                     <span className="text-muted-foreground">
-                      Delay retirement by{" "}
+                      Retire{" "}
                       <span className="font-medium text-foreground">
                         {adjustments.retirementAgeDelay.toFixed(1)} years
-                      </span>
+                      </span>{" "}
+                      later — more time to save &amp; earn returns
                     </span>
                   </div>
                 )}
 
                 {adjustments.monthlyIncomeReduction > 0 && (
                   <div className="flex items-start gap-2">
-                    <span className="text-blue-700 font-medium">•</span>
+                    <span className="text-blue-700 dark:text-blue-400 font-medium">
+                      •
+                    </span>
                     <span className="text-muted-foreground">
-                      Reduce desired monthly income by{" "}
+                      Lower your monthly income target by{" "}
                       <span className="font-medium text-foreground">
                         {formatCurrency(adjustments.monthlyIncomeReduction)}
                       </span>
@@ -165,12 +188,15 @@ export function ReadinessCard({
 
                 {adjustments.currentInvestmentBoost > 0 && (
                   <div className="flex items-start gap-2">
-                    <span className="text-blue-700 font-medium">•</span>
+                    <span className="text-blue-700 dark:text-blue-400 font-medium">
+                      •
+                    </span>
                     <span className="text-muted-foreground">
-                      Boost current investments by{" "}
+                      Make a one-time investment of{" "}
                       <span className="font-medium text-foreground">
                         {formatCurrency(adjustments.currentInvestmentBoost)}
-                      </span>
+                      </span>{" "}
+                      today
                     </span>
                   </div>
                 )}
@@ -181,9 +207,10 @@ export function ReadinessCard({
 
         <div className="flex items-start gap-2 rounded-xl bg-muted/30 p-4">
           <Info className="mt-0.5 h-4 w-4 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            Toggle between your saved figures and simulation to explore
-            different outcomes.
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            These projections use compound growth with monthly contributions.
+            Actual returns will vary. Use the simulation mode to stress-test
+            different scenarios and find a plan that feels right.
           </p>
         </div>
       </CardContent>

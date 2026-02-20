@@ -7,6 +7,10 @@ export type ProjectionInputs = {
   inflationPct: number;
   safeWithdrawalRatePct: number;
   desiredMonthlyIncome: number;
+  /** Existing pension / retirement account balance */
+  existingPensionBalance: number;
+  /** Monthly pension or retirement account contribution */
+  monthlyPensionContribution: number;
 };
 
 export type StatusTone = {
