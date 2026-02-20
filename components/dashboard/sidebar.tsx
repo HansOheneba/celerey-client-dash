@@ -15,31 +15,32 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { motion, AnimatePresence } from "framer-motion";
+import { LifeBuoy, LogOut } from "lucide-react";
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  LayoutDashboard,
-  Users,
-  LifeBuoy,
-  LogOut,
-  Target,
-  Umbrella,
-  Briefcase,
-  DollarSign,
-  Brain,
-  Home,
-  Shield,
-} from "lucide-react";
+  faChartPie,
+  faBullseye,
+  faBriefcase,
+  faHouse,
+  faShieldHalved,
+  faMoneyBillWave,
+  faUmbrellaBeach,
+  faBrain,
+  faUserGroup,
+} from "@fortawesome/free-solid-svg-icons";
 
 const nav = [
-  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Goals & Planning", href: "/dashboard/goals", icon: Target },
-  { label: "Assets", href: "/dashboard/assets", icon: Briefcase },
-  { label: "Properties", href: "/dashboard/properties", icon: Home },
-  { label: "Insurance", href: "/dashboard/insurance", icon: Shield },
-  { label: "Cash Flow", href: "/dashboard/cash-flow", icon: DollarSign },
-  { label: "Retirement", href: "/dashboard/retirement", icon: Umbrella },
-  { label: "Celerey Insights", href: "/dashboard/ai", icon: Brain },
-  { label: "Advisor", href: "/dashboard/advisor", icon: Users },
-  // { label: "Documents", href: "/dashboard/documents", icon: FileText },
+  { label: "Overview", href: "/dashboard", icon: faChartPie },
+  { label: "Goals & Planning", href: "/dashboard/goals", icon: faBullseye },
+  { label: "Assets", href: "/dashboard/assets", icon: faBriefcase },
+  { label: "Properties", href: "/dashboard/properties", icon: faHouse },
+  { label: "Insurance", href: "/dashboard/insurance", icon: faShieldHalved },
+  { label: "Cash Flow", href: "/dashboard/cash-flow", icon: faMoneyBillWave },
+  { label: "Retirement", href: "/dashboard/retirement", icon: faUmbrellaBeach },
+  { label: "Celerey Insights", href: "/dashboard/ai", icon: faBrain },
+  { label: "Advisor", href: "/dashboard/advisor", icon: faUserGroup },
+  // { label: "Documents", href: "/dashboard/documents", icon: faFileLines },
 ];
 
 export default function AdminSidebar() {
@@ -49,7 +50,7 @@ export default function AdminSidebar() {
 
   return (
     <Sidebar collapsible="icon" variant="sidebar">
-      <SidebarHeader className=" pt-2">
+      <SidebarHeader className="pt-2">
         <Link href="/admin" className="flex items-center gap-3 rounded-md">
           <div className="flex w-full justify-left">
             <div className="relative h-[56px] w-[120px]">
@@ -145,7 +146,11 @@ export default function AdminSidebar() {
                   className="data-[active=true]:bg-[#1B1856] data-[active=true]:text-white hover:data-[active=true]:bg-[#1B1856]"
                 >
                   <Link href={item.href} className="flex items-center gap-2">
-                    <item.icon />
+                    <FontAwesomeIcon
+                      icon={item.icon}
+                      className="h-4 w-4 opacity-90"
+                      fixedWidth
+                    />
                     <span>{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
@@ -170,7 +175,6 @@ export default function AdminSidebar() {
             <SidebarMenuButton
               tooltip="Sign out"
               onClick={() => {
-                // replace with your auth signOut()
                 console.log("sign out");
               }}
             >
