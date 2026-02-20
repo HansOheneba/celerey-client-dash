@@ -3,7 +3,6 @@ import {
   Pencil,
   Trash2,
   CheckCircle2,
-  Sparkles,
   TrendingUp,
   Target,
 } from "lucide-react";
@@ -69,7 +68,6 @@ export function GoalCard({
           ),
       )}
     >
-
       {goal.completed ? (
         <>
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_0%,rgba(16,185,129,0.22),transparent_60%)]" />
@@ -92,7 +90,7 @@ export function GoalCard({
 
             {goal.completed ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-600">
-                <Sparkles className="h-3.5 w-3.5" />
+                <CheckCircle2 className="h-3.5 w-3.5" />
                 Achieved
               </span>
             ) : null}

@@ -103,11 +103,11 @@ export default function RetirementProjectionsPage() {
     if (fundedPct >= 90)
       return {
         tone: "warn" as const,
-        title: "You're close — small adjustments could help",
+        title: "You're close - small adjustments could help",
       };
     return {
       tone: "warn" as const,
-      title: "You're behind target — consider adjustments",
+      title: "You're behind target - consider adjustments",
     };
   }, [fundedPct]);
 

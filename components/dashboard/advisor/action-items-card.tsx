@@ -76,7 +76,7 @@ export function ActionItemsCard({
         ))}
 
         <div className="rounded-2xl bg-muted/30 p-4 text-sm text-muted-foreground">
-          Keep these updated — they become inputs to your next review.
+          Keep these updated - they become inputs to your next review.
         </div>
       </CardContent>
     </Card>

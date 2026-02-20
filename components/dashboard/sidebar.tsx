@@ -24,21 +24,20 @@ import {
   Briefcase,
   DollarSign,
   Brain,
+  Home,
 } from "lucide-react";
-
 
 const nav = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Goals & Planning", href: "/dashboard/goals", icon: Target },
   { label: "Assets", href: "/dashboard/assets", icon: Briefcase },
+  { label: "Properties", href: "/dashboard/properties", icon: Home },
   { label: "Cash Flow", href: "/dashboard/cash-flow", icon: DollarSign },
   { label: "Retirement", href: "/dashboard/retirement", icon: Umbrella },
   { label: "Celerey Insights", href: "/dashboard/ai", icon: Brain },
   { label: "Advisor", href: "/dashboard/advisor", icon: Users },
   // { label: "Documents", href: "/dashboard/documents", icon: FileText },
 ];
-
-
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -57,7 +56,7 @@ export default function AdminSidebar() {
             />
           </div>
         </Link>
-      <SidebarSeparator className="my-2" />
+        <SidebarSeparator className="my-2" />
       </SidebarHeader>
 
       <SidebarContent className="px-2">

@@ -6,7 +6,7 @@ import {
   MapPin,
   MessageSquareText,
   Phone,
-  Sparkles,
+  Lightbulb,
 } from "lucide-react";
 
 import { AvailabilityPill } from "@/components/dashboard/advisor/availability-pill";
@@ -76,7 +76,7 @@ export function AdvisorProfileCard({
 
             <div className="mt-4 rounded-2xl border border-muted/60 bg-muted/20 p-4">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Sparkles className="h-4 w-4" />
+                <Lightbulb className="h-4 w-4" />
                 Approach
               </div>
               <div className="mt-2 text-sm text-foreground">

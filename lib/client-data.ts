@@ -241,14 +241,6 @@ export type Scenario = {
 export const goalsData = {
   goals: [
     {
-      id: "fi",
-      title: "Financial Independence",
-      yearsRemaining: 8,
-      current: 2847500,
-      target: 5000000,
-      completed: false,
-    },
-    {
       id: "vac",
       title: "Vacation Home",
       yearsRemaining: 4,
@@ -280,14 +272,7 @@ export const goalsData = {
       target: 120000,
       completed: false,
     },
-    {
-      id: "charity",
-      title: "Charitable Foundation",
-      yearsRemaining: 15,
-      current: 50000,
-      target: 500000,
-      completed: false,
-    },
+
     {
       id: "wedding",
       title: "Daughter's Wedding Fund",
@@ -408,7 +393,7 @@ export const advisorData = {
     email: "j.addo@celerey.co",
     phone: "+1 (555) 012-9090",
     availability: "limited" as const,
-    bio: "James supports high-net-worth families with long-term portfolio strategy, tax-aware planning, and risk management. His style is structured and calm — focusing on clear decisions, measurable outcomes, and fewer surprises.",
+    bio: "James supports high-net-worth families with long-term portfolio strategy, tax-aware planning, and risk management. His style is structured and calm - focusing on clear decisions, measurable outcomes, and fewer surprises.",
     specialties: [
       "Tax-aware investing",
       "Retirement & longevity planning",

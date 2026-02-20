@@ -91,7 +91,7 @@ export function PropertyAnalysis() {
         ) : null}
 
         <div className="pt-1 text-xs text-muted-foreground">
-          These panels are placeholders — plug in your analysis logic later.
+          These panels are placeholders - plug in your analysis logic later.
         </div>
       </CardContent>
     </Card>

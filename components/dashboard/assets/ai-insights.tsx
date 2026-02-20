@@ -52,7 +52,7 @@ export function AIInsights({ insights }: { insights: Insight[] }) {
           </div>
         ))}
         <div className="pt-2 text-xs text-muted-foreground">
-          These insights are placeholders — wire them to your analyzer later.
+          These insights are placeholders - wire them to your analyzer later.
         </div>
       </CardContent>
     </Card>

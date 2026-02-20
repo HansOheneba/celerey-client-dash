@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -16,7 +16,7 @@ export function CelereyInsights() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">Celerey Cash Flow Insights</CardTitle>
         <Badge variant="secondary" className="gap-1">
-          <Sparkles className="h-3.5 w-3.5" />
+          <Lightbulb className="h-3.5 w-3.5" />
           Insights
         </Badge>
       </CardHeader>

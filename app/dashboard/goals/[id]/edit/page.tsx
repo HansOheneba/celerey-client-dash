@@ -10,7 +10,7 @@ import {
   CalendarDays,
   Wallet,
   ClipboardCheck,
-  Sparkles,
+  TrendingUp,
   ChevronDown,
 } from "lucide-react";
 
@@ -142,7 +142,8 @@ export default function EditGoalPage() {
   });
 
   const [isSaving, setIsSaving] = React.useState(false);
-  const [showCustomContribution, setShowCustomContribution] = React.useState(false);
+  const [showCustomContribution, setShowCustomContribution] =
+    React.useState(false);
 
   // Simulated load
   React.useEffect(() => {
@@ -398,7 +399,7 @@ export default function EditGoalPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="min-h-screen bg-linear-to-b from-background to-muted/20">
         <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6">
           <Card className="border-muted/60 bg-background/70 shadow-sm backdrop-blur">
             <CardHeader>
@@ -416,7 +417,7 @@ export default function EditGoalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen bg-linear-to-b from-background to-muted/20">
       <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6">
         {/* Header */}
         <div className="mb-6 flex items-start justify-between gap-4">
@@ -450,7 +451,7 @@ export default function EditGoalPage() {
               {tone === "complete" ? (
                 <CheckCircle2 className="h-4 w-4" />
               ) : (
-                <Sparkles className="h-4 w-4" />
+                <TrendingUp className="h-4 w-4" />
               )}
               <span className="font-medium">{statusLabel}</span>
               {targetNum > 0 && timelineValueNum > 0 ? (
@@ -484,7 +485,7 @@ export default function EditGoalPage() {
                   {tone === "complete" ? (
                     <CheckCircle2 className="h-4 w-4" />
                   ) : (
-                    <Sparkles className="h-4 w-4" />
+                    <TrendingUp className="h-4 w-4" />
                   )}
                   <span className="font-medium">{statusLabel}</span>
                   {targetNum > 0 && timelineValueNum > 0 ? (
@@ -579,7 +580,7 @@ export default function EditGoalPage() {
 
                   <div className="shrink-0 text-right">
                     <p className="text-sm font-semibold">
-                      {targetNum > 0 ? `${Math.round(progress)}%` : "—"}
+                      {targetNum > 0 ? `${Math.round(progress)}%` : "-"}
                     </p>
                     <p className="text-xs text-muted-foreground">complete</p>
                   </div>
@@ -608,7 +609,7 @@ export default function EditGoalPage() {
                     <span className="font-medium text-foreground">
                       {requiredPerMonth > 0
                         ? `GHS ${currency(requiredPerMonth)}`
-                        : "—"}
+                        : "-"}
                     </span>
                   </span>
                   {deltaSinceLoad !== 0 ? (
@@ -784,7 +785,10 @@ export default function EditGoalPage() {
                 )}
 
                 {/* Add contribution */}
-                <Collapsible open={showCustomContribution} onOpenChange={setShowCustomContribution}>
+                <Collapsible
+                  open={showCustomContribution}
+                  onOpenChange={setShowCustomContribution}
+                >
                   <div className="rounded-xl border bg-muted/20 p-3">
                     <CollapsibleTrigger asChild>
                       <button
@@ -795,15 +799,19 @@ export default function EditGoalPage() {
                           <Wallet className="h-4 w-4" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium">Custom contribution</p>
+                          <p className="text-sm font-medium">
+                            Custom contribution
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             Add any amount with details.
                           </p>
                         </div>
-                        <ChevronDown className={cn(
-                          "h-4 w-4 transition-transform text-muted-foreground",
-                          showCustomContribution && "rotate-180"
-                        )} />
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 transition-transform text-muted-foreground",
+                            showCustomContribution && "rotate-180",
+                          )}
+                        />
                       </button>
                     </CollapsibleTrigger>
 
@@ -834,7 +842,10 @@ export default function EditGoalPage() {
                               type="date"
                               value={contrib.date}
                               onChange={(e) =>
-                                setContrib((p) => ({ ...p, date: e.target.value }))
+                                setContrib((p) => ({
+                                  ...p,
+                                  date: e.target.value,
+                                }))
                               }
                               className="pl-10"
                             />
@@ -848,7 +859,10 @@ export default function EditGoalPage() {
                             placeholder="e.g. Monthly transfer, side hustle income, bonus top-up"
                             value={contrib.note}
                             onChange={(e) =>
-                              setContrib((p) => ({ ...p, note: e.target.value }))
+                              setContrib((p) => ({
+                                ...p,
+                                note: e.target.value,
+                              }))
                             }
                             className="min-h-21"
                           />

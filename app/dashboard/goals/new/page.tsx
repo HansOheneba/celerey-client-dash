@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowLeft, CheckCircle2, TrendingUp } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -154,7 +154,7 @@ export default function NewGoalPage() {
       return {
         tone: "complete",
         label: "Completed",
-        message: "You've already reached this target — nice work.",
+        message: "You've already reached this target. Nice work.",
       };
     }
     if (!targetNum || !timelineValueNum) {
@@ -321,7 +321,7 @@ export default function NewGoalPage() {
             <CardHeader className="space-y-1">
               <CardTitle className="text-base">Goal setup</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Keep it simple — you can refine later.
+                Keep it simple. You can refine later.
               </p>
             </CardHeader>
 
@@ -337,7 +337,7 @@ export default function NewGoalPage() {
                   {insight.tone === "complete" ? (
                     <CheckCircle2 className="h-4 w-4" />
                   ) : (
-                    <Sparkles className="h-4 w-4" />
+                    <TrendingUp className="h-4 w-4" />
                   )}
                   <span className="font-medium">{insight.label}</span>
                   {targetNum > 0 && timelineValueNum > 0 ? (
@@ -431,7 +431,7 @@ export default function NewGoalPage() {
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-sm font-semibold">
-                      {targetNum > 0 ? `${Math.round(progress)}%` : "—"}
+                      {targetNum > 0 ? `${Math.round(progress)}%` : "-"}
                     </p>
                     <p className="text-xs text-muted-foreground">complete</p>
                   </div>
@@ -566,7 +566,7 @@ export default function NewGoalPage() {
                       Progress
                     </span>
                     <span className="text-sm font-semibold">
-                      {targetNum > 0 ? `${Math.round(progress)}%` : "—"}
+                      {targetNum > 0 ? `${Math.round(progress)}%` : "-"}
                     </span>
                   </div>
 
@@ -575,7 +575,7 @@ export default function NewGoalPage() {
                       Remaining
                     </span>
                     <span className="text-sm font-semibold">
-                      {targetNum > 0 ? `GHS ${currency(remaining)}` : "—"}
+                      {targetNum > 0 ? `GHS ${currency(remaining)}` : "-"}
                     </span>
                   </div>
 
@@ -588,7 +588,7 @@ export default function NewGoalPage() {
                     <span className="text-sm font-semibold">
                       {timelineValueNum >= 1
                         ? `${timelineValueNum} ${form.timelineUnit}`
-                        : "—"}
+                        : "-"}
                     </span>
                   </div>
 
@@ -599,7 +599,7 @@ export default function NewGoalPage() {
                     <span className="text-sm font-semibold">
                       {requiredPerMonth > 0
                         ? `GHS ${currency(requiredPerMonth)}`
-                        : "—"}
+                        : "-"}
                     </span>
                   </div>
 
