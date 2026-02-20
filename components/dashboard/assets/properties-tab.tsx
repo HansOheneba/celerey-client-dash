@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { MiniStat } from "@/components/dashboard/assets/mini-stat";
 import { PropertyRow } from "@/components/dashboard/assets/property-row";
 import { PropertyAnalysis } from "@/components/dashboard/assets/property-analysis";
+import { InsuranceSummaryCard } from "@/components/dashboard/assets/insurance-summary-card";
 import {
   mockProperties,
   propertyEquity,
   propertyLvr,
+  totalInsurancePremium,
 } from "@/lib/property-data";
 
 function formatCurrency(n: number): string {
@@ -47,10 +49,15 @@ export function PropertiesTab() {
     return Math.round(totalLvr / properties.length);
   }, [properties]);
 
+  const totalInsuranceCost = React.useMemo(
+    () => sum(properties.map((p) => totalInsurancePremium(p))),
+    [properties],
+  );
+
   return (
     <>
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <MiniStat
           label="Total Property Value"
           value={formatCurrency(totalPropertyValue)}
@@ -64,6 +71,11 @@ export function PropertiesTab() {
           label="Avg LVR"
           value={`${avgLvr}%`}
           hint={avgLvr > 60 ? "Consider reducing leverage" : "Healthy range"}
+        />
+        <MiniStat
+          label="Insurance Cost"
+          value={formatCurrency(totalInsuranceCost)}
+          hint={`${formatCurrency(Math.round(totalInsuranceCost / 12))}/mo`}
         />
       </div>
 
@@ -90,7 +102,8 @@ export function PropertiesTab() {
           <PropertyRow key={p.property_id} property={p} />
         ))}
       </div>
-
+      {/* Insurance overview */}
+      <InsuranceSummaryCard properties={properties} />
       {/* Analysis */}
       <PropertyAnalysis />
     </>

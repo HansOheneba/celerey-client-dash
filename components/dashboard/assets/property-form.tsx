@@ -20,9 +20,11 @@ import {
 import {
   type Property,
   type PropertyType,
+  type PropertyInsurance,
   PROPERTY_TYPE_OPTIONS,
   COUNTRY_OPTIONS,
 } from "@/lib/property-data";
+import { InsuranceSection } from "./insurance-section";
 
 // ── Form state ──────────────────────────────────────────────────
 export type PropertyFormValues = {
@@ -34,6 +36,7 @@ export type PropertyFormValues = {
   marketValue: string;
   mortgageBalance: string;
   isPrimary: boolean;
+  insurance: PropertyInsurance[];
 };
 
 export type PropertyFormProps = {
@@ -91,6 +94,7 @@ export function PropertyForm({
           editingProperty.mortgage_balance.toString(),
         ),
         isPrimary: editingProperty.is_primary,
+        insurance: editingProperty.insurance ?? [],
       };
     }
     return {
@@ -102,6 +106,7 @@ export function PropertyForm({
       marketValue: "",
       mortgageBalance: "",
       isPrimary: false,
+      insurance: [],
     };
   });
 
@@ -202,6 +207,7 @@ export function PropertyForm({
         market_value: marketValueNum,
         mortgage_balance: mortgageNum,
         is_primary: form.isPrimary,
+        insurance: form.insurance,
       };
 
       console.log(isEditing ? "Update property:" : "New property:", payload);
@@ -429,6 +435,14 @@ export function PropertyForm({
 
               <Separator />
 
+              {/* Insurance */}
+              <InsuranceSection
+                policies={form.insurance}
+                onChange={(policies) => update("insurance", policies)}
+              />
+
+              <Separator />
+
               {/* Purchase date */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
@@ -545,6 +559,47 @@ export function PropertyForm({
                     label="Purchased"
                     value={form.purchaseDate || "\u2014"}
                   />
+
+                  {form.insurance.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Insurance
+                        </span>
+                      </div>
+                      <SummaryRow
+                        label="Policies"
+                        value={String(form.insurance.length)}
+                      />
+                      <SummaryRow
+                        label="Coverage"
+                        value={currency(
+                          form.insurance.reduce(
+                            (s, i) => s + i.coverage_amount,
+                            0,
+                          ),
+                        )}
+                      />
+                      <SummaryRow
+                        label="Premium/yr"
+                        value={currency(
+                          form.insurance.reduce(
+                            (s, i) => s + i.annual_premium,
+                            0,
+                          ),
+                        )}
+                      />
+                    </>
+                  )}
+                  {form.insurance.length === 0 && (
+                    <>
+                      <Separator />
+                      <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                        No insurance - consider adding a policy
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Contextual guidance */}

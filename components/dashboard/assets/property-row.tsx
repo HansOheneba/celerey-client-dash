@@ -10,7 +10,11 @@ import {
   propertyEquity,
   propertyLvr,
   propertyTypeLabel,
+  totalInsurancePremium,
+  isInsuranceExpiringSoon,
+  isInsuranceExpired,
 } from "@/lib/property-data";
+import { Shield, AlertTriangle } from "lucide-react";
 
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat(undefined, {
@@ -27,6 +31,12 @@ function cn(...classes: Array<string | false | null | undefined>) {
 export function PropertyRow({ property }: { property: Property }) {
   const equity = propertyEquity(property);
   const lvr = propertyLvr(property);
+  const hasInsurance = property.insurance.length > 0;
+  const annualPremium = totalInsurancePremium(property);
+  const anyExpired = property.insurance.some(isInsuranceExpired);
+  const anyExpiringSoon = property.insurance.some(
+    (p) => isInsuranceExpiringSoon(p) && !isInsuranceExpired(p),
+  );
 
   return (
     <Card className="border-muted/60 bg-background/60 shadow-sm">
@@ -67,7 +77,7 @@ export function PropertyRow({ property }: { property: Property }) {
           </div>
 
           {/* Right: stats */}
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-5 md:gap-6">
             <div>
               <div className="text-xs text-muted-foreground">Market Value</div>
               <div className="text-sm font-semibold tabular-nums">
@@ -112,6 +122,38 @@ export function PropertyRow({ property }: { property: Property }) {
               >
                 {lvr}%
               </div>
+            </div>
+
+            {/* Insurance indicator */}
+            <div>
+              <div className="text-xs text-muted-foreground">Insurance</div>
+              {hasInsurance ? (
+                <div className="flex items-center gap-1">
+                  <Shield
+                    className={cn(
+                      "h-3.5 w-3.5",
+                      anyExpired
+                        ? "text-rose-500"
+                        : anyExpiringSoon
+                          ? "text-amber-500"
+                          : "text-emerald-500",
+                    )}
+                  />
+                  <span className="text-sm font-semibold tabular-nums">
+                    {formatCurrency(annualPremium)}/yr
+                  </span>
+                  {anyExpired && (
+                    <AlertTriangle className="h-3 w-3 text-rose-500" />
+                  )}
+                  {anyExpiringSoon && !anyExpired && (
+                    <AlertTriangle className="h-3 w-3 text-amber-500" />
+                  )}
+                </div>
+              ) : (
+                <span className="text-xs text-amber-600 dark:text-amber-400">
+                  None
+                </span>
+              )}
             </div>
           </div>
         </div>

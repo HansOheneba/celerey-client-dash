@@ -21,6 +21,34 @@ export const PROPERTY_TYPE_OPTIONS: { value: PropertyType; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
+export type InsuranceType =
+  | "homeowners"
+  | "landlord"
+  | "flood"
+  | "earthquake"
+  | "umbrella"
+  | "other";
+
+export const INSURANCE_TYPE_OPTIONS: { value: InsuranceType; label: string }[] =
+  [
+    { value: "homeowners", label: "Homeowners" },
+    { value: "landlord", label: "Landlord" },
+    { value: "flood", label: "Flood" },
+    { value: "earthquake", label: "Earthquake" },
+    { value: "umbrella", label: "Umbrella" },
+    { value: "other", label: "Other" },
+  ];
+
+export type PropertyInsurance = {
+  insurance_type: InsuranceType;
+  provider: string;
+  policy_number: string;
+  coverage_amount: number;
+  annual_premium: number;
+  deductible: number;
+  expiry_date: string;
+};
+
 export const COUNTRY_OPTIONS = [
   "USA",
   "UK",
@@ -51,6 +79,7 @@ export type Property = {
   mortgage_balance: number;
   is_primary: boolean;
   is_active: boolean;
+  insurance: PropertyInsurance[];
   created_at: string;
   updated_at: string;
 };
@@ -77,6 +106,31 @@ export function findProperty(
   return properties.find((p) => p.property_id === id);
 }
 
+export function totalInsurancePremium(p: Property): number {
+  return p.insurance.reduce((sum, i) => sum + i.annual_premium, 0);
+}
+
+export function totalInsuranceCoverage(p: Property): number {
+  return p.insurance.reduce((sum, i) => sum + i.coverage_amount, 0);
+}
+
+export function insuranceTypeLabel(type: InsuranceType): string {
+  return INSURANCE_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
+}
+
+export function isInsuranceExpiringSoon(policy: PropertyInsurance): boolean {
+  const expiry = new Date(policy.expiry_date);
+  const now = new Date();
+  const daysUntilExpiry = Math.ceil(
+    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  return daysUntilExpiry <= 60 && daysUntilExpiry > 0;
+}
+
+export function isInsuranceExpired(policy: PropertyInsurance): boolean {
+  return new Date(policy.expiry_date) < new Date();
+}
+
 // ── Mock data ───────────────────────────────────────────────────
 const now = new Date().toISOString();
 
@@ -93,6 +147,26 @@ export const mockProperties: Property[] = [
     mortgage_balance: 450000,
     is_primary: true,
     is_active: true,
+    insurance: [
+      {
+        insurance_type: "homeowners",
+        provider: "State Farm",
+        policy_number: "HO-2024-88412",
+        coverage_amount: 850000,
+        annual_premium: 2400,
+        deductible: 2500,
+        expiry_date: "2026-09-15",
+      },
+      {
+        insurance_type: "flood",
+        provider: "NFIP",
+        policy_number: "FL-2024-33210",
+        coverage_amount: 250000,
+        annual_premium: 780,
+        deductible: 1500,
+        expiry_date: "2026-06-01",
+      },
+    ],
     created_at: now,
     updated_at: now,
   },
@@ -108,6 +182,17 @@ export const mockProperties: Property[] = [
     mortgage_balance: 380000,
     is_primary: false,
     is_active: true,
+    insurance: [
+      {
+        insurance_type: "landlord",
+        provider: "Allianz",
+        policy_number: "LL-2024-55709",
+        coverage_amount: 620000,
+        annual_premium: 1850,
+        deductible: 2000,
+        expiry_date: "2026-04-10",
+      },
+    ],
     created_at: now,
     updated_at: now,
   },
@@ -123,6 +208,7 @@ export const mockProperties: Property[] = [
     mortgage_balance: 0,
     is_primary: false,
     is_active: true,
+    insurance: [],
     created_at: now,
     updated_at: now,
   },

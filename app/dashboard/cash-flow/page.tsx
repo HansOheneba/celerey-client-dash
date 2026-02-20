@@ -21,12 +21,14 @@ import {
   type CashFlowSettings,
 } from "@/components/dashboard/cash-flow/settings-dialog";
 import { CelereyInsights } from "@/components/dashboard/cash-flow/celerey-insights";
+import { NetWorthCard } from "@/components/dashboard/cash-flow/net-worth-card";
 import {
   DeleteConfirmDialog,
   type EditMode,
   type DeleteTarget,
 } from "@/components/dashboard/cash-flow/delete-confirm-dialog";
 import { cashFlowData } from "@/lib/client-data";
+import { calculateNetWorth } from "@/lib/net-worth";
 
 type RowMode = "create" | "edit";
 
@@ -95,6 +97,20 @@ export default function CashFlowPage() {
     if (totalIncome <= 0) return 0;
     return (savings / totalIncome) * 100;
   }, [savings, totalIncome]);
+
+  // Net worth calculation based on all data sources
+  const netWorth = React.useMemo(
+    () =>
+      calculateNetWorth(
+        undefined, // holdings (default)
+        undefined, // valuations (default)
+        undefined, // properties (default)
+        undefined, // insurance (default)
+        income, // live income state
+        expenses, // live expense state
+      ),
+    [income, expenses],
+  );
 
   function openCreate(type: EditMode): void {
     setRowDialogType(type);
@@ -195,7 +211,12 @@ export default function CashFlowPage() {
         </div>
 
         {/* Top stats */}
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-5">
+          <MiniStat
+            label="Net Worth"
+            value={formatCurrency(netWorth.netWorth)}
+            accent={netWorth.netWorth >= 0 ? "good" : undefined}
+          />
           <MiniStat
             label="Monthly Income"
             value={formatCurrency(totalIncome)}
@@ -215,61 +236,69 @@ export default function CashFlowPage() {
           />
         </div>
 
-        {/* Income + Expenses */}
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* Income sources */}
-          <Card className="border-muted/60 bg-background/60 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Income Sources</CardTitle>
-              <Badge variant="secondary" className="tabular-nums">
-                {formatCurrency(totalIncome)}
-              </Badge>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {income.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  No income sources yet. Add one to start tracking.
-                </div>
-              ) : (
-                income.map((r) => (
-                  <RowItem
-                    key={r.id}
-                    row={r}
-                    total={totalIncome}
-                    onEdit={() => openEdit("income", r)}
-                    onDelete={() => requestDelete("income", r)}
-                  />
-                ))
-              )}
-            </CardContent>
-          </Card>
+        {/* Net Worth + Income/Expenses */}
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {/* Net worth breakdown */}
+          <div className="lg:col-span-1">
+            <NetWorthCard breakdown={netWorth} />
+          </div>
 
-          {/* Expense breakdown */}
-          <Card className="border-muted/60 bg-background/60 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Expense Breakdown</CardTitle>
-              <Badge variant="secondary" className="tabular-nums">
-                {formatCurrency(totalExpenses)}
-              </Badge>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {expenses.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  No expenses yet. Add one to start tracking.
-                </div>
-              ) : (
-                expenses.map((r) => (
-                  <RowItem
-                    key={r.id}
-                    row={r}
-                    total={totalExpenses}
-                    onEdit={() => openEdit("expense", r)}
-                    onDelete={() => requestDelete("expense", r)}
-                  />
-                ))
-              )}
-            </CardContent>
-          </Card>
+          {/* Income + Expenses - side by side */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:col-span-2">
+            {/* Income sources */}
+            <Card className="border-muted/60 bg-background/60 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Income Sources</CardTitle>
+                <Badge variant="secondary" className="tabular-nums">
+                  {formatCurrency(totalIncome)}
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {income.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">
+                    No income sources yet. Add one to start tracking.
+                  </div>
+                ) : (
+                  income.map((r) => (
+                    <RowItem
+                      key={r.id}
+                      row={r}
+                      total={totalIncome}
+                      onEdit={() => openEdit("income", r)}
+                      onDelete={() => requestDelete("income", r)}
+                    />
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Expense breakdown */}
+            <Card className="border-muted/60 bg-background/60 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Expense Breakdown</CardTitle>
+                <Badge variant="secondary" className="tabular-nums">
+                  {formatCurrency(totalExpenses)}
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {expenses.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">
+                    No expenses yet. Add one to start tracking.
+                  </div>
+                ) : (
+                  expenses.map((r) => (
+                    <RowItem
+                      key={r.id}
+                      row={r}
+                      total={totalExpenses}
+                      onEdit={() => openEdit("expense", r)}
+                      onDelete={() => requestDelete("expense", r)}
+                    />
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Celerey insights */}
