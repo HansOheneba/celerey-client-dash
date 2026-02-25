@@ -10,6 +10,7 @@ import { LoginCarousel } from "@/components/login/login-carousel";
 import { EmailForm } from "@/components/login/email-form";
 import { OtpForm } from "@/components/login/otp-form";
 import type { AuthStep } from "@/components/login/types";
+import { setAuth } from "../lib/storage";
 
 export default function Home() {
   const router = useRouter();
@@ -25,13 +26,14 @@ export default function Home() {
     setStep("otp");
   }
 
-  /** OTP entered - navigate to dashboard */
+  /** OTP entered - set auth and navigate to choose plan */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function handleOtpVerify(_otp: string) {
     setIsSubmitting(true);
     try {
-      // No backend yet - just proceed
-      router.push("/dashboard");
+      // No backend yet - set local auth and go to plan selection
+      setAuth(email);
+      router.push("/choose-plan");
     } finally {
       setIsSubmitting(false);
     }

@@ -14,8 +14,25 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
-import { LifeBuoy, LogOut } from "lucide-react";
+import {
+  LifeBuoy,
+  LogOut,
+  MoreVertical,
+  Settings,
+  UserIcon,
+} from "lucide-react";
+import { mockUser, getUserFullName } from "@/lib/user-data";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -130,7 +147,7 @@ export default function AdminSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2">
-        <SidebarMenu>
+        <SidebarMenu className="relative">
           {nav.map((item) => {
             const active =
               item.href === "/dashboard"
@@ -138,20 +155,68 @@ export default function AdminSidebar() {
                 : pathname.startsWith(item.href);
 
             return (
-              <SidebarMenuItem key={item.href}>
+              <SidebarMenuItem key={item.href} className="relative">
                 <SidebarMenuButton
                   asChild
                   isActive={active}
                   tooltip={item.label}
-                  className="data-[active=true]:bg-[#1B1856] data-[active=true]:text-white hover:data-[active=true]:bg-[#1B1856]"
+                  className={[
+                    // remove the hard active bg so the animated pill is the “bg”
+                    "relative overflow-hidden",
+                    "hover:bg-sidebar-accent/60",
+                    "transition-colors",
+                    // make spacing consistent to avoid tiny reflows
+                    "h-10",
+                  ].join(" ")}
                 >
-                  <Link href={item.href} className="flex items-center gap-2">
-                    <FontAwesomeIcon
-                      icon={item.icon}
-                      className="h-4 w-4 opacity-90"
-                      fixedWidth
-                    />
-                    <span>{item.label}</span>
+                  <Link
+                    href={item.href}
+                    className="relative flex items-center gap-2"
+                  >
+                    {/* Animated active background */}
+                    {active ? (
+                      <motion.span
+                        layoutId="active-nav-pill"
+                        className="absolute inset-0 rounded-md bg-[#1B1856]"
+                        transition={{
+                          type: "spring",
+                          stiffness: 420,
+                          damping: 32,
+                          mass: 0.6,
+                        }}
+                      />
+                    ) : null}
+
+                    {/* Foreground content */}
+                    <span className="relative z-10 flex items-center gap-2">
+                      <FontAwesomeIcon
+                        icon={item.icon}
+                        className={[
+                          "h-4 w-4 opacity-90",
+                          active ? "text-white" : "text-foreground",
+                        ].join(" ")}
+                        fixedWidth
+                      />
+
+                      {/* Smooth label fade when collapsing (prevents “snap”) */}
+                      <AnimatePresence initial={false}>
+                        {!collapsed ? (
+                          <motion.span
+                            key="label"
+                            initial={{ opacity: 0, x: -4 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -4 }}
+                            transition={{ duration: 0.14, ease: "easeOut" }}
+                            className={[
+                              active ? "text-white" : "text-foreground",
+                              "whitespace-nowrap",
+                            ].join(" ")}
+                          >
+                            {item.label}
+                          </motion.span>
+                        ) : null}
+                      </AnimatePresence>
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -170,19 +235,80 @@ export default function AdminSidebar() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+        </SidebarMenu>
 
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip="Sign out"
+        <SidebarSeparator className="my-1" />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-sidebar-accent transition-colors outline-none">
+              <Avatar size="sm">
+                <AvatarFallback className="bg-[#1B1856] text-white text-xs">
+                  {mockUser.first_name[0]}
+                  {mockUser.last_name[0]}
+                </AvatarFallback>
+              </Avatar>
+
+              {!collapsed && (
+                <div className="flex flex-1 items-center justify-between min-w-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium leading-tight truncate">
+                      {getUserFullName(mockUser)}
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-tight truncate">
+                      {mockUser.email}
+                    </p>
+                  </div>
+                  <MoreVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </div>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent side="right" align="end" className="w-56">
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">
+                  {getUserFullName(mockUser)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {mockUser.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/dashboard/account"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <UserIcon className="h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/dashboard/account"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Account Settings</span>
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive cursor-pointer"
               onClick={() => {
                 console.log("sign out");
               }}
             >
-              <LogOut />
+              <LogOut className="h-4 w-4 mr-2" />
               <span>Sign out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   );

@@ -167,7 +167,7 @@ export function ControlsCard({
         <p className="text-sm text-muted-foreground">
           {simulationMode
             ? "Drag the sliders to explore 'what-if' scenarios. Nothing is saved until you choose to."
-            : "These are your baseline numbers — your current savings, pension, and goals. They power every projection on this page."}
+            : "These are your baseline numbers; your current savings, pension, and goals. They power every projection on this page."}
         </p>
       </CardHeader>
 

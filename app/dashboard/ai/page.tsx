@@ -9,6 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { aiInsights } from "@/lib/client-data";
+import { useClientGate } from "@/lib/useClientGate";
+import { canAccessFeature } from "@/lib/entitlements";
+import { useRouter } from "next/navigation";
 
 type Priority = "high" | "medium" | "low";
 type InsightKind = "opportunity" | "risk" | "milestone" | "action";
@@ -173,6 +176,41 @@ function InsightRow({ insight }: { insight: Insight }) {
 }
 
 export default function AIInsightsIntelligencePage() {
+  const router = useRouter();
+  const { ready, auth, sub } = useClientGate();
+
+  if (!ready) return <div>Loading...</div>;
+
+  if (!auth.loggedIn) {
+    router.replace("/");
+    return <div />;
+  }
+
+  if (!canAccessFeature(sub.status, "premiumInsights")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-lg text-center">
+          <h2 className="text-xl font-semibold">Feature locked</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Celerey Insights are available for Premium members only.
+          </p>
+          <div className="mt-4">
+            <button
+              onClick={() => {
+                try {
+                  window.localStorage.setItem("upgrade_intent", "true");
+                } catch {}
+                router.push("/choose-plan");
+              }}
+              className="inline-flex h-10 items-center justify-center rounded-md px-4 bg-[#0B102A] text-white"
+            >
+              Upgrade to Premium
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const insights: Insight[] = aiInsights.map((insight) => ({
     ...insight,
     cta: insight.cta ? { ...insight.cta, onClick: () => {} } : undefined,

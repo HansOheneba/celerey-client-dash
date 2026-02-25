@@ -1,6 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { useClientGate } from "@/lib/useClientGate";
+import { canAccessFeature } from "@/lib/entitlements";
 import { motion } from "framer-motion";
 import { ActionItemsCard } from "@/components/dashboard/advisor/action-items-card";
 import { AdvisorHeader } from "@/components/dashboard/advisor/advisor-header";
@@ -39,15 +42,13 @@ const item = {
 };
 
 export default function AdvisorPage() {
-  const advisor = advisorData.advisor;
-  const upcoming = advisorData.upcomingMeeting;
+  const router = useRouter();
+  const { ready, auth, sub } = useClientGate();
 
+  // ✅ All hooks before any early returns
   const [items, setItems] = React.useState<ActionItem[]>(
     advisorData.actionItems,
   );
-  const notes = advisorData.notes;
-
-  // Request conversation dialog (logic placeholder)
   const [open, setOpen] = React.useState(false);
   const [topic, setTopic] = React.useState<RequestTopic>("portfolio");
   const [urgency, setUrgency] = React.useState<RequestUrgency>("standard");
@@ -62,16 +63,50 @@ export default function AdvisorPage() {
   }
 
   function submitRequest() {
-    // Replace with your real flow:
-    // - create request record in DB (status="pending")
-    // - notify advisor (email/queue)
-    // - show "request received" state + SLA copy
     console.log("REQUEST", { topic, urgency, message });
     setOpen(false);
     setMessage("");
     setUrgency("standard");
     setTopic("portfolio");
   }
+
+  // ✅ Early returns after all hooks
+  if (!ready) return <div>Loading...</div>;
+
+  if (!auth.loggedIn) {
+    router.replace("/");
+    return <div />;
+  }
+
+  if (!canAccessFeature(sub.status, "advisorChat")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-lg text-center">
+          <h2 className="text-xl font-semibold">Feature locked</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Advisor access is available for Premium members only.
+          </p>
+          <div className="mt-4">
+            <button
+              onClick={() => {
+                try {
+                  window.localStorage.setItem("upgrade_intent", "true");
+                } catch {}
+                router.push("/choose-plan");
+              }}
+              className="inline-flex h-10 items-center justify-center rounded-md px-4 bg-[#0B102A] text-white"
+            >
+              Upgrade to Premium
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const advisor = advisorData.advisor;
+  const upcoming = advisorData.upcomingMeeting;
+  const notes = advisorData.notes;
 
   return (
     <div className="min-h-screen from-background to-muted/20">
@@ -119,7 +154,7 @@ export default function AdvisorPage() {
               />
             </motion.div>
 
-            {/* Advisor queue (creative section) */}
+            {/* Advisor queue */}
             <motion.div variants={item}>
               <RequestQueueCard />
             </motion.div>
