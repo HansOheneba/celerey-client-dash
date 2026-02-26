@@ -60,7 +60,7 @@ const nav = [
   // { label: "Documents", href: "/dashboard/documents", icon: faFileLines },
 ];
 
-export default function AdminSidebar() {
+export default function DashboardSidebar() {
   const pathname = usePathname();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -68,7 +68,7 @@ export default function AdminSidebar() {
   return (
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader className="pt-2">
-        <Link href="/admin" className="flex items-center gap-3 rounded-md">
+        <Link href="/dashboard" className="flex items-center gap-3 rounded-md">
           <div className="flex w-full justify-left">
             <div className="relative h-[56px] w-[120px]">
               <AnimatePresence mode="wait" initial={false}>
@@ -177,7 +177,7 @@ export default function AdminSidebar() {
                     {active ? (
                       <motion.span
                         layoutId="active-nav-pill"
-                        className="absolute inset-0 rounded-md bg-[#1B1856]"
+                        className="absolute inset-0 rounded-3xl bg-[#1B1856]"
                         transition={{
                           type: "spring",
                           stiffness: 420,

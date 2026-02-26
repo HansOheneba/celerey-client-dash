@@ -201,6 +201,14 @@ export default function DashboardPage() {
   }, []);
 
   const greetingName = useMemo(() => {
+    // Prefer the actual first name from the local client data (mock user)
+    const client = getClientData();
+    const full = client.personal?.name ?? "";
+    if (full) {
+      return full.split(" ")[0];
+    }
+
+    // Fallback to deriving a name from the email as before
     const email = auth.email?.trim();
     if (!email) return "";
     const prefix = email.split("@")[0] ?? "";
@@ -211,6 +219,14 @@ export default function DashboardPage() {
       .map((w) => (w ? w[0]!.toUpperCase() + w.slice(1) : ""))
       .join(" ");
   }, [auth.email]);
+
+  const timeGreeting = useMemo(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    if (hour < 12) return "Good Morning!";
+    if (hour < 18) return "Good Afternoon!";
+    return "Good Evening!";
+  }, []);
 
   const motionContainer = useMemo(() => {
     if (reduceMotion) return undefined;
@@ -255,7 +271,7 @@ export default function DashboardPage() {
                 Hi{greetingName ? ` ${greetingName}` : ""},{" "}
               </p>
               <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
-                Good Morning!
+                {timeGreeting}
               </h1>
               <p className="text-sm text-muted-foreground">
                 Here is your account snapshot and what is next.
