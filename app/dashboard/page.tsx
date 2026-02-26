@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 "use client";
 
 import * as React from "react";
@@ -12,7 +11,6 @@ import {
   Sparkles,
   Wallet,
   Goal,
-  PiggyBank,
   Shield,
   MessageSquareText,
 } from "lucide-react";
@@ -32,10 +30,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
+// ✅ NEW: quiz card (replaces AI insights)
+import QuizCard from "@/components/dashboard/risk/quizCard";
+
 type Snapshot = {
   netWorth: number;
   portfolioValue: number;
-  cashBalance: number;
   monthlyCashFlow: number;
   goalsActive: number;
   insurancePolicies: number;
@@ -108,12 +108,9 @@ export default function DashboardPage() {
     };
   }, [sub.status]);
 
-  // Live snapshot using local lib data (mocked data source)
   const snapshot: Snapshot = useMemo(() => {
     const client = getClientData();
     const portfolio = client.portfolio;
-
-    const cashAllocation = portfolio?.allocation?.cash?.value ?? 0;
 
     const income = cashFlowData.income.reduce((s, i) => s + i.amount, 0);
     const expenses = cashFlowData.expenses.reduce((s, e) => s + e.amount, 0);
@@ -121,7 +118,6 @@ export default function DashboardPage() {
     return {
       netWorth: client.computed?.totalNetWorth ?? 0,
       portfolioValue: portfolio?.totalValue ?? 0,
-      cashBalance: cashAllocation,
       monthlyCashFlow: Math.round(income - expenses),
       goalsActive: goalsData.goals.filter((g) => !g.completed).length,
       insurancePolicies: mockProperties.reduce(
@@ -153,7 +149,6 @@ export default function DashboardPage() {
       });
     }
 
-    // Fallback if no items
     if (items.length === 0) {
       items.push({ id: "u-fallback", title: "No upcoming items", time: "—" });
     }
@@ -164,7 +159,6 @@ export default function DashboardPage() {
   const activity: ActivityRow[] = useMemo(() => {
     const rows: ActivityRow[] = [];
 
-    // Recent goals (most recent 3)
     goalsData.goals.slice(0, 3).forEach((g) =>
       rows.push({
         id: `g-${g.id}`,
@@ -175,7 +169,6 @@ export default function DashboardPage() {
       }),
     );
 
-    // Recent cash flow entries
     cashFlowData.income.slice(0, 2).forEach((c) =>
       rows.push({
         id: `c-${c.id}`,
@@ -186,7 +179,6 @@ export default function DashboardPage() {
       }),
     );
 
-    // Advisor action items
     advisorData.actionItems.slice(0, 2).forEach((a) =>
       rows.push({
         id: `a-${a.id}`,
@@ -201,14 +193,10 @@ export default function DashboardPage() {
   }, []);
 
   const greetingName = useMemo(() => {
-    // Prefer the actual first name from the local client data (mock user)
     const client = getClientData();
     const full = client.personal?.name ?? "";
-    if (full) {
-      return full.split(" ")[0];
-    }
+    if (full) return full.split(" ")[0] ?? "";
 
-    // Fallback to deriving a name from the email as before
     const email = auth.email?.trim();
     if (!email) return "";
     const prefix = email.split("@")[0] ?? "";
@@ -263,7 +251,6 @@ export default function DashboardPage() {
       className="w-full"
     >
       <div className="mx-auto px-6 py-8 space-y-6">
-        {/* Header */}
         <motion.div variants={motionItem} className="space-y-3">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div className="space-y-1">
@@ -301,9 +288,7 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Top grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Left: KPI stack */}
           <div className="lg:col-span-4 space-y-4">
             <motion.div variants={motionItem}>
               <MetricCard
@@ -337,16 +322,6 @@ export default function DashboardPage() {
 
             <motion.div variants={motionItem}>
               <MetricCard
-                title="Cash balance"
-                value={formatMoneyGhs(snapshot.cashBalance)}
-                icon={<PiggyBank className="h-5 w-5" />}
-                helper="Available cash"
-                onOpen={() => router.push("/cash")}
-              />
-            </motion.div>
-
-            <motion.div variants={motionItem}>
-              <MetricCard
                 title="Insurance policies"
                 value={`${snapshot.insurancePolicies}`}
                 icon={<Shield className="h-5 w-5" />}
@@ -356,7 +331,6 @@ export default function DashboardPage() {
             </motion.div>
           </div>
 
-          {/* Middle: chart */}
           <div className="lg:col-span-5">
             <motion.div variants={motionItem} className="h-full">
               <Card className="h-full">
@@ -379,23 +353,16 @@ export default function DashboardPage() {
                     Portfolio and cash flow trend for the selected period.
                   </div>
 
-                  {/* Replace with your real chart component later */}
                   <div className="h-[260px] rounded-md border flex items-center justify-center text-sm text-muted-foreground">
                     Chart placeholder
                   </div>
 
                   <Separator />
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     <MiniStat
                       label="Monthly cash flow"
                       value={formatMoneyGhs(snapshot.monthlyCashFlow)}
-                    />
-                    <MiniStat
-                      label="Cash to invest"
-                      value={formatMoneyGhs(
-                        Math.max(snapshot.cashBalance - 5000, 0),
-                      )}
                     />
                   </div>
                 </CardContent>
@@ -403,7 +370,6 @@ export default function DashboardPage() {
             </motion.div>
           </div>
 
-          {/* Right: upcoming + premium blocks */}
           <div className="lg:col-span-3 space-y-4">
             <motion.div variants={motionItem}>
               <Card>
@@ -467,20 +433,13 @@ export default function DashboardPage() {
               />
             </motion.div>
 
+            {/* ✅ REPLACED: AI insights -> Risk attitude quiz card */}
             <motion.div variants={motionItem}>
-              <LockedFeatureCard
-                title="AI insights"
-                description="Get tailored insights from your goals and portfolio."
-                icon={<Sparkles className="h-5 w-5" />}
-                hasAccess={access.premiumInsights}
-                onOpen={() => router.push("/insights")}
-                onUpgrade={handleUpgradeIntent}
-              />
+              <QuizCard />
             </motion.div>
           </div>
         </div>
 
-        {/* Bottom: activity table */}
         <motion.div variants={motionItem}>
           <Card>
             <CardHeader className="pb-2">
@@ -554,7 +513,6 @@ function MetricCard(props: {
 }) {
   const { title, value, helper, icon, onOpen } = props;
 
-  // No custom styling on Card itself, just layout and the arrow button
   return (
     <Card>
       <CardHeader className="pb-2">
