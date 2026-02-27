@@ -5,6 +5,8 @@ import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
+  ArrowUp,
+  ArrowDown,
   CalendarDays,
   Download,
   LineChart,
@@ -24,13 +26,18 @@ import {
   cashFlowData,
   advisorData,
 } from "@/lib/client-data";
+import { mockUser, getUserFullName } from "@/lib/user-data";
 import { mockProperties } from "@/lib/property-data";
+import {
+  createNetWorthSnapshot,
+  recordNetWorthSnapshot,
+  getLatestNetWorthChange,
+} from "@/lib/net-worth";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-// ✅ NEW: quiz card (replaces AI insights)
 import QuizCard from "@/components/dashboard/risk/quizCard";
 
 type Snapshot = {
@@ -38,6 +45,8 @@ type Snapshot = {
   portfolioValue: number;
   monthlyCashFlow: number;
   goalsActive: number;
+  goalsTotal: number;
+  goalsCompleted: number;
   insurancePolicies: number;
 };
 
@@ -115,17 +124,52 @@ export default function DashboardPage() {
     const income = cashFlowData.income.reduce((s, i) => s + i.amount, 0);
     const expenses = cashFlowData.expenses.reduce((s, e) => s + e.amount, 0);
 
+    const nw = createNetWorthSnapshot();
+
     return {
-      netWorth: client.computed?.totalNetWorth ?? 0,
+      netWorth: nw.netWorth ?? client.computed?.totalNetWorth ?? 0,
       portfolioValue: portfolio?.totalValue ?? 0,
       monthlyCashFlow: Math.round(income - expenses),
       goalsActive: goalsData.goals.filter((g) => !g.completed).length,
+      goalsTotal: goalsData.goals.length,
+      goalsCompleted: goalsData.goals.filter((g) => g.completed).length,
       insurancePolicies: mockProperties.reduce(
         (sum, p) => sum + (p.insurance?.length ?? 0),
         0,
       ),
     } as Snapshot;
   }, []);
+
+  const [netWorthPercent, setNetWorthPercent] = React.useState<number | null>(
+    null,
+  );
+
+  const [netWorthChangeText, setNetWorthChangeText] = React.useState<
+    string | null
+  >(null);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!auth.loggedIn) return;
+
+    try {
+      // record a snapshot (dedupe per day) and compute change vs previous
+      recordNetWorthSnapshot({ dedupeDays: 1 });
+      const change = getLatestNetWorthChange();
+      if (change && change.percent !== null && change.since) {
+        const upDown =
+          change.percent > 0 ? "up" : change.percent < 0 ? "down" : "no change";
+        const pct = Math.abs(change.percent).toFixed(1);
+        const sinceDate = new Date(change.since).toLocaleDateString();
+        setNetWorthChangeText(
+          `Your net worth is ${upDown} ${pct}% since ${sinceDate}`,
+        );
+        setNetWorthPercent(change.percent);
+      }
+    } catch {
+      // noop
+    }
+  }, [ready, auth.loggedIn]);
 
   const upcoming: UpcomingItem[] = useMemo(() => {
     const items: UpcomingItem[] = [];
@@ -260,9 +304,47 @@ export default function DashboardPage() {
               <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
                 {timeGreeting}
               </h1>
-              <p className="text-sm text-muted-foreground">
-                Here is your account snapshot and what is next.
-              </p>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Here is your account snapshot and what is next.
+                </p>
+                {/* Enhanced net worth snapshot */}
+                <div className="text-base font-medium flex items-center gap-2 mt-1">
+                  {netWorthPercent !== null ? (
+                    <>
+                      {netWorthPercent > 0 ? (
+                        <ArrowUp className="h-5 w-5 text-green-600" />
+                      ) : netWorthPercent < 0 ? (
+                        <ArrowDown className="h-5 w-5 text-red-600" />
+                      ) : (
+                        <span className="h-5 w-5" />
+                      )}
+                      <span
+                        className={
+                          netWorthPercent > 0
+                            ? "text-green-600"
+                            : netWorthPercent < 0
+                              ? "text-red-600"
+                              : "text-muted-foreground"
+                        }
+                      >
+                        {netWorthPercent > 0
+                          ? `Up by ${Math.abs(netWorthPercent).toFixed(1)}%`
+                          : netWorthPercent < 0
+                            ? `Down by ${Math.abs(netWorthPercent).toFixed(1)}%`
+                            : "No change"}
+                        <span className="text-xs text-muted-foreground ml-2">
+                          (this month)
+                        </span>
+                      </span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {getUserFullName(mockUser)}, {mockUser.occupation},{" "}
+                        {mockUser.marital_status}, {mockUser.risk_profile} risk
+                      </span>
+                    </>
+                  ) : null}
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -294,18 +376,33 @@ export default function DashboardPage() {
               <MetricCard
                 title="Net worth"
                 value={formatMoneyGhs(snapshot.netWorth)}
+                valueClassName="text-primary"
+                trend={
+                  netWorthPercent !== null
+                    ? {
+                        value: `${Math.abs(netWorthPercent).toFixed(1)}%`,
+                        dir:
+                          netWorthPercent > 0
+                            ? "up"
+                            : netWorthPercent < 0
+                              ? "down"
+                              : "flat",
+                      }
+                    : undefined
+                }
                 icon={<Wallet className="h-5 w-5" />}
                 helper="Assets minus liabilities"
-                onOpen={() => router.push("/net-worth")}
+                onOpen={() => router.push("/dashboard/cash-flow")}
               />
             </motion.div>
 
             <motion.div variants={motionItem}>
               <MetricCard
                 title="Goals active"
-                value={`${snapshot.goalsActive}`}
+                value={`${snapshot.goalsActive} / ${snapshot.goalsTotal}`}
+                valueClassName="text-primary"
+                helper={`Active ${snapshot.goalsActive} • Total ${snapshot.goalsTotal} • Completed ${snapshot.goalsCompleted}`}
                 icon={<Goal className="h-5 w-5" />}
-                helper="Goals currently tracking"
                 onOpen={() => router.push("/goals")}
               />
             </motion.div>
@@ -316,7 +413,7 @@ export default function DashboardPage() {
                 value={formatMoneyGhs(snapshot.portfolioValue)}
                 icon={<LineChart className="h-5 w-5" />}
                 helper="Investments and holdings"
-                onOpen={() => router.push("/portfolio")}
+                onOpen={() => router.push("/dashboard/portfolio")}
               />
             </motion.div>
 
@@ -326,7 +423,7 @@ export default function DashboardPage() {
                 value={`${snapshot.insurancePolicies}`}
                 icon={<Shield className="h-5 w-5" />}
                 helper="Coverage overview"
-                onOpen={() => router.push("/insurance")}
+                onOpen={() => router.push("/dashboard/insurance")}
               />
             </motion.div>
           </div>
@@ -353,7 +450,7 @@ export default function DashboardPage() {
                     Portfolio and cash flow trend for the selected period.
                   </div>
 
-                  <div className="h-[260px] rounded-md border flex items-center justify-center text-sm text-muted-foreground">
+                  <div className="h-65 rounded-md border flex items-center justify-center text-sm text-muted-foreground">
                     Chart placeholder
                   </div>
 
@@ -510,8 +607,10 @@ function MetricCard(props: {
   helper: string;
   icon: React.ReactNode;
   onOpen: () => void;
+  valueClassName?: string;
+  trend?: { value?: string; dir?: "up" | "down" | "flat" } | null;
 }) {
-  const { title, value, helper, icon, onOpen } = props;
+  const { title, value, helper, icon, onOpen, valueClassName, trend } = props;
 
   return (
     <Card>
@@ -532,7 +631,38 @@ function MetricCard(props: {
         </div>
       </CardHeader>
       <CardContent className="space-y-1">
-        <div className="text-2xl font-semibold tracking-tight">{value}</div>
+        <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              "text-2xl font-semibold tracking-tight",
+              valueClassName,
+            )}
+          >
+            {value}
+          </div>
+          {trend ? (
+            <div className="text-xs flex items-center gap-1">
+              {trend.dir === "up" ? (
+                <ArrowUp className="h-4 w-4 text-green-600" />
+              ) : trend.dir === "down" ? (
+                <ArrowDown className="h-4 w-4 text-red-600" />
+              ) : null}
+              <div
+                className={cn(
+                  "font-medium",
+                  trend.dir === "up"
+                    ? "text-green-600"
+                    : trend.dir === "down"
+                      ? "text-red-600"
+                      : "text-muted-foreground",
+                )}
+              >
+                {trend.value}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
         <div className="text-xs text-muted-foreground">{helper}</div>
       </CardContent>
     </Card>

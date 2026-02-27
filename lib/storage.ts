@@ -89,3 +89,44 @@ export function clearSubscription(): void {
   safeSetItem(SUB_STATUS_KEY, "none");
   safeRemoveItem(TRIAL_STARTED_AT_KEY);
 }
+
+// --- Net worth history storage helpers ----------------
+const NETWORTH_HISTORY_KEY = "networth_history_v1";
+
+export type NetWorthHistoryItem = {
+  ts: string; // ISO timestamp
+  netWorth: number;
+  breakdown?: unknown;
+  // Optional computed fields for quick lookup
+  percentChange?: number | null; // percent vs previous (positive => up)
+  trend?: "up" | "down" | "flat";
+  previousNetWorth?: number | null;
+};
+
+export function getNetWorthHistory(): NetWorthHistoryItem[] {
+  const raw = safeGetItem(NETWORTH_HISTORY_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed as NetWorthHistoryItem[];
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export function pushNetWorthSnapshot(
+  item: NetWorthHistoryItem,
+  maxEntries = 500,
+) {
+  const list = getNetWorthHistory();
+  list.push(item);
+  // keep newest last; cap size
+  const start = Math.max(0, list.length - maxEntries);
+  const trimmed = list.slice(start);
+  try {
+    safeSetItem(NETWORTH_HISTORY_KEY, JSON.stringify(trimmed));
+  } catch {
+    // noop
+  }
+}

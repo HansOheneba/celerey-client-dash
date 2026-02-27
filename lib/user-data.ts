@@ -2,8 +2,6 @@
 // USER PROFILE
 // ============================================================================
 
-export type UserType = "regular" | "enterprise";
-
 export type User = {
   user_id: string;
   first_name: string;
@@ -12,11 +10,16 @@ export type User = {
   phone_number?: string;
   resident_country: string;
   date_of_birth: string; // ISO date string (YYYY-MM-DD)
-  user_type: UserType;
+  user_type: "regular" | "enterprise";
   currency: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  occupation?: string;
+  marital_status?: "single" | "married" | "divorced" | "widowed";
+  risk_profile?: "conservative" | "moderate" | "aggressive";
+  dependents?: number;
+  bio?: string;
 };
 
 export const mockUser: User = {
@@ -31,6 +34,11 @@ export const mockUser: User = {
   is_active: true,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+  occupation: "Software Engineer",
+  marital_status: "married",
+  risk_profile: "moderate",
+  dependents: 2,
+  bio: "A tech enthusiast and family man focused on building wealth for the future.",
 };
 
 // ── helpers ──────────────────────────────────────────────────────────────────

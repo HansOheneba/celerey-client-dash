@@ -22,6 +22,7 @@ import {
   type InsurancePolicy,
 } from "@/lib/insurance-data";
 import { cashFlowData } from "@/lib/client-data";
+import { getNetWorthHistory, pushNetWorthSnapshot } from "@/lib/storage";
 
 // ── Types ───────────────────────────────────────────────────────
 export type NetWorthBreakdown = {
@@ -178,5 +179,109 @@ export function calculateNetWorth(
     insuranceToIncomeRatio,
     investmentByType,
     propertyBreakdown,
+  };
+}
+
+// --- Snapshot helpers ----------------------------------
+export type NetWorthSnapshot = {
+  ts: string; // ISO timestamp
+  netWorth: number;
+  breakdown: NetWorthBreakdown;
+};
+
+export function createNetWorthSnapshot(
+  holdings: AssetHolding[] = mockHoldings,
+  valuations: AssetValuation[] = mockValuations,
+  properties: Property[] = mockProperties.filter((p) => p.is_active),
+  insurancePolicies: InsurancePolicy[] = mockInsurancePolicies.filter(
+    (p) => p.is_active,
+  ),
+  income: { amount: number }[] = cashFlowData.income,
+  expenses: { amount: number }[] = cashFlowData.expenses,
+): NetWorthSnapshot {
+  const breakdown = calculateNetWorth(
+    holdings,
+    valuations,
+    properties,
+    insurancePolicies,
+    income,
+    expenses,
+  );
+
+  return {
+    ts: new Date().toISOString(),
+    netWorth: breakdown.netWorth,
+    breakdown,
+  };
+}
+
+export function computePercentChange(previous: number, current: number) {
+  if (!isFinite(previous) || previous === 0) return null;
+  const diff = current - previous;
+  return (diff / Math.abs(previous)) * 100;
+}
+
+/**
+ * Record a net worth snapshot to persistent history.
+ * If `dedupeDays` is provided, will not push a new snapshot if the
+ * most recent snapshot is newer than that many days.
+ */
+export function recordNetWorthSnapshot(opts?: {
+  dedupeDays?: number;
+  maxEntries?: number;
+}): NetWorthSnapshot {
+  const snap = createNetWorthSnapshot();
+  try {
+    const history = getNetWorthHistory();
+    if (opts?.dedupeDays && history.length > 0) {
+      const last = history[history.length - 1];
+      const lastTs = new Date(last.ts);
+      const now = new Date(snap.ts);
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const days = (now.getTime() - lastTs.getTime()) / msPerDay;
+      if (days < opts.dedupeDays) {
+        return snap; // skip pushing
+      }
+    }
+    // augment snapshot with quick lookup fields (percent change and trend)
+    const prev = history.length > 0 ? history[history.length - 1] : null;
+    const rawPct = prev ? computePercentChange(prev.netWorth, snap.netWorth) : null;
+    const pct = rawPct === null ? null : Math.round(rawPct * 10) / 10;
+    const trend: "up" | "down" | "flat" | undefined =
+      pct === null ? undefined : pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+
+    const item = {
+      ts: snap.ts,
+      netWorth: snap.netWorth,
+      breakdown: snap.breakdown,
+      percentChange: pct,
+      trend,
+      previousNetWorth: prev ? prev.netWorth : null,
+    };
+
+    pushNetWorthSnapshot(item, opts?.maxEntries ?? 500);
+  } catch {
+    // noop
+  }
+  return snap;
+}
+
+export function getLatestNetWorthChange(): {
+  percent: number | null;
+  since: string | null;
+  previous?: number;
+  current?: number;
+} {
+  const history = getNetWorthHistory();
+  if (history.length === 0) return { percent: null, since: null };
+  const latest = history[history.length - 1];
+  const prev = history.length > 1 ? history[history.length - 2] : null;
+  if (!prev) return { percent: null, since: null, current: latest.netWorth };
+  const pct = computePercentChange(prev.netWorth, latest.netWorth);
+  return {
+    percent: pct === null ? null : Math.round(pct * 10) / 10,
+    since: prev.ts,
+    previous: prev.netWorth,
+    current: latest.netWorth,
   };
 }

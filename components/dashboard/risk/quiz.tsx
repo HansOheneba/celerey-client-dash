@@ -223,7 +223,7 @@ export default function RiskAttitudeQuiz({
             <div className="flex gap-3">
               {Array.from({ length: totalSteps }).map((_, i) => (
                 <div key={i} className="h-2 flex-1 rounded-full bg-gray-200">
-                  <div className="h-2 w-full rounded-full bg-orange-400" />
+                  <div className="h-2 w-full rounded-full bg-primary" />
                 </div>
               ))}
             </div>
@@ -244,11 +244,11 @@ export default function RiskAttitudeQuiz({
           </div>
         </div>
 
-        {/* BIG SPACING LIKE SCREENSHOT */}
+
         <div className="pt-24 pb-24">
           <div className={cn("mx-auto px-6", pageMax)}>
             <div className="mx-auto text-center space-y-8 max-w-[860px]">
-              <p className="text-xs font-semibold text-orange-500 tracking-[0.25em]">
+              <p className="text-xs font-semibold text-primary tracking-[0.25em]">
                 YOUR RISK PROFILE
               </p>
 
@@ -278,14 +278,14 @@ export default function RiskAttitudeQuiz({
                 <Button
                   variant="outline"
                   onClick={handleRetake}
-                  className="rounded-full px-8 py-6 h-auto font-semibold"
+                  className="rounded-full  h-auto font-semibold"
                 >
                   Retake Quiz
                 </Button>
 
                 <Button
                   onClick={handleSave}
-                  className="rounded-full px-8 py-6 h-auto font-semibold bg-blue-600 hover:bg-blue-700"
+                  className="rounded-full h-auto font-semibold "
                 >
                   Save Result
                 </Button>
