@@ -26,8 +26,10 @@ import {
   cashFlowData,
   advisorData,
 } from "@/lib/client-data";
+import { mockHoldings, mockValuations, currentValue } from "@/lib/asset-data";
 import { mockUser, getUserFullName } from "@/lib/user-data";
 import { mockProperties } from "@/lib/property-data";
+import { mockInsurancePolicies } from "@/lib/insurance-data";
 import {
   createNetWorthSnapshot,
   recordNetWorthSnapshot,
@@ -119,24 +121,35 @@ export default function DashboardPage() {
 
   const snapshot: Snapshot = useMemo(() => {
     const client = getClientData();
-    const portfolio = client.portfolio;
 
     const income = cashFlowData.income.reduce((s, i) => s + i.amount, 0);
     const expenses = cashFlowData.expenses.reduce((s, e) => s + e.amount, 0);
 
     const nw = createNetWorthSnapshot();
 
+    // Compute portfolio value from holdings & valuations (matches Portfolio page)
+    const holdings = mockHoldings.filter((h) => h.is_active);
+    const portfolioValue = holdings.reduce(
+      (s, h) => s + currentValue(h, mockValuations),
+      0,
+    );
+
+    // Count insurance policies: active general policies + property insurances
+    const generalActivePolicies = mockInsurancePolicies.filter(
+      (p) => p.is_active,
+    ).length;
+    const propertyInsCount = mockProperties
+      .filter((p) => p.is_active)
+      .reduce((sum, p) => sum + (p.insurance?.length ?? 0), 0);
+
     return {
       netWorth: nw.netWorth ?? client.computed?.totalNetWorth ?? 0,
-      portfolioValue: portfolio?.totalValue ?? 0,
+      portfolioValue: portfolioValue ?? client.portfolio?.totalValue ?? 0,
       monthlyCashFlow: Math.round(income - expenses),
       goalsActive: goalsData.goals.filter((g) => !g.completed).length,
       goalsTotal: goalsData.goals.length,
       goalsCompleted: goalsData.goals.filter((g) => g.completed).length,
-      insurancePolicies: mockProperties.reduce(
-        (sum, p) => sum + (p.insurance?.length ?? 0),
-        0,
-      ),
+      insurancePolicies: generalActivePolicies + propertyInsCount,
     } as Snapshot;
   }, []);
 
@@ -403,7 +416,7 @@ export default function DashboardPage() {
                 valueClassName="text-primary"
                 helper={`Active ${snapshot.goalsActive} • Total ${snapshot.goalsTotal} • Completed ${snapshot.goalsCompleted}`}
                 icon={<Goal className="h-5 w-5" />}
-                onOpen={() => router.push("/goals")}
+                onOpen={() => router.push("dashboard/goals")}
               />
             </motion.div>
 
@@ -413,7 +426,7 @@ export default function DashboardPage() {
                 value={formatMoneyGhs(snapshot.portfolioValue)}
                 icon={<LineChart className="h-5 w-5" />}
                 helper="Investments and holdings"
-                onOpen={() => router.push("/dashboard/portfolio")}
+                onOpen={() => router.push("/dashboard/assets")}
               />
             </motion.div>
 
