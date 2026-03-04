@@ -45,6 +45,7 @@ import {
   faUmbrellaBeach,
   faBrain,
   faUserGroup,
+  faBellConcierge,
 } from "@fortawesome/free-solid-svg-icons";
 
 const nav = [
@@ -56,7 +57,7 @@ const nav = [
   { label: "Cash Flow", href: "/dashboard/cash-flow", icon: faMoneyBillWave },
   { label: "Retirement", href: "/dashboard/retirement", icon: faUmbrellaBeach },
   { label: "Celerey Insights", href: "/dashboard/ai", icon: faBrain },
-  { label: "Advisor", href: "/dashboard/advisor", icon: faUserGroup },
+  { label: "Concierge", href: "/dashboard/concierge", icon: faBellConcierge },
   // { label: "Documents", href: "/dashboard/documents", icon: faFileLines },
 ];
 

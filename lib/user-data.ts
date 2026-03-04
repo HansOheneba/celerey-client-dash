@@ -27,6 +27,7 @@ export const mockUser: User = {
   first_name: "John",
   last_name: "Doe",
   email: "john@celerey.co",
+  phone_number: "+1 (555) 012-9090",
   resident_country: "USA",
   date_of_birth: "1982-06-14",
   user_type: "regular",

@@ -35,7 +35,7 @@ function AccessPill({
 }) {
   if (variant === "full") {
     return (
-      <div className="flex items-center justify-center sm:justify-start">
+      <div className="flex items-center justify-center">
         <span className="text-sm font-semibold text-slate-900">
           Full access
         </span>
@@ -45,14 +45,14 @@ function AccessPill({
 
   if (variant === "limited") {
     return (
-      <div className="flex items-center justify-center sm:justify-start">
+      <div className="flex items-center justify-center">
         <span className="text-sm font-medium text-slate-600">Limited</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center sm:justify-start">
+    <div className="flex items-center justify-center">
       <span className="text-sm font-medium text-slate-400">Not included</span>
     </div>
   );
