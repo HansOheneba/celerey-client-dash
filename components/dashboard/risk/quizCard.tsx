@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles } from "lucide-react";
 
 import RiskAttitudeQuiz from "@/components/dashboard/risk/quiz";
 
@@ -60,6 +59,7 @@ export default function QuizCard() {
 
     return {
       title: "Your risk attitude",
+      desc: "Retake the quiz any time to update your profile.",
       button: "Retake test",
     };
   }, [result]);
@@ -83,10 +83,11 @@ export default function QuizCard() {
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="text-muted-foreground">
-              </div>
+            <div>
               <CardTitle className="text-base">{header.title}</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {header.desc}
+              </p>
             </div>
 
             <Button
@@ -101,23 +102,18 @@ export default function QuizCard() {
         </CardHeader>
 
         <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">{header.desc}</p>
-
           {result ? (
             <div className="rounded-md border p-3">
               <div className="text-xs text-muted-foreground">Current band</div>
-              <div className="text-sm font-semibold mt-1">{result.band}</div>
-              {/* <div className="text-xs text-muted-foreground mt-1">
-                Score: {result.score} / 24
-              </div> */}
+              <div className="mt-1 text-sm font-semibold">{result.band}</div>
             </div>
           ) : (
             <div className="rounded-md border p-3">
               <div className="text-xs text-muted-foreground">Status</div>
-              <div className="text-sm font-semibold mt-1">
+              <div className="mt-1 text-sm font-semibold">
                 Not completed yet
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="mt-1 text-xs text-muted-foreground">
                 Complete it to tailor suggestions.
               </div>
             </div>
@@ -131,7 +127,14 @@ export default function QuizCard() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className=" p-0 overflow-hidden">
+        <DialogContent
+          className={`
+            p-0 overflow-hidden
+            w-[calc(100vw-24px)] sm:w-[calc(100vw-48px)]
+            max-w-[90rem]
+            h-[92vh] sm:h-[88vh]
+          `}
+        >
           <DialogHeader className="px-6 pt-6 pb-2">
             <DialogTitle>Risk attitude</DialogTitle>
             <DialogDescription>
@@ -139,7 +142,8 @@ export default function QuizCard() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="max-h-[85vh] overflow-auto">
+          {/* IMPORTANT: let the dialog control the scroll area so width is actually used */}
+          <div className="h-[calc(92vh-92px)] sm:h-[calc(88vh-92px)] overflow-auto">
             <RiskAttitudeQuiz onSave={handleSave} />
           </div>
         </DialogContent>

@@ -8,6 +8,7 @@ type Answer = "A" | "B" | "C" | "D";
 type RiskBand =
   | "Very Conservative"
   | "Moderately Conservative"
+  | "Moderately Conservative"
   | "Moderate Growth"
   | "Aggressive / High Risk";
 
@@ -159,9 +160,7 @@ function getBand(score: number): { band: RiskBand; description: string } {
   return RISK_BANDS.aggressive;
 }
 
-export default function RiskAttitudeQuiz({
-  onSave,
-}: QuizProps) {
+export default function RiskAttitudeQuiz({ onSave }: QuizProps) {
   const totalSteps = QUESTIONS.length;
 
   const [step, setStep] = useState<number>(1);
@@ -209,10 +208,10 @@ export default function RiskAttitudeQuiz({
     onSave?.({ score, band: band.band, answers });
   }
 
-  // Shared layout widths to match screenshot
-  const pageMax = "max-w-[1400px]";
-  const contentMax = "max-w-[820px]"; // question width
-  const optionsMax = "max-w-[760px]"; // options column width
+
+  const pageMax = "max-w-[90rem]"; // 1440px
+  const contentMax = "max-w-[980px]"; // question area
+  const optionsMax = "max-w-[920px]"; // options buttons
 
   if (showResults) {
     return (
@@ -238,16 +237,13 @@ export default function RiskAttitudeQuiz({
                   PREVIOUS
                 </span>
               </button>
-
-           
             </div>
           </div>
         </div>
 
-
         <div className="pt-24 pb-24">
           <div className={cn("mx-auto px-6", pageMax)}>
-            <div className="mx-auto text-center space-y-8 max-w-[860px]">
+            <div className="mx-auto max-w-[980px] text-center space-y-8">
               <p className="text-xs font-semibold text-primary tracking-[0.25em]">
                 YOUR RISK PROFILE
               </p>
@@ -256,7 +252,7 @@ export default function RiskAttitudeQuiz({
                 {band.band}
               </h1>
 
-              <div className="pt-2">
+              {/* <div className="pt-2">
                 <div className="relative w-28 h-28 mx-auto">
                   <div className="absolute inset-0 rounded-full bg-orange-500/10" />
                   <div className="absolute inset-2 rounded-full bg-white border-2 border-orange-400 flex items-center justify-center">
@@ -268,9 +264,9 @@ export default function RiskAttitudeQuiz({
                     </div>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
-              <p className="text-slate-600 text-base md:text-lg leading-relaxed mx-auto max-w-[680px]">
+              <p className="text-slate-600 text-base md:text-lg leading-relaxed mx-auto max-w-[760px]">
                 {band.description}
               </p>
 
@@ -278,14 +274,14 @@ export default function RiskAttitudeQuiz({
                 <Button
                   variant="outline"
                   onClick={handleRetake}
-                  className="rounded-full  h-auto font-semibold"
+                  className="rounded-full h-auto font-semibold"
                 >
                   Retake Quiz
                 </Button>
 
                 <Button
                   onClick={handleSave}
-                  className="rounded-full h-auto font-semibold "
+                  className="rounded-full h-auto font-semibold"
                 >
                   Save Result
                 </Button>
@@ -299,7 +295,7 @@ export default function RiskAttitudeQuiz({
 
   // QUESTION SCREEN
   return (
-    <div className=" bg-white">
+    <div className="bg-white">
       {/* TOP STRIP */}
       <div className="pt-4">
         <div className={cn("mx-auto px-6", pageMax)}>
@@ -334,28 +330,27 @@ export default function RiskAttitudeQuiz({
                 PREVIOUS
               </span>
             </button>
-
           </div>
         </div>
       </div>
 
-      {/* MAIN BODY: large whitespace above question */}
-      <div className="pt-28">
+      {/* MAIN BODY */}
+      <div className="pt-24 md:pt-28 ">
         <div className={cn("mx-auto px-6", pageMax)}>
           <div className={cn("mx-auto", contentMax)}>
-            {/* QUESTION COUNTER sits above question */}
+            {/* QUESTION COUNTER */}
             <div className="text-center">
               <p className="text-xs font-semibold text-blue-900 tracking-[0.25em]">
                 QUESTION {step} / {totalSteps}
               </p>
             </div>
 
-            {/* Big headline with lots of top spacing */}
+            {/* Headline */}
             <h2 className="mt-6 text-center text-xl md:text-3xl font-extrabold text-slate-900 leading-tight">
               {currentQuestion?.question}
             </h2>
 
-            {/* Options block spacing like screenshot */}
+            {/* Options */}
             <div className={cn("mt-10 mx-auto space-y-4", optionsMax)}>
               {currentQuestion?.options.map((option) => {
                 const isActive = selectedAnswer === option.value;
@@ -364,7 +359,7 @@ export default function RiskAttitudeQuiz({
                     key={option.value}
                     onClick={() => handleSelect(option.value)}
                     className={cn(
-                      "w-full rounded-full px-6 py-4 text-left transition",
+                      "w-full rounded-full px-7 py-4 text-left transition",
                       "bg-gray-100 hover:bg-gray-200",
                       "flex items-center gap-4",
                       isActive && "bg-blue-50 ring-2 ring-blue-900",
@@ -392,15 +387,15 @@ export default function RiskAttitudeQuiz({
               })}
             </div>
 
-            {/* Button sits lower with large spacing */}
-            <div className="mt-24 flex justify-center pb-24">
+            {/* CTA */}
+            <div className="mt-20 md:mt-24 flex justify-center pb-24">
               <Button
                 onClick={handleNext}
                 disabled={!canGoNext}
                 className="rounded-full h-auto text-base font-semibold bg-blue-900 hover:bg-blue-800 disabled:opacity-50"
               >
                 Next Question
-                <ChevronRight className=" h-5 w-5" />
+                <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
           </div>

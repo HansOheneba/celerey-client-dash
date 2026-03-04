@@ -10,7 +10,6 @@ import {
   CalendarDays,
   Download,
   LineChart,
-  Sparkles,
   Wallet,
   Goal,
   Shield,
@@ -41,6 +40,9 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 import QuizCard from "@/components/dashboard/risk/quizCard";
+import { MetricCard } from "@/components/dashboard/overview/metric-card";
+import { LockedFeatureCard } from "@/components/dashboard/overview/locked-feature-card";
+import { MiniStat } from "@/components/dashboard/overview/mini-stat";
 
 type Snapshot = {
   netWorth: number;
@@ -74,10 +76,6 @@ function formatMoneyGhs(value: number): string {
     currency: "GHS",
     maximumFractionDigits: 0,
   }).format(safe);
-}
-
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
 }
 
 export default function DashboardPage() {
@@ -614,134 +612,3 @@ export default function DashboardPage() {
   );
 }
 
-function MetricCard(props: {
-  title: string;
-  value: string;
-  helper: string;
-  icon: React.ReactNode;
-  onOpen: () => void;
-  valueClassName?: string;
-  trend?: { value?: string; dir?: "up" | "down" | "flat" } | null;
-}) {
-  const { title, value, helper, icon, onOpen, valueClassName, trend } = props;
-
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="text-muted-foreground">{icon}</div>
-            <CardTitle className="text-base">{title}</CardTitle>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`Open ${title}`}
-            onClick={onOpen}
-          >
-            <ArrowUpRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-1">
-        <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              "text-2xl font-semibold tracking-tight",
-              valueClassName,
-            )}
-          >
-            {value}
-          </div>
-          {trend ? (
-            <div className="text-xs flex items-center gap-1">
-              {trend.dir === "up" ? (
-                <ArrowUp className="h-4 w-4 text-green-600" />
-              ) : trend.dir === "down" ? (
-                <ArrowDown className="h-4 w-4 text-red-600" />
-              ) : null}
-              <div
-                className={cn(
-                  "font-medium",
-                  trend.dir === "up"
-                    ? "text-green-600"
-                    : trend.dir === "down"
-                      ? "text-red-600"
-                      : "text-muted-foreground",
-                )}
-              >
-                {trend.value}
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="text-xs text-muted-foreground">{helper}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function LockedFeatureCard(props: {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  hasAccess: boolean;
-  onOpen: () => void;
-  onUpgrade: () => void;
-}) {
-  const { title, description, icon, hasAccess, onOpen, onUpgrade } = props;
-
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="text-muted-foreground">{icon}</div>
-            <CardTitle className="text-base">{title}</CardTitle>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`Open ${title}`}
-            onClick={() => {
-              if (hasAccess) onOpen();
-              else onUpgrade();
-            }}
-          >
-            <ArrowUpRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">{description}</p>
-
-        {hasAccess ? (
-          <Button className="w-full justify-between" onClick={onOpen}>
-            Open <ArrowUpRight className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button
-            className="w-full justify-between"
-            onClick={onUpgrade}
-            style={{ background: "#0B102A", boxShadow: "none" }}
-          >
-            Upgrade to Premium <ArrowUpRight className="h-4 w-4" />
-          </Button>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function MiniStat(props: { label: string; value: string }) {
-  const { label, value } = props;
-  return (
-    <div className="rounded-md border p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-sm font-semibold mt-1">{value}</div>
-    </div>
-  );
-}
