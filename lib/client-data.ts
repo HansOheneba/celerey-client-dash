@@ -493,3 +493,75 @@ export const aiInsights = [
     cta: { label: "Schedule Review" },
   },
 ] as AIInsight[];
+
+// ============================================================================
+// DOMAIN MODEL RE-EXPORTS
+// The new modular domain types/data/selectors live in:
+//   lib/types/financial.ts
+//   lib/data/financial.ts
+//   lib/selectors/financial.ts
+// Re-exported here so consuming code can import from a single location.
+// ============================================================================
+export type {
+  Account,
+  AccountType,
+  Liability,
+  LiabilityType,
+  PropertyAsset,
+  PerformancePoint,
+  AllocationSlice,
+  TaxProfile,
+  FilingStatus,
+  EmergencyFundConfig,
+  InsurancePolicy as FinancialInsurancePolicy,
+  InsurancePolicyType,
+  CashFlowRow,
+  ExpenseCategory,
+  SectionFreshness,
+  FinancialDomainData,
+  RetirementConfig,
+  GoalMetrics,
+  RetirementOutputs,
+  PerformanceMetrics,
+  CashFlowMetrics,
+  NetWorthBreakdownMetrics,
+  EmergencyFundMetrics,
+  LiquidityMetrics,
+  InsuranceReviewStatus,
+  DashboardMetrics,
+} from "@/lib/types/financial";
+
+export {
+  getFinancialDomainData,
+  financialDomainData,
+  mockAccounts,
+  mockLiabilities,
+  mockPropertyAssets,
+  mockPortfolioPerformance,
+  mockAllocation,
+  mockTaxProfile,
+  mockEmergencyFund,
+  mockInsurancePoliciesFinancial,
+  mockIncomeRows,
+  mockExpenseCategories,
+  mockFreshness,
+  mockRetirementConfig,
+} from "@/lib/data/financial";
+
+export {
+  selectNetWorthBreakdown,
+  selectCashFlowMetrics,
+  selectEmergencyFundMetrics,
+  selectGoalMetrics,
+  selectGoalMetricsForScenario,
+  selectRetirementOutputs,
+  selectPerformanceMetrics,
+  selectLiquidityMetrics,
+  selectInsuranceReviewStatus,
+  selectTotalNetWorth,
+  selectMonthlyIncome,
+  selectMonthlyExpenses,
+  selectSavingsRate,
+  selectDashboardMetrics,
+  getDashboardData,
+} from "@/lib/selectors/financial";

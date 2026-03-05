@@ -4,19 +4,19 @@ import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-type Answer = "A" | "B" | "C" | "D";
+type OptionScore = 1 | 2 | 3 | 4 | 5;
 type RiskBand =
-  | "Very Conservative"
-  | "Moderately Conservative"
-  | "Moderately Conservative"
-  | "Moderate Growth"
-  | "Aggressive / High Risk";
+  | "Capital Preservation"
+  | "Conservative"
+  | "Balanced"
+  | "Growth"
+  | "Aggressive";
 
 interface QuizProps {
   onSave?: (result: {
     score: number;
     band: RiskBand;
-    answers: Record<number, Answer>;
+    answers: Record<number, OptionScore>;
   }) => void;
   brandText?: string;
 }
@@ -24,123 +24,161 @@ interface QuizProps {
 const QUESTIONS: Array<{
   id: number;
   question: string;
-  options: Array<{ value: Answer; label: string }>;
+  options: Array<{ score: OptionScore; label: string }>;
 }> = [
   {
     id: 1,
-    question:
-      "How would you react if your investment dropped 15% in one month?",
+    question: "What is your primary investment objective?",
     options: [
-      {
-        value: "A",
-        label: "I would sell immediately to prevent further losses",
-      },
-      { value: "B", label: "I would feel uncomfortable but wait and see" },
-      { value: "C", label: "I would hold and stay calm" },
-      { value: "D", label: "I would invest more while prices are lower" },
+      { score: 1, label: "Preserving my capital and avoiding losses" },
+      { score: 2, label: "Generating stable income" },
+      { score: 3, label: "Balanced growth and income" },
+      { score: 4, label: "Long term capital growth" },
+      { score: 5, label: "Maximizing long term growth" },
     ],
   },
   {
     id: 2,
-    question: "Which statement best describes you?",
+    question:
+      "If your investment portfolio declined by 20% in a year, what would you most likely do?",
     options: [
-      { value: "A", label: "I prefer stable returns, even if they are lower" },
-      {
-        value: "B",
-        label: "I want some growth, but not at the cost of big losses",
-      },
-      {
-        value: "C",
-        label:
-          "I am comfortable with ups and downs for higher long-term growth",
-      },
-      {
-        value: "D",
-        label:
-          "I am willing to take significant risks for high potential returns",
-      },
+      { score: 1, label: "Sell all investments immediately" },
+      { score: 2, label: "Sell part of the portfolio to reduce risk" },
+      { score: 3, label: "Hold the investments and wait for recovery" },
+      { score: 5, label: "Invest additional money at lower prices" },
     ],
   },
   {
     id: 3,
     question:
-      "If you were investing money you won't need for 5–10 years, what would you choose?",
+      "How long do you plan to keep the majority of your investments before needing the funds?",
     options: [
-      { value: "A", label: "Guaranteed but low interest return" },
-      {
-        value: "B",
-        label: "Mostly safe investments with a small portion in growth assets",
-      },
-      { value: "C", label: "Balanced mix of safe and growth investments" },
-      { value: "D", label: "Mostly growth investments, even if volatile" },
+      { score: 1, label: "Less than 1 year" },
+      { score: 2, label: "1 to 3 years" },
+      { score: 3, label: "3 to 5 years" },
+      { score: 4, label: "5 to 10 years" },
+      { score: 5, label: "More than 10 years" },
     ],
   },
   {
     id: 4,
-    question:
-      "How important is avoiding losses compared to achieving high returns?",
+    question: "How experienced are you with investing?",
     options: [
-      { value: "A", label: "Avoiding losses is my top priority" },
-      { value: "B", label: "I dislike losses but accept small risks" },
-      { value: "C", label: "I understand losses are part of investing" },
-      {
-        value: "D",
-        label: "I focus more on potential gains than temporary losses",
-      },
+      { score: 1, label: "No investment experience" },
+      { score: 2, label: "Limited experience" },
+      { score: 3, label: "Moderate experience" },
+      { score: 4, label: "Experienced investor" },
+      { score: 5, label: "Very experienced or professional investor" },
     ],
   },
   {
     id: 5,
-    question: "When making financial decisions, you usually:",
+    question: "How comfortable are you with investment volatility?",
     options: [
-      { value: "A", label: "Choose the safest option available" },
-      { value: "B", label: "Research carefully and take moderate risks" },
-      {
-        value: "C",
-        label: "Accept uncertainty if the potential reward is worth it",
-      },
-      {
-        value: "D",
-        label: "Prefer bold decisions that could lead to big outcomes",
-      },
+      { score: 1, label: "I prefer very stable investments" },
+      { score: 2, label: "I can tolerate small fluctuations" },
+      { score: 3, label: "I accept moderate fluctuations" },
+      { score: 4, label: "I am comfortable with significant fluctuations" },
+      { score: 5, label: "I accept high volatility for higher returns" },
     ],
   },
   {
     id: 6,
     question:
-      "If your friend doubled their money in a risky investment, you would:",
+      "How much of your total savings are you planning to invest this year?",
     options: [
-      { value: "A", label: "Be glad for them but avoid it yourself" },
-      { value: "B", label: "Consider it, but only with a small amount" },
-      { value: "C", label: "Research and possibly invest" },
-      { value: "D", label: "Jump in quickly to try and achieve similar gains" },
+      { score: 1, label: "More than 90%" },
+      { score: 2, label: "70 to 90%" },
+      { score: 3, label: "50 to 70%" },
+      { score: 4, label: "30 to 50%" },
+      { score: 5, label: "Less than 30%" },
+    ],
+  },
+  {
+    id: 7,
+    question:
+      "If markets fell by 30% during a financial crisis, what would you most likely do?",
+    options: [
+      { score: 1, label: "Sell everything to avoid further losses" },
+      { score: 2, label: "Reduce my investments" },
+      { score: 3, label: "Wait for markets to recover" },
+      { score: 5, label: "Invest more during the downturn" },
+    ],
+  },
+  {
+    id: 8,
+    question: "How stable is your primary source of income?",
+    options: [
+      { score: 1, label: "Highly unpredictable income" },
+      { score: 2, label: "Freelance or commission based income" },
+      { score: 3, label: "Business income" },
+      { score: 4, label: "Stable corporate salary" },
+      { score: 5, label: "Government or long term secure employment" },
+    ],
+  },
+  {
+    id: 9,
+    question:
+      "Do you currently hold investments across multiple asset classes?",
+    options: [
+      { score: 1, label: "No investments" },
+      { score: 2, label: "Mostly one type of investment" },
+      { score: 3, label: "Some diversification" },
+      { score: 4, label: "Well diversified portfolio" },
+      { score: 5, label: "Highly diversified portfolio" },
+    ],
+  },
+  {
+    id: 10,
+    question:
+      "When will you likely need access to a significant portion of this investment?",
+    options: [
+      { score: 1, label: "Within the next year" },
+      { score: 2, label: "Within 1 to 3 years" },
+      { score: 3, label: "Within 3 to 5 years" },
+      { score: 4, label: "Within 5 to 10 years" },
+      { score: 5, label: "More than 10 years" },
     ],
   },
 ];
 
 const RISK_BANDS: Record<
-  "conservative" | "moderate_conservative" | "moderate_growth" | "aggressive",
-  { band: RiskBand; description: string }
+  | "capital_preservation"
+  | "conservative"
+  | "balanced"
+  | "growth"
+  | "aggressive",
+  { band: RiskBand; description: string; strategy: string }
 > = {
+  capital_preservation: {
+    band: "Capital Preservation",
+    description:
+      "You prioritize protecting your capital above all else, preferring stable and predictable returns over growth.",
+    strategy: "Focus on stability with capital preservation instruments.",
+  },
   conservative: {
-    band: "Very Conservative",
+    band: "Conservative",
     description:
-      "You prioritize capital preservation and stable, predictable returns.",
+      "You prefer lower-risk investments and can tolerate only small fluctuations in pursuit of modest returns.",
+    strategy: "Low volatility portfolio with income-generating assets.",
   },
-  moderate_conservative: {
-    band: "Moderately Conservative",
+  balanced: {
+    band: "Balanced",
     description:
-      "You prefer safety but accept small fluctuations for modest growth.",
+      "You are comfortable with a balanced approach, accepting moderate volatility in exchange for a mix of growth and income.",
+    strategy: "Balanced mix of growth and income investments.",
   },
-  moderate_growth: {
-    band: "Moderate Growth",
+  growth: {
+    band: "Growth",
     description:
-      "You are comfortable with a balanced approach and understand volatility.",
+      "You are focused on long-term capital growth and comfortable with significant market fluctuations along the way.",
+    strategy: "Growth oriented diversified portfolio.",
   },
   aggressive: {
-    band: "Aggressive / High Risk",
+    band: "Aggressive",
     description:
-      "You accept significant fluctuations for higher long-term return potential.",
+      "You accept high volatility and significant short-term losses in pursuit of maximum long-term capital growth.",
+    strategy: "High growth strategy with exposure to higher-risk assets.",
   },
 };
 
@@ -148,15 +186,24 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-function scoreForAnswer(a: Answer): number {
-  const map: Record<Answer, number> = { A: 1, B: 2, C: 3, D: 4 };
-  return map[a];
+/**
+ * Final Risk Score = sum of all question scores ÷ 10
+ * Produces a value between 1.0 and 5.0.
+ */
+function calculateRiskScore(answers: Record<number, OptionScore>): number {
+  const total = Object.values(answers).reduce((sum, s) => sum + s, 0);
+  return Math.round((total / 10) * 10) / 10;
 }
 
-function getBand(score: number): { band: RiskBand; description: string } {
-  if (score <= 10) return RISK_BANDS.conservative;
-  if (score <= 15) return RISK_BANDS.moderate_conservative;
-  if (score <= 19) return RISK_BANDS.moderate_growth;
+function getBand(riskScore: number): {
+  band: RiskBand;
+  description: string;
+  strategy: string;
+} {
+  if (riskScore <= 1.8) return RISK_BANDS.capital_preservation;
+  if (riskScore <= 2.6) return RISK_BANDS.conservative;
+  if (riskScore <= 3.4) return RISK_BANDS.balanced;
+  if (riskScore <= 4.2) return RISK_BANDS.growth;
   return RISK_BANDS.aggressive;
 }
 
@@ -164,24 +211,19 @@ export default function RiskAttitudeQuiz({ onSave }: QuizProps) {
   const totalSteps = QUESTIONS.length;
 
   const [step, setStep] = useState<number>(1);
-  const [answers, setAnswers] = useState<Record<number, Answer>>({});
+  const [answers, setAnswers] = useState<Record<number, OptionScore>>({});
   const [showResults, setShowResults] = useState<boolean>(false);
 
   const currentQuestion = QUESTIONS[step - 1];
-  const selectedAnswer = answers[step];
-  const canGoNext = selectedAnswer !== undefined;
+  const selectedScore = answers[step];
+  const canGoNext = selectedScore !== undefined;
 
-  const score = useMemo(() => {
-    return Object.values(answers).reduce(
-      (sum, a) => sum + scoreForAnswer(a),
-      0,
-    );
-  }, [answers]);
+  const riskScore = useMemo(() => calculateRiskScore(answers), [answers]);
 
-  const band = useMemo(() => getBand(score), [score]);
+  const band = useMemo(() => getBand(riskScore), [riskScore]);
 
-  function handleSelect(answer: Answer): void {
-    setAnswers((prev) => ({ ...prev, [step]: answer }));
+  function handleSelect(score: OptionScore): void {
+    setAnswers((prev) => ({ ...prev, [step]: score }));
   }
 
   function handlePrevious(): void {
@@ -205,9 +247,8 @@ export default function RiskAttitudeQuiz({ onSave }: QuizProps) {
   }
 
   function handleSave(): void {
-    onSave?.({ score, band: band.band, answers });
+    onSave?.({ score: riskScore, band: band.band, answers });
   }
-
 
   const pageMax = "max-w-[90rem]"; // 1440px
   const contentMax = "max-w-[980px]"; // question area
@@ -252,23 +293,29 @@ export default function RiskAttitudeQuiz({ onSave }: QuizProps) {
                 {band.band}
               </h1>
 
-              {/* <div className="pt-2">
-                <div className="relative w-28 h-28 mx-auto">
-                  <div className="absolute inset-0 rounded-full bg-orange-500/10" />
-                  <div className="absolute inset-2 rounded-full bg-white border-2 border-orange-400 flex items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-orange-600">
-                        {score}
-                      </p>
-                      <p className="text-xs text-gray-500">out of 24</p>
-                    </div>
-                  </div>
+              {/* Risk score badge */}
+              <div className="pt-2">
+                <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-6 py-3">
+                  <span className="text-2xl font-bold text-blue-900">
+                    {riskScore.toFixed(1)}
+                  </span>
+                  <span className="text-sm text-slate-500">/ 5</span>
                 </div>
-              </div> */}
+              </div>
 
               <p className="text-slate-600 text-base md:text-lg leading-relaxed mx-auto max-w-[760px]">
                 {band.description}
               </p>
+
+              {/* Suggested strategy */}
+              <div className="mx-auto max-w-[560px] rounded-2xl bg-slate-50 border border-slate-200 px-6 py-4 text-left">
+                <p className="text-xs font-semibold text-slate-400 tracking-widest mb-1">
+                  SUGGESTED STRATEGY
+                </p>
+                <p className="text-sm text-slate-700 font-medium">
+                  {band.strategy}
+                </p>
+              </div>
 
               <div className="pt-6 flex flex-col sm:flex-row gap-4 justify-center">
                 <Button
@@ -353,11 +400,11 @@ export default function RiskAttitudeQuiz({ onSave }: QuizProps) {
             {/* Options */}
             <div className={cn("mt-10 mx-auto space-y-4", optionsMax)}>
               {currentQuestion?.options.map((option) => {
-                const isActive = selectedAnswer === option.value;
+                const isActive = selectedScore === option.score;
                 return (
                   <button
-                    key={option.value}
-                    onClick={() => handleSelect(option.value)}
+                    key={option.score}
+                    onClick={() => handleSelect(option.score)}
                     className={cn(
                       "w-full rounded-full px-7 py-4 text-left transition",
                       "bg-gray-100 hover:bg-gray-200",

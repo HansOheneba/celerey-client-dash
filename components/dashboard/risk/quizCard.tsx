@@ -15,17 +15,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import RiskAttitudeQuiz from "@/components/dashboard/risk/quiz";
 
-type Answer = "A" | "B" | "C" | "D";
+type OptionScore = 1 | 2 | 3 | 4 | 5;
 type RiskBand =
-  | "Very Conservative"
-  | "Moderately Conservative"
-  | "Moderate Growth"
-  | "Aggressive / High Risk";
+  | "Capital Preservation"
+  | "Conservative"
+  | "Balanced"
+  | "Growth"
+  | "Aggressive";
 
 type RiskResult = {
   score: number;
   band: RiskBand;
-  answers: Record<number, Answer>;
+  answers: Record<number, OptionScore>;
 };
 
 const STORAGE_KEY = "risk_attitude_result_v1";
@@ -52,7 +53,7 @@ export default function QuizCard() {
     if (!result) {
       return {
         title: "Risk attitude quiz",
-        desc: "Take 6 quick questions to understand your investment comfort level.",
+        desc: "Take 10 quick questions to understand your investment comfort level.",
         button: "Take quiz",
       };
     }
@@ -103,9 +104,28 @@ export default function QuizCard() {
 
         <CardContent className="space-y-3">
           {result ? (
-            <div className="rounded-md border p-3">
-              <div className="text-xs text-muted-foreground">Current band</div>
-              <div className="mt-1 text-sm font-semibold">{result.band}</div>
+            <div className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    Risk profile
+                  </div>
+                  <div className="mt-1 text-sm font-semibold">
+                    {result.band}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-muted-foreground">
+                    Risk score
+                  </div>
+                  <div className="mt-1 text-sm font-semibold">
+                    {result.score.toFixed(1)}{" "}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      / 5
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="rounded-md border p-3">
@@ -131,7 +151,7 @@ export default function QuizCard() {
           className={`
             p-0 overflow-hidden
             w-[calc(100vw-24px)] sm:w-[calc(100vw-48px)]
-            max-w-[90rem]
+            max-w-36
             h-[92vh] sm:h-[88vh]
           `}
         >
@@ -142,7 +162,6 @@ export default function QuizCard() {
             </DialogDescription>
           </DialogHeader>
 
-          {/* IMPORTANT: let the dialog control the scroll area so width is actually used */}
           <div className="h-[calc(92vh-92px)] sm:h-[calc(88vh-92px)] overflow-auto">
             <RiskAttitudeQuiz onSave={handleSave} />
           </div>

@@ -120,7 +120,7 @@ export default function ConciergePage() {
               Available services
             </p>
             <p className="mt-1 text-xs leading-5 text-neutral-600">
-              Choosing one is opening a short request form.
+              Choose one to open a short request form.
             </p>
           </div>
 

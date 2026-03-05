@@ -284,7 +284,7 @@ async function handleSubmit(e: React.FormEvent) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[620px] rounded-[22px]">
+      <DialogContent className="sm:max-w-155 rounded-[22px]">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-neutral-900">
             {service ? "Request concierge support" : "Request a service"}
