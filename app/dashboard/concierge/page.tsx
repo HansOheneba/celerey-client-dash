@@ -201,7 +201,7 @@ export default function ConciergePage() {
             {[
               {
                 n: "1",
-                t: "Choosing a service",
+                t: "Choose a service",
                 d: "Pick an option this will open a short request form.",
               },
               {
@@ -212,7 +212,7 @@ export default function ConciergePage() {
               {
                 n: "3",
                 t: "Confirm scope",
-                d: "We are confirm fit and next steps before work starts.",
+                d: "We confirm fit and next steps before work starts.",
               },
             ].map((x) => (
               <div key={x.n} className="flex gap-3">
