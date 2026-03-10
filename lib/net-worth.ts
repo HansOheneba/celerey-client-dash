@@ -24,12 +24,25 @@ import {
 import { cashFlowData } from "@/lib/client-data";
 import { getNetWorthHistory, pushNetWorthSnapshot } from "@/lib/storage";
 
+// ── Other assets ────────────────────────────────────────────────
+/** Miscellaneous assets that aren't investments, cash, or property. */
+export type OtherAsset = {
+  id: string;
+  name: string;
+  value: number;
+};
+
+/** Default empty array — users populate this via the UI. */
+export const mockOtherAssets: OtherAsset[] = [];
+
 // ── Types ───────────────────────────────────────────────────────
 export type NetWorthBreakdown = {
   // Assets
   investmentAssets: number; // stocks, ETFs, bonds, etc.
   cashAssets: number; // cash & equivalents
   propertyValues: number; // total property market values
+  otherAssets: OtherAsset[]; // user-entered miscellaneous assets
+  totalOtherAssets: number; // sum of otherAssets[].value
   totalAssets: number;
 
   // Liabilities
@@ -79,6 +92,7 @@ export function calculateNetWorth(
   ),
   income: { amount: number }[] = cashFlowData.income,
   expenses: { amount: number }[] = cashFlowData.expenses,
+  otherAssets: OtherAsset[] = mockOtherAssets,
 ): NetWorthBreakdown {
   // ── Investment assets ─────────────────────────────────────
   const activeHoldings = holdings.filter((h) => h.is_active);
@@ -122,8 +136,12 @@ export function calculateNetWorth(
     insuranceCost: totalInsurancePremium(p),
   }));
 
+  // ── Other assets ─────────────────────────────────────────
+  const totalOtherAssets = otherAssets.reduce((s, a) => s + a.value, 0);
+
   // ── Totals ────────────────────────────────────────────────
-  const totalAssets = investmentAssets + cashAssets + propertyValues;
+  const totalAssets =
+    investmentAssets + cashAssets + propertyValues + totalOtherAssets;
   const totalLiabilities = mortgageBalances;
   const netWorth = totalAssets - totalLiabilities;
 
@@ -162,6 +180,8 @@ export function calculateNetWorth(
     investmentAssets,
     cashAssets,
     propertyValues,
+    otherAssets,
+    totalOtherAssets,
     totalAssets,
     mortgageBalances,
     totalLiabilities,
@@ -245,7 +265,9 @@ export function recordNetWorthSnapshot(opts?: {
     }
     // augment snapshot with quick lookup fields (percent change and trend)
     const prev = history.length > 0 ? history[history.length - 1] : null;
-    const rawPct = prev ? computePercentChange(prev.netWorth, snap.netWorth) : null;
+    const rawPct = prev
+      ? computePercentChange(prev.netWorth, snap.netWorth)
+      : null;
     const pct = rawPct === null ? null : Math.round(rawPct * 10) / 10;
     const trend: "up" | "down" | "flat" | undefined =
       pct === null ? undefined : pct > 0 ? "up" : pct < 0 ? "down" : "flat";

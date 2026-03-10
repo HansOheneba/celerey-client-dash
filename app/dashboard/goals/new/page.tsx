@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cashFlowData, savingsData } from "@/lib/client-data";
+import { formatCurrency, userCurrency } from "@/lib/utils";
 
 type GoalForm = {
   title: string;
@@ -49,11 +50,7 @@ function pct(current: number, target: number): number {
   return clamp(0, (current / target) * 100, 100);
 }
 
-function currency(n: number): string {
-  return new Intl.NumberFormat("en-GH", {
-    maximumFractionDigits: 0,
-  }).format(n);
-}
+
 
 export default function NewGoalPage() {
   const router = useRouter();
@@ -171,7 +168,7 @@ export default function NewGoalPage() {
       return {
         tone: "good",
         label: "On track",
-        message: `At your current savings rate (GHS ${currency(monthlySavings)}/mo), you can reach this comfortably within ${timelineValueNum} ${form.timelineUnit}.`,
+        message: `At your current savings rate (${formatCurrency(monthlySavings)}/mo), you can reach this comfortably within ${timelineValueNum} ${form.timelineUnit}.`,
       };
     }
     if (savingsRatio <= 0.6) {
@@ -192,7 +189,7 @@ export default function NewGoalPage() {
         tone: "stretch",
         label: "Ambitious",
         message: suggestedTimeline
-          ? `Based on your cash flow, you'd need GHS ${currency(requiredPerMonth)}/mo, that's ${Math.round(savingsRatio * 100)}% of your surplus. A more comfortable timeline would be around ${suggestedTimeline}.`
+          ? `Based on your cash flow, you'd need ${formatCurrency(requiredPerMonth)}/mo, that's ${Math.round(savingsRatio * 100)}% of your surplus. A more comfortable timeline would be around ${suggestedTimeline}.`
           : `This would require most of your monthly surplus. Consider a longer timeline or a smaller target.`,
       };
     }
@@ -206,7 +203,7 @@ export default function NewGoalPage() {
     return {
       tone: "stretch",
       label: "Needs a bigger runway",
-      message: `At GHS ${currency(monthlySavings)}/mo savings, reaching GHS ${currency(targetNum)} would take ~${suggestedTimeline}. To stay within ${timelineValueNum} ${form.timelineUnit}, we'd recommend a target closer to GHS ${currency(comfortTarget)}.`,
+      message: `At ${formatCurrency(monthlySavings)}/mo savings, reaching ${formatCurrency(targetNum)} would take ~${suggestedTimeline}. To stay within ${timelineValueNum} ${form.timelineUnit}, we'd recommend a target closer to ${formatCurrency(comfortTarget)}.`,
     };
   }, [
     targetNum,
@@ -368,7 +365,7 @@ export default function NewGoalPage() {
                   <Label htmlFor="current">Current amount</Label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                      GHS
+                      {userCurrency}
                     </div>
                     <Input
                       id="current"
@@ -392,7 +389,7 @@ export default function NewGoalPage() {
                   <Label htmlFor="target">Target amount</Label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                      GHS
+                      {userCurrency}
                     </div>
                     <Input
                       id="target"
@@ -421,8 +418,8 @@ export default function NewGoalPage() {
                     <p className="text-xs text-muted-foreground">
                       {targetNum > 0 ? (
                         <>
-                          GHS {currency(currentNum)} of GHS{" "}
-                          {currency(targetNum)}
+                          {formatCurrency(currentNum)} of{" "}
+                          {formatCurrency(targetNum)}
                         </>
                       ) : (
                         <>Add a target to see progress.</>
@@ -453,19 +450,19 @@ export default function NewGoalPage() {
                     <span>
                       Remaining:{" "}
                       <span className="font-medium text-foreground">
-                        GHS {currency(remaining)}
+                        {formatCurrency(remaining)}
                       </span>
                     </span>
                     <span>
                       Current:{" "}
                       <span className="font-medium text-foreground">
-                        GHS {currency(currentNum)}
+                        {formatCurrency(currentNum)}
                       </span>
                     </span>
                     <span>
                       Target:{" "}
                       <span className="font-medium text-foreground">
-                        GHS {currency(targetNum)}
+                        {formatCurrency(targetNum)}
                       </span>
                     </span>
                   </div>
@@ -575,7 +572,7 @@ export default function NewGoalPage() {
                       Remaining
                     </span>
                     <span className="text-sm font-semibold">
-                      {targetNum > 0 ? `GHS ${currency(remaining)}` : "-"}
+                      {targetNum > 0 ? formatCurrency(remaining) : "-"}
                     </span>
                   </div>
 
@@ -598,7 +595,7 @@ export default function NewGoalPage() {
                     </span>
                     <span className="text-sm font-semibold">
                       {requiredPerMonth > 0
-                        ? `GHS ${currency(requiredPerMonth)}`
+                        ? formatCurrency(requiredPerMonth)
                         : "-"}
                     </span>
                   </div>
@@ -608,7 +605,7 @@ export default function NewGoalPage() {
                       Your surplus
                     </span>
                     <span className="text-sm font-semibold">
-                      GHS {currency(monthlySurplus)}/mo
+                      {formatCurrency(monthlySurplus)}/mo
                     </span>
                   </div>
                 </div>

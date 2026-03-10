@@ -29,16 +29,9 @@ import {
 } from "@/components/dashboard/cash-flow/delete-confirm-dialog";
 import { cashFlowData } from "@/lib/client-data";
 import { calculateNetWorth } from "@/lib/net-worth";
+import { formatCurrency } from "@/lib/utils";
 
 type RowMode = "create" | "edit";
-
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
 
 function sum(values: number[]): number {
   return values.reduce((a, b) => a + b, 0);
@@ -211,7 +204,7 @@ export default function CashFlowPage() {
         </div>
 
         {/* Top stats */}
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-5">
+        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           <MiniStat
             label="Net Worth"
             value={formatCurrency(netWorth.netWorth)}
@@ -224,6 +217,11 @@ export default function CashFlowPage() {
           <MiniStat
             label="Monthly Expenses"
             value={formatCurrency(totalExpenses)}
+          />
+          <MiniStat
+            label="Disposable Income"
+            value={formatCurrency(savings)}
+            accent={savings >= 0 ? "good" : "danger"}
           />
           <MiniStat
             label="Savings Rate"

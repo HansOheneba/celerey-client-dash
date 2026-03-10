@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatCurrency, userCurrency } from "@/lib/utils";
 
 type GoalForm = {
   title: string;
@@ -94,7 +95,7 @@ function pct(current: number, target: number): number {
 }
 
 function currency(n: number): string {
-  return new Intl.NumberFormat("en-GH", { maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(n);
 }
 
 function todayISO(): string {
@@ -516,7 +517,7 @@ export default function EditGoalPage() {
                   <Label htmlFor="current">Current amount</Label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                      GHS
+                      {userCurrency}
                     </div>
                     <Input
                       id="current"
@@ -540,7 +541,7 @@ export default function EditGoalPage() {
                   <Label htmlFor="target">Target amount</Label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                      GHS
+                      {userCurrency}
                     </div>
                     <Input
                       id="target"
@@ -569,8 +570,8 @@ export default function EditGoalPage() {
                     <p className="text-xs text-muted-foreground">
                       {targetNum > 0 ? (
                         <>
-                          GHS {currency(currentNum)} of GHS{" "}
-                          {currency(targetNum)}
+                          {formatCurrency(currentNum)} of{" "}
+                          {formatCurrency(targetNum)}
                         </>
                       ) : (
                         <>Add a target to see progress.</>
@@ -601,14 +602,14 @@ export default function EditGoalPage() {
                   <span>
                     Remaining:{" "}
                     <span className="font-medium text-foreground">
-                      GHS {currency(remaining)}
+                      {formatCurrency(remaining)}
                     </span>
                   </span>
                   <span>
                     Needed / month:{" "}
                     <span className="font-medium text-foreground">
                       {requiredPerMonth > 0
-                        ? `GHS ${currency(requiredPerMonth)}`
+                        ? formatCurrency(requiredPerMonth)
                         : "-"}
                     </span>
                   </span>
@@ -617,7 +618,7 @@ export default function EditGoalPage() {
                       Since last edit:{" "}
                       <span className="font-medium text-foreground">
                         {deltaSinceLoad > 0 ? "+" : ""}
-                        GHS {currency(Math.abs(deltaSinceLoad))}
+                        {formatCurrency(Math.abs(deltaSinceLoad))}
                       </span>
                     </span>
                   ) : null}
@@ -748,7 +749,7 @@ export default function EditGoalPage() {
                           Required
                         </span>
                         <span className="font-semibold">
-                          GHS {currency(requiredPerMonth)}
+                          {formatCurrency(requiredPerMonth)}
                         </span>
                       </Button>
                       <Button
@@ -775,7 +776,7 @@ export default function EditGoalPage() {
                           Extra (1.5x)
                         </span>
                         <span className="font-semibold">
-                          GHS {currency(Math.round(requiredPerMonth * 1.5))}
+                          {formatCurrency(Math.round(requiredPerMonth * 1.5))}
                         </span>
                       </Button>
                     </div>
@@ -818,7 +819,7 @@ export default function EditGoalPage() {
                     <CollapsibleContent>
                       <div className="space-y-3 pt-2">
                         <div className="space-y-2">
-                          <Label htmlFor="contrib-amount">Amount (GHS)</Label>
+                          <Label htmlFor="contrib-amount">Amount ({userCurrency})</Label>
                           <Input
                             id="contrib-amount"
                             inputMode="numeric"
@@ -998,7 +999,7 @@ export default function EditGoalPage() {
 
                           <div className="mt-1 truncate text-sm font-medium">
                             {item.type === "contribution"
-                              ? `+ GHS ${currency(item.amount)}`
+                              ? `+ ${formatCurrency(item.amount)}`
                               : item.title}
                           </div>
 

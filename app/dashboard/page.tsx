@@ -34,6 +34,7 @@ import {
   recordNetWorthSnapshot,
   getLatestNetWorthChange,
 } from "@/lib/net-worth";
+import { formatCurrency } from "@/lib/utils";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,14 +70,7 @@ type ActivityRow = {
   status: "Pending" | "Completed";
 };
 
-function formatMoneyGhs(value: number): string {
-  const safe = Number.isFinite(value) ? value : 0;
-  return new Intl.NumberFormat("en-GH", {
-    style: "currency",
-    currency: "GHS",
-    maximumFractionDigits: 0,
-  }).format(safe);
-}
+
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -386,7 +380,7 @@ export default function DashboardPage() {
             <motion.div variants={motionItem}>
               <MetricCard
                 title="Net worth"
-                value={formatMoneyGhs(snapshot.netWorth)}
+                value={formatCurrency(snapshot.netWorth)}
                 valueClassName="text-primary"
                 trend={
                   netWorthPercent !== null
@@ -421,7 +415,7 @@ export default function DashboardPage() {
             <motion.div variants={motionItem}>
               <MetricCard
                 title="Portfolio value"
-                value={formatMoneyGhs(snapshot.portfolioValue)}
+                value={formatCurrency(snapshot.portfolioValue)}
                 icon={<LineChart className="h-5 w-5" />}
                 helper="Investments and holdings"
                 onOpen={() => router.push("/dashboard/assets")}
@@ -470,7 +464,7 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-1 gap-3">
                     <MiniStat
                       label="Monthly cash flow"
-                      value={formatMoneyGhs(snapshot.monthlyCashFlow)}
+                      value={formatCurrency(snapshot.monthlyCashFlow)}
                     />
                   </div>
                 </CardContent>

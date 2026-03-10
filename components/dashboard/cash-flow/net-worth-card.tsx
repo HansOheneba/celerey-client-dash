@@ -8,6 +8,7 @@ import {
   Home,
   Wallet,
   Shield,
+  Package,
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
@@ -15,17 +16,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { type NetWorthBreakdown } from "@/lib/net-worth";
 import { assetTypeLabel } from "@/lib/asset-data";
+import { formatCurrency } from "@/lib/utils";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
-}
-
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
 }
 
 // ── Bar component for visual breakdown ──────────────────────────
@@ -128,6 +122,11 @@ export function NetWorthCard({ breakdown }: { breakdown: NetWorthBreakdown }) {
       value: breakdown.propertyValues,
       color: "bg-violet-500",
     },
+    {
+      label: "Other",
+      value: breakdown.totalOtherAssets,
+      color: "bg-amber-500",
+    },
   ];
 
   return (
@@ -194,7 +193,31 @@ export function NetWorthCard({ breakdown }: { breakdown: NetWorthBreakdown }) {
               value={formatCurrency(breakdown.propertyValues)}
               icon={Home}
             />
+            <StatRow
+              label="Other Assets"
+              value={formatCurrency(breakdown.totalOtherAssets)}
+              icon={Package}
+            />
           </div>
+
+          {/* Other assets sub-breakdown */}
+          {breakdown.otherAssets.length > 0 && (
+            <div className="mt-2 ml-5 space-y-0.5 border-l border-muted/40 pl-3">
+              {breakdown.otherAssets.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between py-0.5"
+                >
+                  <span className="text-xs text-muted-foreground">
+                    {a.name}
+                  </span>
+                  <span className="text-xs font-medium tabular-nums">
+                    {formatCurrency(a.value)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Investment sub-breakdown */}
           {breakdown.investmentByType.length > 0 && (

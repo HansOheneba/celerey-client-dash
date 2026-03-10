@@ -440,7 +440,7 @@ async function handleSubmit(e: React.FormEvent) {
                 </Button>
               </div>
 
-              <p className="text-xs text-neutral-500">{postSubmitTip}</p>
+              {/* <p className="text-xs text-neutral-500">{postSubmitTip}</p> */}
             </>
           ) : (
             <>
@@ -493,7 +493,7 @@ async function handleSubmit(e: React.FormEvent) {
                 </Button>
               </div>
 
-              <p className="text-xs text-neutral-500">{postSubmitTip}</p>
+              {/* <p className="text-xs text-neutral-500">{postSubmitTip}</p> */}
             </>
           )}
 

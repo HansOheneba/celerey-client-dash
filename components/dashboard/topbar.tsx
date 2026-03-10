@@ -21,7 +21,7 @@ export default function AdminTopbar() {
   }, []);
 
   return (
-    <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-background/80 backdrop-blur px-6 py-3">
+    <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-sidebar backdrop-blur px-6 py-3">
       <div className="flex gap-2">
         <SidebarTrigger />
         <Breadcrumbs />
