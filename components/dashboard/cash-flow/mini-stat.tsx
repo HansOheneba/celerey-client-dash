@@ -10,7 +10,7 @@ export function MiniStat({
   label: string;
   value: string;
   hint?: string;
-  accent?: "good";
+  accent?: "good" | "danger";
 }) {
   return (
     <Card className="border-muted/60 bg-background/60 shadow-sm">
@@ -19,7 +19,11 @@ export function MiniStat({
         <div
           className={cn(
             "mt-1 text-2xl font-semibold tracking-tight",
-            accent === "good" ? "text-emerald-600 dark:text-emerald-500" : "",
+            accent === "good"
+              ? "text-emerald-600 dark:text-emerald-500"
+              : accent === "danger"
+                ? "text-red-600 dark:text-red-500"
+                : "",
           )}
         >
           {value}
