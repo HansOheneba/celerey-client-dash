@@ -70,8 +70,6 @@ type ActivityRow = {
   status: "Pending" | "Completed";
 };
 
-
-
 export default function DashboardPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();

@@ -219,6 +219,17 @@ export function ControlsCard({
                   explainer="When you plan to stop working full-time."
                 />
 
+                <NumberInput
+                  label="Life expectancy"
+                  value={actual.lifeExpectancy}
+                  min={50}
+                  max={110}
+                  onChange={(v) =>
+                    setActual((p) => ({ ...p, lifeExpectancy: v }))
+                  }
+                  explainer="Your estimated lifespan. Your nest egg must sustain income for (life expectancy − retirement age) years. Average is ~75–80."
+                />
+
                 <MoneyInput
                   label="Current invested"
                   value={actual.currentInvested}

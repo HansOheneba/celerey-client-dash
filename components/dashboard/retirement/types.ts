@@ -1,6 +1,9 @@
 export type ProjectionInputs = {
   currentAge: number;
   retirementAge: number;
+  /** How many years the user expects to live. Drives the PV-of-annuity
+   *  calculation: nest egg must sustain income for (lifeExpectancy − retirementAge) years. */
+  lifeExpectancy: number;
   currentInvested: number;
   monthlySavings: number;
   expectedReturnPct: number;

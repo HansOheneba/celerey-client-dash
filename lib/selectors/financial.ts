@@ -72,6 +72,46 @@ function requiredMonthlyContribution(
   return gap / ((growth - 1) / r);
 }
 
+// ── Shared Liquid-Net-Worth Computation ─────────────────────────────────
+
+/**
+ * Single source of truth for liquid assets, short-term debt, and
+ * liquid net worth.  Called by both selectNetWorthBreakdown and
+ * selectLiquidityMetrics so the two modules can never diverge.
+ *
+ * Liquid assets = cash + taxable brokerage accounts.
+ * Short-term debt = everything except mortgages.
+ * Liquid net worth = liquidAssets − shortTermDebt.
+ */
+function computeLiquidComponents(data: FinancialDomainData): {
+  liquidAssets: number;
+  shortTermDebt: number;
+  liquidNetWorth: number;
+} {
+  const liquidAssets = sum(
+    data.accounts
+      .filter((a) => a.type === "cash" || a.type === "taxable")
+      .map((a) => a.balance),
+  );
+  const shortTermTypes: Liability["type"][] = [
+    "credit_card",
+    "personal_loan",
+    "auto_loan",
+    "student_loan",
+    "other",
+  ];
+  const shortTermDebt = sum(
+    data.liabilities
+      .filter((l) => shortTermTypes.includes(l.type))
+      .map((l) => l.balance),
+  );
+  return {
+    liquidAssets,
+    shortTermDebt,
+    liquidNetWorth: liquidAssets - shortTermDebt,
+  };
+}
+
 // ── Net Worth Breakdown ──────────────────────────────────────────────────
 
 export function selectNetWorthBreakdown(
@@ -104,28 +144,12 @@ export function selectNetWorthBreakdown(
   const totalMortgages = sum(
     data.liabilities.filter((l) => l.type === "mortgage").map((l) => l.balance),
   );
-  const shortTermTypes: Liability["type"][] = [
-    "credit_card",
-    "personal_loan",
-    "auto_loan",
-    "student_loan",
-    "other",
-  ];
-  const totalShortTermDebt = sum(
-    data.liabilities
-      .filter((l) => shortTermTypes.includes(l.type))
-      .map((l) => l.balance),
-  );
+  // Short-term debt and liquid net worth both come from the shared helper,
+  // ensuring they can never diverge from the Liquidity module.
+  const { shortTermDebt: totalShortTermDebt, liquidNetWorth } =
+    computeLiquidComponents(data);
   const totalLiabilities = totalMortgages + totalShortTermDebt;
   const totalNetWorth = totalAssets - totalLiabilities;
-
-  // Liquid: cash + taxable accounts minus short-term liabilities
-  const liquidAssets = sum(
-    data.accounts
-      .filter((a) => a.type === "cash" || a.type === "taxable")
-      .map((a) => a.balance),
-  );
-  const liquidNetWorth = liquidAssets - totalShortTermDebt;
 
   return {
     totalInvestments,
@@ -301,16 +325,34 @@ export function selectRetirementOutputs(
   config: RetirementConfig,
 ): RetirementOutputs {
   const yearsToRetirement = config.retirementAge - config.currentAge;
+
+  // --- PVA helpers --------------------------------------------------------
+  // How many years the nest egg must sustain income
+  const retirementYears = Math.max(
+    1,
+    config.lifeExpectancy - config.retirementAge,
+  );
+  // Real return rate (strips inflation so income target & discount rate align)
+  const realRate =
+    (1 + config.expectedReturnPct / 100) / (1 + config.inflationPct / 100) - 1;
+  // PV-of-annuity factor: present value of $1/year for retirementYears years
+  const pvFactor =
+    Math.abs(realRate) < 1e-9
+      ? retirementYears
+      : (1 - Math.pow(1 + realRate, -retirementYears)) / realRate;
+  // Effective annual withdrawal rate derived from life expectancy
+  const effectiveSWR =
+    pvFactor > 0 ? 1 / pvFactor : config.safeWithdrawalRatePct / 100;
+  // ------------------------------------------------------------------------
+
   if (yearsToRetirement <= 0) {
+    const sustainableAnnualIncome = config.currentInvested * effectiveSWR;
     return {
       yearsToRetirement: 0,
       projectedBalanceAtRetirement: config.currentInvested,
-      sustainableAnnualIncome:
-        config.currentInvested * (config.safeWithdrawalRatePct / 100),
-      sustainableMonthlyIncome:
-        (config.currentInvested * (config.safeWithdrawalRatePct / 100)) / 12,
-      inflationAdjustedSustainableMonthlyIncome:
-        (config.currentInvested * (config.safeWithdrawalRatePct / 100)) / 12,
+      sustainableAnnualIncome,
+      sustainableMonthlyIncome: sustainableAnnualIncome / 12,
+      inflationAdjustedSustainableMonthlyIncome: sustainableAnnualIncome / 12,
       incomeGap: 0,
       onTrack: true,
     };
@@ -330,8 +372,9 @@ export function selectRetirementOutputs(
   );
   const projectedBalanceAtRetirement = investmentFV + pensionFV;
 
-  const sustainableAnnualIncome =
-    projectedBalanceAtRetirement * (config.safeWithdrawalRatePct / 100);
+  // Sustainable income uses the PVA-derived effective SWR so that life expectancy
+  // directly governs how much can safely be drawn down each year.
+  const sustainableAnnualIncome = projectedBalanceAtRetirement * effectiveSWR;
   const sustainableMonthlyIncome = sustainableAnnualIncome / 12;
 
   // Discount future income to today's purchasing power
@@ -410,24 +453,12 @@ export function selectPerformanceMetrics(
 export function selectLiquidityMetrics(
   data: FinancialDomainData,
 ): LiquidityMetrics {
-  const liquidAssets = sum(
-    data.accounts
-      .filter((a) => a.type === "cash" || a.type === "taxable")
-      .map((a) => a.balance),
-  );
-  const shortTermLiabTypes: Liability["type"][] = [
-    "credit_card",
-    "personal_loan",
-    "auto_loan",
-    "student_loan",
-    "other",
-  ];
-  const shortTermLiabilities = sum(
-    data.liabilities
-      .filter((l) => shortTermLiabTypes.includes(l.type))
-      .map((l) => l.balance),
-  );
-  const liquidNetWorth = liquidAssets - shortTermLiabilities;
+  // Re-use shared helper — liquidNetWorth is now a single computed constant.
+  const {
+    liquidAssets,
+    shortTermDebt: shortTermLiabilities,
+    liquidNetWorth,
+  } = computeLiquidComponents(data);
   const essentialExpenses = selectEssentialExpenses(data.expenseCategories);
   const liquidityRatio =
     essentialExpenses > 0 ? liquidAssets / essentialExpenses : 0;

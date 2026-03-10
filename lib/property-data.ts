@@ -2,6 +2,17 @@
 // PROPERTY DATA
 // ============================================================================
 
+/**
+ * An individual lien secured against a property, e.g. a first mortgage,
+ * HELOC, second mortgage, or construction loan.
+ */
+export type Lien = {
+  id: string;
+  name: string;
+  /** Outstanding balance of this lien. */
+  balance: number;
+};
+
 export type PropertyType =
   | "house"
   | "apartment"
@@ -76,7 +87,10 @@ export type Property = {
   city: string;
   purchase_date: string;
   market_value: number;
+  /** Primary mortgage balance.  Use totalPropertyLienBalance(p) for equity/LVR. */
   mortgage_balance: number;
+  /** Additional liens secured against this property (e.g. HELOC, second mortgage). */
+  additional_liens?: Lien[];
   is_primary: boolean;
   is_active: boolean;
   insurance: PropertyInsurance[];
@@ -85,13 +99,26 @@ export type Property = {
 };
 
 // ── Helpers ─────────────────────────────────────────────────────
+
+/**
+ * Sum of ALL liens secured against a property (first mortgage +
+ * any additional liens such as a HELOC or second mortgage).
+ * Use this value — not p.mortgage_balance alone — when computing
+ * equity or loan-to-value ratio.
+ */
+export function totalPropertyLienBalance(p: Property): number {
+  const additionalLiens =
+    p.additional_liens?.reduce((s, l) => s + l.balance, 0) ?? 0;
+  return p.mortgage_balance + additionalLiens;
+}
+
 export function propertyEquity(p: Property): number {
-  return p.market_value - p.mortgage_balance;
+  return p.market_value - totalPropertyLienBalance(p);
 }
 
 export function propertyLvr(p: Property): number {
   return p.market_value > 0
-    ? Math.round((p.mortgage_balance / p.market_value) * 100)
+    ? Math.round((totalPropertyLienBalance(p) / p.market_value) * 100)
     : 0;
 }
 

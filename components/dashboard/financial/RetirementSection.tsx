@@ -94,7 +94,7 @@ export function RetirementSection({
     {
       label: "Sustainable Monthly Income",
       value: fmtUSD(outputs.sustainableMonthlyIncome),
-      sub: `SWR ${config.safeWithdrawalRatePct}%`,
+      sub: `${config.lifeExpectancy - config.retirementAge} yr retirement span`,
     },
     {
       label: "Inflation-Adjusted Income",

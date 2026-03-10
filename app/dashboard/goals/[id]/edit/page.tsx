@@ -95,7 +95,9 @@ function pct(current: number, target: number): number {
 }
 
 function currency(n: number): string {
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(
+    n,
+  );
 }
 
 function todayISO(): string {
@@ -819,7 +821,9 @@ export default function EditGoalPage() {
                     <CollapsibleContent>
                       <div className="space-y-3 pt-2">
                         <div className="space-y-2">
-                          <Label htmlFor="contrib-amount">Amount ({userCurrency})</Label>
+                          <Label htmlFor="contrib-amount">
+                            Amount ({userCurrency})
+                          </Label>
                           <Input
                             id="contrib-amount"
                             inputMode="numeric"

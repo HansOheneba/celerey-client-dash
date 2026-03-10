@@ -14,6 +14,7 @@ import {
   propertyEquity,
   propertyLvr,
   totalInsurancePremium,
+  totalPropertyLienBalance,
 } from "@/lib/property-data";
 
 function formatCurrency(n: number): string {
@@ -40,7 +41,8 @@ export function PropertiesTab() {
     [properties],
   );
   const outstandingLoans = React.useMemo(
-    () => sum(properties.map((p) => p.mortgage_balance)),
+    // Sum ALL liens per property, not just the primary mortgage balance
+    () => sum(properties.map((p) => totalPropertyLienBalance(p))),
     [properties],
   );
   const avgLvr = React.useMemo(() => {

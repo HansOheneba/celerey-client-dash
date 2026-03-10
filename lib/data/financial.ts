@@ -315,8 +315,8 @@ export const mockFreshness: SectionFreshness[] = [
 // ── Retirement Config ─────────────────────────────────────────────────────
 export const mockRetirementConfig: RetirementConfig = {
   currentAge: 43,
-  retirementAge: 55,
-  lifeExpectancy: 95,
+  retirementAge: 60,
+  lifeExpectancy: 75,
   currentInvested: 1250000,
   monthlySavings: 14300,
   existingPensionBalance: 185000,

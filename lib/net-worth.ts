@@ -14,6 +14,7 @@ import {
   mockProperties,
   propertyEquity,
   totalInsurancePremium,
+  totalPropertyLienBalance,
   type Property,
 } from "@/lib/property-data";
 import {
@@ -123,15 +124,16 @@ export function calculateNetWorth(
 
   // ── Properties ────────────────────────────────────────────
   const propertyValues = properties.reduce((s, p) => s + p.market_value, 0);
+  // Sum ALL liens per property (mortgage + any HELOC / second mortgage)
   const mortgageBalances = properties.reduce(
-    (s, p) => s + p.mortgage_balance,
+    (s, p) => s + totalPropertyLienBalance(p),
     0,
   );
 
   const propertyBreakdown = properties.map((p) => ({
     name: p.name,
     marketValue: p.market_value,
-    mortgage: p.mortgage_balance,
+    mortgage: totalPropertyLienBalance(p),
     equity: propertyEquity(p),
     insuranceCost: totalInsurancePremium(p),
   }));

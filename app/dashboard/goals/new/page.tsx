@@ -50,8 +50,6 @@ function pct(current: number, target: number): number {
   return clamp(0, (current / target) * 100, 100);
 }
 
-
-
 export default function NewGoalPage() {
   const router = useRouter();
 

@@ -35,22 +35,49 @@ export function compoundFutureValue({
   return pv * factor + pmt * ((factor - 1) / r);
 }
 
+/**
+ * Present-value-of-annuity factor.
+ * Tells you what a stream of 1 unit/year for `years` years is worth today
+ * at the given real discount rate.  Used to size the required nest egg.
+ */
+function pvAnnuityFactor(realRate: number, years: number): number {
+  if (years <= 0) return 0;
+  if (Math.abs(realRate) < 1e-9) return years;
+  return (1 - Math.pow(1 + realRate, -years)) / realRate;
+}
+
 export function requiredNestEgg({
   desiredMonthlyIncomeToday,
   inflationRate,
   years,
-  swr,
+  lifeExpectancy,
+  retirementAge,
+  expectedReturnRate,
 }: {
   desiredMonthlyIncomeToday: number;
-  inflationRate: number;
-  years: number;
-  swr: number;
+  inflationRate: number; // decimal e.g. 0.03
+  years: number; // years until retirement
+  lifeExpectancy: number;
+  retirementAge: number;
+  /** Nominal annual return as a DECIMAL, e.g. 0.07 for 7%. */
+  expectedReturnRate: number;
 }): number {
+  // Step 1 — how many years the nest egg must sustain withdrawals
+  const retirementYears = Math.max(1, lifeExpectancy - retirementAge);
+
+  // Step 2 — inflate desired monthly income to retirement-date dollars
   const desiredMonthlyAtRetirement =
     desiredMonthlyIncomeToday * Math.pow(1 + inflationRate, years);
+  // Step 3 — annualise (×12 BEFORE discounting, order matters)
   const annualIncomeAtRetirement = desiredMonthlyAtRetirement * 12;
-  if (swr <= 0) return Infinity;
-  return annualIncomeAtRetirement / swr;
+
+  // Step 4 — PV of annuity using REAL return rate
+  // Real rate strips inflation so the income target and discount rate are
+  // expressed in the same purchasing-power terms.
+  const realRate = (1 + expectedReturnRate) / (1 + inflationRate) - 1;
+
+  // Required nest egg = inflation-adjusted annual income × PVA factor
+  return annualIncomeAtRetirement * pvAnnuityFactor(realRate, retirementYears);
 }
 
 export function parseMoney(input: string): number {
@@ -68,9 +95,10 @@ export function calculateAdjustmentsToReachTarget({
   projectedNestEgg,
   currentAge,
   retirementAge,
+  lifeExpectancy,
   desiredMonthlyIncome,
   inflationPct,
-  safeWithdrawalRatePct,
+  safeWithdrawalRatePct: _swr, // kept for API compat; PVA formula is used instead
 }: {
   currentInvested: number;
   monthlySavings: number;
@@ -80,6 +108,7 @@ export function calculateAdjustmentsToReachTarget({
   projectedNestEgg: number;
   currentAge: number;
   retirementAge: number;
+  lifeExpectancy: number;
   desiredMonthlyIncome: number;
   inflationPct: number;
   safeWithdrawalRatePct: number;
@@ -140,10 +169,12 @@ export function calculateAdjustmentsToReachTarget({
     retirementAgeDelay = Math.ceil(((high + low) / 2) * 12) / 12; // Round to 0.5 years
   }
 
-  // 3. Monthly income reduction needed
-  // Reduce desired income to match what current trajectory can support
-  const currentMonthlyAtRetirement =
-    (projectedNestEgg * safeWithdrawalRatePct) / 100 / 12;
+  // 3. Monthly income reduction needed using PVA-derived sustainable draw-down
+  const retirementYears = Math.max(1, lifeExpectancy - retirementAge);
+  const realRate = (1 + expectedReturnPct / 100) / (1 + inflationPct / 100) - 1;
+  const pvaFactor = pvAnnuityFactor(realRate, retirementYears);
+  const effectiveSWR = pvaFactor > 0 ? 1 / pvaFactor : 0;
+  const currentMonthlyAtRetirement = (projectedNestEgg * effectiveSWR) / 12;
   const futureInflationFactor = Math.pow(
     1 + inflationPct / 100,
     yearsToRetirement,

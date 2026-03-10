@@ -51,8 +51,8 @@ export const personalData = {
   get currentAge() {
     return getUserAge(mockUser);
   },
-  retirementAge: 55,
-  lifeExpectancy: 95,
+  retirementAge: 60,
+  lifeExpectancy: 75,
 };
 
 // ============================================================================
@@ -173,6 +173,7 @@ export function getRetirementProjectionInputs() {
   return {
     currentAge: personalData.currentAge,
     retirementAge: personalData.retirementAge,
+    lifeExpectancy: personalData.lifeExpectancy,
     currentInvested: portfolioData.totalValue,
     monthlySavings: savingsData.monthlySavings,
     expectedReturnPct: investmentAssumptions.expectedReturnPct,

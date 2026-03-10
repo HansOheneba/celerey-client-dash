@@ -81,13 +81,17 @@ export default function RetirementProjectionsPage() {
       desiredMonthlyIncomeToday: active.desiredMonthlyIncome,
       inflationRate: active.inflationPct / 100,
       years: yearsToRetirement,
-      swr: active.safeWithdrawalRatePct / 100,
+      lifeExpectancy: active.lifeExpectancy,
+      retirementAge: active.retirementAge,
+      expectedReturnRate: active.expectedReturnPct / 100,
     });
   }, [
     active.desiredMonthlyIncome,
     active.inflationPct,
     yearsToRetirement,
-    active.safeWithdrawalRatePct,
+    active.lifeExpectancy,
+    active.retirementAge,
+    active.expectedReturnPct,
   ]);
 
   const projectedSurplus = React.useMemo(() => {
@@ -128,6 +132,7 @@ export default function RetirementProjectionsPage() {
       projectedNestEgg,
       currentAge: active.currentAge,
       retirementAge: active.retirementAge,
+      lifeExpectancy: active.lifeExpectancy,
       desiredMonthlyIncome: active.desiredMonthlyIncome,
       inflationPct: active.inflationPct,
       safeWithdrawalRatePct: active.safeWithdrawalRatePct,
@@ -143,6 +148,7 @@ export default function RetirementProjectionsPage() {
     projectedNestEgg,
     active.currentAge,
     active.retirementAge,
+    active.lifeExpectancy,
     active.desiredMonthlyIncome,
     active.inflationPct,
     active.safeWithdrawalRatePct,

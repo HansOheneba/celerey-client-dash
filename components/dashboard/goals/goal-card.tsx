@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   TrendingUp,
   Target,
+  Info,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import {
   DropdownMenu,
@@ -120,12 +127,38 @@ export function GoalCard({
 
         <div className="flex shrink-0 items-center gap-2">
           {!goal.completed ? (
-            <Badge
-              variant={probabilityTone(adjustedProb)}
-              className="font-medium"
-            >
-              {adjustedProb}% probability
-            </Badge>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center gap-1 cursor-default">
+                    <Badge
+                      variant={probabilityTone(adjustedProb)}
+                      className="font-medium"
+                    >
+                      {adjustedProb}% probability
+                    </Badge>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                  <p className="font-semibold mb-1">
+                    How this score is calculated
+                  </p>
+                  <p>
+                    Uses a <strong>simple linear model</strong>: your monthly
+                    surplus is shared proportionally across all active goals.
+                    The score reflects how fully your surplus covers this goal’s
+                    required contribution; not a standalone statistical
+                    likelihood.
+                  </p>
+                  {/* <p className="mt-1 text-muted-foreground">
+                    A user with five goals will score lower on each than a user
+                    with one goal, even with identical finances, because the
+                    surplus is split further.
+                  </p> */}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : (
             <Badge
               variant="outline"

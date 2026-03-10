@@ -1,10 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Target } from "lucide-react";
+import { CheckCircle2, Info, Target } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { GoalMetrics, SectionFreshness } from "@/lib/types/financial";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
@@ -40,12 +46,38 @@ function GoalRow({ goal }: { goal: GoalMetrics }) {
             Done
           </Badge>
         ) : (
-          <Badge
-            variant={goal.onTrack ? "default" : "secondary"}
-            className={`text-xs ${goal.onTrack ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-700 border-0"}`}
-          >
-            {goal.onTrack ? "On track" : "Review"}
-          </Badge>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center gap-1 cursor-default">
+                  <Badge
+                    variant={goal.onTrack ? "default" : "secondary"}
+                    className={`text-xs ${
+                      goal.onTrack
+                        ? "bg-emerald-600 text-white"
+                        : "bg-amber-100 text-amber-700 border-0"
+                    }`}
+                  >
+                    {goal.onTrack ? "On track" : "Review"}
+                  </Badge>
+                  <Info className="h-3 w-3 text-muted-foreground shrink-0" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                <p className="font-semibold mb-1">Compound-growth model</p>
+                <p>
+                  “On track” means your monthly surplus covers the contribution
+                  required by a <strong>compound future-value</strong> formula
+                  (accounts for investment returns over time).
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  The probability score on the Goals page uses a simpler linear
+                  model, so the two figures may differ — especially on
+                  long-horizon goals.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
 
