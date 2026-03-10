@@ -164,11 +164,7 @@ export function ControlsCard({
         <CardTitle className="text-base">
           {simulationMode ? "Simulation Controls" : "Your Figures"}
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {simulationMode
-            ? "Drag the sliders to explore 'what-if' scenarios. Nothing is saved until you choose to."
-            : "These are your baseline numbers; your current savings, pension, and goals. They power every projection on this page."}
-        </p>
+        
       </CardHeader>
 
       <CardContent className="space-y-6">
