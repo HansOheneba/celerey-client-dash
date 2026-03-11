@@ -2,7 +2,7 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat(undefined, {
@@ -38,7 +38,7 @@ export function AllocationDonut({
   const total = sum(data.map((d) => d.value));
 
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
@@ -93,6 +93,6 @@ export function AllocationDonut({
           ))}
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

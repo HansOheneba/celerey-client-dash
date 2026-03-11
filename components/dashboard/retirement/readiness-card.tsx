@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Info } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { cn } from "@/lib/utils";
 import {
   StatusTone,
@@ -55,7 +55,7 @@ export function ReadinessCard({
   adjustments,
 }: ReadinessCardProps) {
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -214,6 +214,6 @@ export function ReadinessCard({
           </p>
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

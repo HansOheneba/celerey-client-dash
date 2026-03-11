@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Celerey Admin",
-    template: "%s • Celerey Admin",
+    default: "Celerey Financial Dashboard",
+    template: "%s • Celerey Financial Dashboard",
   },
   description:
-    "Celerey Admin is the internal control center for managing advisory clients, publishing insights, stories, and podcasts, and overseeing platform operations.",
-  applicationName: "Celerey Admin",
+    "Celerey Financial Dashboard provides clients with a clear overview of their financial health, assets, and long-term goals. Track your progress, monitor key metrics, and stay aligned with your financial plan.",
+  applicationName: "Celerey Financial Dashboard",
   robots: {
     index: false,
     follow: false,

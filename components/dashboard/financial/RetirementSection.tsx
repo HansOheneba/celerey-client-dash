@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import type {
@@ -118,7 +118,7 @@ export function RetirementSection({
   ];
 
   return (
-    <Card>
+    <DashCard>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">Retirement Projection</CardTitle>
@@ -201,6 +201,6 @@ export function RetirementSection({
           ))}
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

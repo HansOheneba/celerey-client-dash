@@ -12,7 +12,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Separator } from "@/components/ui/separator";
 import { type NetWorthBreakdown } from "@/lib/net-worth";
 import { assetTypeLabel } from "@/lib/asset-data";
@@ -130,7 +130,7 @@ export function NetWorthCard({ breakdown }: { breakdown: NetWorthBreakdown }) {
   ];
 
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Net Worth</CardTitle>
@@ -324,6 +324,6 @@ export function NetWorthCard({ breakdown }: { breakdown: NetWorthBreakdown }) {
           </div>
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

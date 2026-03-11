@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Plus, Shield, AlertTriangle } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -182,7 +182,7 @@ export function InsuranceSection({
 
       {/* Add form */}
       {showForm && (
-        <Card className="border-muted/60 bg-muted/10 shadow-sm">
+        <DashCard>
           <CardHeader className="space-y-1 pb-3">
             <CardTitle className="text-sm">New Insurance Policy</CardTitle>
           </CardHeader>
@@ -337,7 +337,7 @@ export function InsuranceSection({
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </DashCard>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ArrowUpRight } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Button } from "@/components/ui/button";
 
 interface LockedFeatureCardProps {
@@ -21,7 +21,7 @@ export function LockedFeatureCard({
   onUpgrade,
 }: LockedFeatureCardProps) {
   return (
-    <Card>
+    <DashCard>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -60,6 +60,6 @@ export function LockedFeatureCard({
           </Button>
         )}
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

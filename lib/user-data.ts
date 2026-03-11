@@ -9,9 +9,12 @@ export type User = {
   email: string;
   phone_number?: string;
   resident_country: string;
+  city?: string;
+  citizenships?: string[];
   date_of_birth: string; // ISO date string (YYYY-MM-DD)
   user_type: "regular" | "enterprise";
   currency: string;
+  preferred_contact?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -28,10 +31,13 @@ export const mockUser: User = {
   last_name: "Doe",
   email: "john@celerey.co",
   phone_number: "+1 (555) 012-9090",
-  resident_country: "USA",
+  resident_country: "United States",
+  city: "New York",
+  citizenships: ["United States"],
   date_of_birth: "1982-06-14",
   user_type: "regular",
   currency: "USD",
+  preferred_contact: "Email",
   is_active: true,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),

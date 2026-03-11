@@ -4,7 +4,7 @@ import { CheckCircle2, Circle, ClipboardList } from "lucide-react";
 
 import { ActionItem } from "@/components/dashboard/advisor/types";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { cn } from "@/lib/utils";
 
 type ActionItemsCardProps = {
@@ -19,7 +19,7 @@ export function ActionItemsCard({
   onToggleItem,
 }: ActionItemsCardProps) {
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
@@ -79,6 +79,6 @@ export function ActionItemsCard({
           Keep these updated - they become inputs to your next review.
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

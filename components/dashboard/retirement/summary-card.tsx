@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { HelpCircle } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { DashCard, CardContent } from "@/components/dashboard/dash-card";
 import { cn } from "@/lib/utils";
 import { ProjectionInputs } from "@/components/dashboard/retirement/types";
 import { formatCurrency } from "@/components/dashboard/retirement/utils";
@@ -65,7 +65,7 @@ export function SummaryCard({
   projectedSurplus,
 }: SummaryCardProps) {
   return (
-    <Card className="mt-6 border-muted/60 bg-background/60 shadow-sm">
+    <DashCard className="mt-6">
       <CardContent className="p-6">
         {/* How-it-works banner */}
         <div className="mb-5 flex items-start gap-2.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/40 dark:border-blue-800/30 px-4 py-3">
@@ -127,6 +127,6 @@ export function SummaryCard({
           />
         </motion.div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

@@ -24,6 +24,7 @@ import {
   currentValue,
   assetTypeLabel,
 } from "@/lib/asset-data";
+import AssetMap from "./country-chart";
 
 export function PortfolioTab() {
   const [location, setLocation] = React.useState<LocationKey>("all");
@@ -76,13 +77,14 @@ export function PortfolioTab() {
       </div>
 
       {/* Allocation + insights */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <AllocationDonut
+      <div className="grid grid-cols-1">
+        {/* <AllocationDonut
           title="Asset Allocation"
           data={allocationDonutData}
           centerLabel="Investments"
-        />
-        <CelereyInsights insights={DEFAULT_INSIGHTS} />
+        /> */}
+        <AssetMap />
+        {/* <CelereyInsights insights={DEFAULT_INSIGHTS} /> */}
       </div>
 
       {/* Holdings list */}

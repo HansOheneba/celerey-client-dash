@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Search, AlertTriangle } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -325,7 +325,7 @@ export function HoldingForm({
 
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
           {/* ── Left: main form ───────────────────────────────── */}
-          <Card className="border-muted/60 bg-background/70 shadow-sm backdrop-blur lg:col-span-2">
+          <DashCard className="backdrop-blur lg:col-span-2">
             <CardHeader className="space-y-1">
               <CardTitle className="text-base">Holding details</CardTitle>
               <p className="text-sm text-muted-foreground">
@@ -606,11 +606,11 @@ export function HoldingForm({
                 </Button>
               </div>
             </CardContent>
-          </Card>
+          </DashCard>
 
           {/* ── Right: summary sidebar ────────────────────── */}
           <div className="space-y-6">
-            <Card className="border-muted/60 bg-background/70 shadow-sm backdrop-blur">
+            <DashCard className="backdrop-blur">
               <CardHeader className="space-y-1">
                 <CardTitle className="text-base">Summary</CardTitle>
               </CardHeader>
@@ -671,7 +671,7 @@ export function HoldingForm({
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </DashCard>
           </div>
         </form>
       </div>

@@ -14,7 +14,7 @@ import { SoftKpi } from "@/components/dashboard/advisor/soft-kpi";
 import { Advisor } from "@/components/dashboard/advisor/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { DashCard, CardContent } from "@/components/dashboard/dash-card";
 import { Separator } from "@/components/ui/separator";
 
 type AdvisorProfileCardProps = {
@@ -27,7 +27,7 @@ export function AdvisorProfileCard({
   onRequestConversation,
 }: AdvisorProfileCardProps) {
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardContent className="p-6">
         <div className="flex flex-col items-center text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-xl font-semibold">
@@ -124,6 +124,6 @@ export function AdvisorProfileCard({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

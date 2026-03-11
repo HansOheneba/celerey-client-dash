@@ -44,8 +44,8 @@ import {
   faMoneyBillWave,
   faUmbrellaBeach,
   faBrain,
-  faUserGroup,
   faBellConcierge,
+  faHeadset,
 } from "@fortawesome/free-solid-svg-icons";
 
 const nav = [
@@ -71,7 +71,7 @@ export default function DashboardSidebar() {
       <SidebarHeader className="pt-2">
         <Link href="/dashboard" className="flex items-center gap-3 rounded-md">
           <div className="flex w-full justify-left">
-            <div className="relative h-[56px] w-[120px]">
+            <div className="relative h-14 w-30">
               <AnimatePresence mode="wait" initial={false}>
                 {collapsed ? (
                   <motion.div
@@ -144,7 +144,7 @@ export default function DashboardSidebar() {
             </div>
           </div>
         </Link>
-        <SidebarSeparator className="my-2" />
+        <SidebarSeparator className="my-2 bg-gray-200 " />
       </SidebarHeader>
 
       <SidebarContent className="px-2">
@@ -178,7 +178,7 @@ export default function DashboardSidebar() {
                     {active ? (
                       <motion.span
                         layoutId="active-nav-pill"
-                        className="absolute inset-0 rounded-3xl bg-[#1B1856]"
+                        className="absolute inset-0 bg-[#1B1856]"
                         transition={{
                           type: "spring",
                           stiffness: 420,
@@ -231,85 +231,16 @@ export default function DashboardSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Support">
               <Link href="/admin/support" className="flex items-center gap-2">
-                <LifeBuoy />
+                <FontAwesomeIcon
+                  icon={faHeadset}
+                  className="h-4 w-4"
+                  fixedWidth
+                />
                 <span>Support</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-
-        <SidebarSeparator className="my-1" />
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-sidebar-accent transition-colors outline-none">
-              <Avatar size="sm">
-                <AvatarFallback className="bg-[#1B1856] text-white text-xs">
-                  {mockUser.first_name[0]}
-                  {mockUser.last_name[0]}
-                </AvatarFallback>
-              </Avatar>
-
-              {!collapsed && (
-                <div className="flex flex-1 items-center justify-between min-w-0">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium leading-tight truncate">
-                      {getUserFullName(mockUser)}
-                    </p>
-                    <p className="text-xs text-muted-foreground leading-tight truncate">
-                      {mockUser.email}
-                    </p>
-                  </div>
-                  <MoreVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
-                </div>
-              )}
-            </button>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent side="right" align="end" className="w-56">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">
-                  {getUserFullName(mockUser)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {mockUser.email}
-                </p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/dashboard/account"
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <UserIcon className="h-4 w-4" />
-                  <span>Profile</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/dashboard/account"
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <Settings className="h-4 w-4" />
-                  <span>Account Settings</span>
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive cursor-pointer"
-              onClick={() => {
-                console.log("sign out");
-              }}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              <span>Sign out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   );

@@ -10,7 +10,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Separator } from "@/components/ui/separator";
 import type {
   NetWorthBreakdownMetrics,
@@ -73,7 +73,7 @@ export function NetWorthBreakdown({
   ];
 
   return (
-    <Card>
+    <DashCard>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">Net Worth Breakdown</CardTitle>
@@ -138,6 +138,6 @@ export function NetWorthBreakdown({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

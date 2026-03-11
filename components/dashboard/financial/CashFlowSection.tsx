@@ -11,7 +11,7 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import type {
@@ -77,7 +77,7 @@ export function CashFlowSection({
   );
 
   return (
-    <Card>
+    <DashCard>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">Cash Flow</CardTitle>
@@ -248,6 +248,6 @@ export function CashFlowSection({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

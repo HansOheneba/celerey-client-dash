@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, TrendingUp } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import {
   type InsurancePolicy,
   policyStatus,
@@ -44,7 +44,7 @@ export function InsuranceAlerts({
   if (allGood && policies.length === 0 && properties.length === 0) return null;
 
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader>
         <CardTitle className="text-base">Alerts & Insights</CardTitle>
       </CardHeader>
@@ -118,6 +118,6 @@ export function InsuranceAlerts({
           </div>
         )}
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

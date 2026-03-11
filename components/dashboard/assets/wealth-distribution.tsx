@@ -4,7 +4,7 @@ import * as React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { MapPin, ChevronDown } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -87,7 +87,7 @@ export function WealthDistribution({
   );
 
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
           <CardTitle className="text-base">
@@ -190,6 +190,6 @@ export function WealthDistribution({
         
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

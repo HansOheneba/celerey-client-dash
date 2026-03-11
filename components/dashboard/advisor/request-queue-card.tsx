@@ -2,11 +2,11 @@
 
 import { Clock3, GraduationCap, ShieldCheck } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 
 export function RequestQueueCard() {
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader>
         <CardTitle className="text-base">
           Request Queue &amp; Service Levels
@@ -51,6 +51,6 @@ export function RequestQueueCard() {
           </div>
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

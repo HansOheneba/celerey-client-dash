@@ -1,7 +1,7 @@
 "use client";
 
 import { Note } from "@/components/dashboard/advisor/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 
 type NotesCardProps = {
   notes: Note[];
@@ -9,7 +9,7 @@ type NotesCardProps = {
 
 export function NotesCard({ notes }: NotesCardProps) {
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader>
         <CardTitle className="text-base">Recent Notes</CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -28,6 +28,6 @@ export function NotesCard({ notes }: NotesCardProps) {
           </div>
         ))}
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

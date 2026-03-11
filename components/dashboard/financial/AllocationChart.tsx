@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import type { AllocationSlice, SectionFreshness } from "@/lib/types/financial";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
@@ -41,7 +41,7 @@ export function AllocationChart({
   freshness,
 }: AllocationChartProps) {
   return (
-    <Card>
+    <DashCard>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">Asset Allocation</CardTitle>
@@ -106,6 +106,6 @@ export function AllocationChart({
           ))}
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

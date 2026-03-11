@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ArrowUpRight, ArrowUp, ArrowDown } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +24,7 @@ export function MetricCard({
   trend,
 }: MetricCardProps) {
   return (
-    <Card>
+    <DashCard>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -76,6 +76,6 @@ export function MetricCard({
 
         <div className="text-xs text-muted-foreground">{helper}</div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

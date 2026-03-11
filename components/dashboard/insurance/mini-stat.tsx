@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { DashCard, CardContent } from "@/components/dashboard/dash-card";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -28,7 +28,7 @@ export function InsuranceMiniStat({
           : "";
 
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardContent className="p-5">
         <div className="text-sm text-muted-foreground">{label}</div>
         <div
@@ -43,6 +43,6 @@ export function InsuranceMiniStat({
           <div className="mt-1 text-sm text-muted-foreground">{hint}</div>
         ) : null}
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

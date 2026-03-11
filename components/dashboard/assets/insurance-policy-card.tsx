@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { DashCard, CardContent } from "@/components/dashboard/dash-card";
 import {
   type PropertyInsurance,
   insuranceTypeLabel,
@@ -40,9 +40,8 @@ export function InsurancePolicyCard({
   const expiringSoon = isInsuranceExpiringSoon(policy);
 
   return (
-    <Card
+    <DashCard
       className={cn(
-        "border-muted/60 bg-background/60 shadow-sm",
         expired && "border-rose-500/30 bg-rose-500/5",
         expiringSoon && !expired && "border-amber-500/30 bg-amber-500/5",
       )}
@@ -124,6 +123,6 @@ export function InsurancePolicyCard({
           </div>
         )}
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

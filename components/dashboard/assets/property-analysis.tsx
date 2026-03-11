@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +48,7 @@ export function PropertyAnalysis() {
   const [tab, setTab] = React.useState<TabKey>("buy_vs_rent");
 
   return (
-    <Card className="mt-6 border-muted/60 bg-background/60 shadow-sm">
+    <DashCard className="mt-6">
       <CardHeader>
         <CardTitle className="text-base">AI Property Analysis</CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -94,6 +94,6 @@ export function PropertyAnalysis() {
           These panels are placeholders - plug in your analysis logic later.
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

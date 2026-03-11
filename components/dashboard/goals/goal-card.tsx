@@ -8,7 +8,12 @@ import {
   Info,
 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -64,13 +69,13 @@ export function GoalCard({
     : "Completed recently";
 
   return (
-    <Card
+    <DashCard
       className={cn(
-        "group relative overflow-hidden border-muted/60 bg-background/70 shadow-sm transition-all",
+        "group relative overflow-hidden shadow-sm transition-all",
         " hover:shadow-md",
         goal.completed &&
           cn(
-            "border-emerald-500/40 bg-gradient-to-b from-emerald-500/[0.12] via-background/80 to-background/70",
+            "border-emerald-500/40 bg-gradient-to-b from-emerald-500/[0.12] via-background/80 to-[#f8f9fb]",
             "shadow-[0_10px_35px_-18px_rgba(16,185,129,0.65)]",
           ),
       )}
@@ -294,6 +299,6 @@ export function GoalCard({
           </div>
         )}
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

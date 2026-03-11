@@ -14,7 +14,7 @@ export default function RootLayout({
 
         <SidebarInset className="min-w-0">
           <AdminTopbar />
-          <div className="p-6">{children}</div>
+          <div className="p-6 bg-gray-50">{children}</div>
         </SidebarInset>
       </div>
     </SidebarProvider>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { DashCard, CardContent } from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
@@ -37,7 +37,7 @@ export function HoldingRow({
   const isPositive = gl.amount >= 0;
 
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardContent className="p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           {/* Left: name + type */}
@@ -125,6 +125,6 @@ export function HoldingRow({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

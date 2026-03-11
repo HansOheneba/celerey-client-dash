@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Separator } from "@/components/ui/separator";
 import type {
   PerformancePoint,
@@ -55,7 +55,7 @@ export function PerformanceChart({
     metrics.ytdReturnPct === null || metrics.ytdReturnPct >= 0;
 
   return (
-    <Card>
+    <DashCard>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">Portfolio Performance</CardTitle>
@@ -146,6 +146,6 @@ export function PerformanceChart({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

@@ -11,7 +11,7 @@ import {
   PiggyBank,
   CheckCircle2,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { DashCard, CardContent } from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type {
@@ -67,7 +67,7 @@ function StatCard({
   freshnessSection,
 }: StatCardProps) {
   return (
-    <Card className="flex flex-col gap-2 p-5">
+    <DashCard className="flex flex-col gap-2 p-5">
       <div className="flex items-start justify-between gap-2">
         <div
           className={cn(
@@ -91,7 +91,7 @@ function StatCard({
           />
         )}
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }
 

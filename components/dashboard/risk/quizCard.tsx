@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 
 import RiskAttitudeQuiz from "@/components/dashboard/risk/quiz";
 
@@ -81,7 +81,7 @@ export default function QuizCard() {
 
   return (
     <>
-      <Card>
+      <DashCard>
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -144,7 +144,7 @@ export default function QuizCard() {
             <span aria-hidden>→</span>
           </Button>
         </CardContent>
-      </Card>
+      </DashCard>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent

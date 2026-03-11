@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Shield, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import type {
@@ -60,7 +60,7 @@ export function ProtectionSection({
   const monthlyTotal = insurance.reduce((s, p) => s + p.premiumMonthly, 0);
 
   return (
-    <Card>
+    <DashCard>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -128,6 +128,6 @@ export function ProtectionSection({
           ))}
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

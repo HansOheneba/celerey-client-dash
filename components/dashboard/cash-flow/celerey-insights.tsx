@@ -1,11 +1,11 @@
 import { Lightbulb } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 
 export function CelereyInsights() {
   return (
-    <Card className="mt-6 border-muted/60 bg-background/60 shadow-sm">
+    <DashCard className="mt-6">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">Celerey Cash Flow Insights</CardTitle>
         <Badge variant="secondary" className="gap-1">
@@ -35,6 +35,6 @@ export function CelereyInsights() {
           </div>
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

@@ -5,7 +5,7 @@ import { CalendarClock } from "lucide-react";
 import { TimelineRow } from "@/components/dashboard/advisor/timeline-row";
 import { Meeting } from "@/components/dashboard/advisor/types";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 
 type UpcomingMeetingCardProps = {
   meeting: Meeting;
@@ -13,7 +13,7 @@ type UpcomingMeetingCardProps = {
 
 export function UpcomingMeetingCard({ meeting }: UpcomingMeetingCardProps) {
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader>
         <CardTitle className="text-base">Upcoming Meeting</CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -42,6 +42,6 @@ export function UpcomingMeetingCard({ meeting }: UpcomingMeetingCardProps) {
           (typically 24 hours before the session).
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

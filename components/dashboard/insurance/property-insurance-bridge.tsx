@@ -7,7 +7,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Button } from "@/components/ui/button";
 import {
   type InsurancePolicy,
@@ -68,7 +68,7 @@ export function PropertyInsuranceBridge({
     uninsured.length > 0 || expiringSoon.length > 0 || expired.length > 0;
 
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -206,6 +206,6 @@ export function PropertyInsuranceBridge({
           </div>
         )}
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

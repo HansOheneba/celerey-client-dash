@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { CheckCircle2, Info, Target } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -109,7 +109,7 @@ export function GoalsSection({ goals, freshness }: GoalsSectionProps) {
   const completedGoals = goals.filter((g) => g.completed);
 
   return (
-    <Card>
+    <DashCard>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -156,6 +156,6 @@ export function GoalsSection({ goals, freshness }: GoalsSectionProps) {
           </>
         )}
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

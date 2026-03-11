@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Scenario, ScenarioKey } from "./types";
@@ -13,7 +13,7 @@ export function ScenarioCard({
   setActiveScenario: (key: ScenarioKey | null) => void;
 }) {
   return (
-    <Card className="mt-6 border-muted/60 bg-background/60 shadow-sm">
+    <DashCard className="mt-6">
       <CardHeader>
         <CardTitle className="text-base">AI Scenario Modeling</CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -51,6 +51,6 @@ export function ScenarioCard({
           </Button>
         ) : null}
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Shield, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import {
   type Property,
   totalInsurancePremium,
@@ -56,7 +56,7 @@ export function InsuranceSummaryCard({
   const uninsured = properties.filter((p) => p.insurance.length === 0);
 
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader>
         <div className="flex items-center gap-2">
           <Shield className="h-4 w-4 text-muted-foreground" />
@@ -207,6 +207,6 @@ export function InsuranceSummaryCard({
           </div>
         )}
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }

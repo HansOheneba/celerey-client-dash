@@ -1,5 +1,5 @@
 import { Shield, TrendingUp, AlertTriangle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
 import { cn } from "@/lib/utils";
 
 export type InsightTone = "warn" | "good" | "info";
@@ -27,7 +27,7 @@ function insightClasses(tone: InsightTone): string {
 
 export function AIInsights({ insights }: { insights: Insight[] }) {
   return (
-    <Card className="border-muted/60 bg-background/60 shadow-sm">
+    <DashCard>
       <CardHeader>
         <CardTitle className="text-base">AI Portfolio Insights</CardTitle>
       </CardHeader>
@@ -55,6 +55,6 @@ export function AIInsights({ insights }: { insights: Insight[] }) {
           These insights are placeholders - wire them to your analyzer later.
         </div>
       </CardContent>
-    </Card>
+    </DashCard>
   );
 }
