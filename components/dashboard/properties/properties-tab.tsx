@@ -6,16 +6,18 @@ import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { MiniStat } from "@/components/dashboard/assets/mini-stat";
-import { PropertyRow } from "@/components/dashboard/assets/property-row";
-import { PropertyAnalysis } from "@/components/dashboard/assets/property-analysis";
-import { InsuranceSummaryCard } from "@/components/dashboard/assets/insurance-summary-card";
+import { PropertyRow } from "@/components/dashboard/properties/property-row";
+import { PropertyAnalysis } from "@/components/dashboard/properties/property-analysis";
+import { InsuranceSummaryCard } from "@/components/dashboard/properties/insurance-summary-card";
+import AssetMap from "@/components/dashboard/properties/country-chart";
 import {
   mockProperties,
   propertyEquity,
   propertyLvr,
   totalInsurancePremium,
   totalPropertyLienBalance,
-} from "@/lib/property-data";
+  getPropertyGeoCountries,
+} from "@/lib/client-data";
 
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat(undefined, {
@@ -106,6 +108,11 @@ export function PropertiesTab() {
       </div>
       {/* Insurance overview */}
       <InsuranceSummaryCard properties={properties} />
+      {/* Geographic spread — derived from client's active properties in lib/client-data.ts */}
+      <AssetMap
+        countries={getPropertyGeoCountries(properties)}
+        propertyCount={properties.length}
+      />
       {/* Analysis */}
       <PropertyAnalysis />
     </>

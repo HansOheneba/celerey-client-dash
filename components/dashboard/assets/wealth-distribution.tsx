@@ -4,7 +4,12 @@ import * as React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { MapPin, ChevronDown } from "lucide-react";
 
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -15,24 +20,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type LocationKey =
-  | "all"
-  | "ghana_accra"
-  | "australia_sydney"
-  | "australia_melbourne"
-  | "usa_newyork"
-  | "uk_london";
+// LocationKey is a plain string derived at runtime from country + city.
+export type LocationKey = string;
 
 export type LocationOption = {
   key: LocationKey;
   label: string;
 };
 
+/**
+ * Shape mirrors the property form / backend property record so no
+ * transformation is needed when real data arrives.
+ * country      → Property.country
+ * city         → Property.city
+ * value        → Property.market_value (or aggregated asset value)
+ * propertyType → Property.property_type
+ * propertyName → Property.name
+ */
 export type LocationDistributionItem = {
-  locationKey: LocationKey;
-  label: string;
+  country: string;
+  city: string;
   value: number;
+  propertyType: string;
+  propertyName: string;
 };
+
+/** Stable key derived from country + city — used only for filtering. */
+export function toLocationKey(country: string, city: string): LocationKey {
+  return `${country}_${city}`.toLowerCase().replace(/\s+/g, "_");
+}
 
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat(undefined, {
@@ -69,13 +85,15 @@ export function WealthDistribution({
 }) {
   const filteredDistribution = React.useMemo(() => {
     if (selectedLocation === "all") return distribution;
-    return distribution.filter((x) => x.locationKey === selectedLocation);
+    return distribution.filter(
+      (x) => toLocationKey(x.country, x.city) === selectedLocation,
+    );
   }, [distribution, selectedLocation]);
 
   const locationDonutData = React.useMemo(
     () =>
       filteredDistribution.map((d) => ({
-        label: d.label,
+        label: `${d.city}, ${d.country}`,
         value: d.value,
       })),
     [filteredDistribution],
@@ -106,7 +124,7 @@ export function WealthDistribution({
 
           <Select
             value={selectedLocation}
-            onValueChange={(v) => onLocationChange(v as LocationKey)}
+            onValueChange={(v) => onLocationChange(v)}
           >
             <SelectTrigger className="w-full md:w-[260px]">
               <SelectValue placeholder="Select a location" />
@@ -186,8 +204,6 @@ export function WealthDistribution({
               Filtered
             </Badge>
           </div>
-
-        
         </div>
       </CardContent>
     </DashCard>

@@ -24,7 +24,6 @@ import {
   currentValue,
   assetTypeLabel,
 } from "@/lib/asset-data";
-import AssetMap from "./country-chart";
 
 export function PortfolioTab() {
   const [location, setLocation] = React.useState<LocationKey>("all");
@@ -83,7 +82,6 @@ export function PortfolioTab() {
           data={allocationDonutData}
           centerLabel="Investments"
         /> */}
-        <AssetMap />
         {/* <CelereyInsights insights={DEFAULT_INSIGHTS} /> */}
       </div>
 

@@ -240,3 +240,46 @@ export const mockProperties: Property[] = [
     updated_at: now,
   },
 ];
+
+// ── Country → world-atlas name mapping ──────────────────────────
+
+/**
+ * Maps the short country names stored on Property records to the full
+ * geographic names used by the react-simple-maps world atlas
+ * (countries-110m.json).  Add new entries here as clients hold assets in
+ * additional countries — the country chart picks them up automatically.
+ */
+export const COUNTRY_GEO_NAME_MAP: Record<string, string> = {
+  USA: "United States of America",
+  UK: "United Kingdom",
+  Australia: "Australia",
+  Canada: "Canada",
+  Ghana: "Ghana",
+  Nigeria: "Nigeria",
+  "South Africa": "South Africa",
+  UAE: "United Arab Emirates",
+  Singapore: "Singapore",
+  Germany: "Germany",
+  France: "France",
+  Netherlands: "Netherlands",
+  Switzerland: "Switzerland",
+  Japan: "Japan",
+};
+
+/**
+ * Derives the unique set of world-atlas country names from the client's
+ * active properties.  Pass the returned array straight to the AssetMap
+ * (country-chart) component so highlighted countries stay in sync with
+ * the actual property data.
+ */
+export function getPropertyGeoCountries(
+  properties: Property[] = mockProperties,
+): string[] {
+  return [
+    ...new Set(
+      properties
+        .filter((p) => p.is_active)
+        .map((p) => COUNTRY_GEO_NAME_MAP[p.country] ?? p.country),
+    ),
+  ];
+}

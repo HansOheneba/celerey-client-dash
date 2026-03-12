@@ -4,7 +4,8 @@ import type {
   LocationOption,
   LocationDistributionItem,
 } from "@/components/dashboard/assets/wealth-distribution";
-import { portfolioData } from "@/lib/client-data";
+import { toLocationKey } from "@/components/dashboard/assets/wealth-distribution";
+import { portfolioData, locationDistributionData } from "@/lib/client-data";
 
 // ── Shared types ────────────────────────────────────────────────
 export type AllocationItem = {
@@ -29,13 +30,14 @@ export function sum(nums: number[]): number {
 }
 
 // ── Static data ─────────────────────────────────────────────────
+// LOCATIONS is derived from locationDistributionData in lib/client-data.ts.
+// To add or change locations, update that array — this list updates automatically.
 export const LOCATIONS: LocationOption[] = [
   { key: "all", label: "All locations" },
-  { key: "ghana_accra", label: "Accra, Ghana" },
-  { key: "australia_sydney", label: "Sydney, Australia" },
-  { key: "australia_melbourne", label: "Melbourne, Australia" },
-  { key: "usa_newyork", label: "New York, USA" },
-  { key: "uk_london", label: "London, UK" },
+  ...locationDistributionData.map((d) => ({
+    key: toLocationKey(d.country, d.city),
+    label: `${d.city}, ${d.country}`,
+  })),
 ];
 
 export const DEFAULT_ALLOCATIONS: AllocationItem[] = [
@@ -75,21 +77,10 @@ export const DEFAULT_INSIGHTS: Insight[] = [
 
 // Properties now live in lib/property-data.ts
 
-export const DEFAULT_LOCATION_DISTRIBUTION: LocationDistributionItem[] = [
-  { locationKey: "ghana_accra", label: "Accra, Ghana", value: 320000 },
-  {
-    locationKey: "australia_sydney",
-    label: "Sydney, Australia",
-    value: 1150000,
-  },
-  {
-    locationKey: "australia_melbourne",
-    label: "Melbourne, Australia",
-    value: 680000,
-  },
-  { locationKey: "usa_newyork", label: "New York, USA", value: 190000 },
-  { locationKey: "uk_london", label: "London, UK", value: 120000 },
-];
+// DEFAULT_LOCATION_DISTRIBUTION comes from lib/client-data.ts (locationDistributionData).
+// When integrating the backend, update locationDistributionData there.
+export const DEFAULT_LOCATION_DISTRIBUTION: LocationDistributionItem[] =
+  locationDistributionData;
 
 // Re-export types that tabs need from child components
 export type { Insight, LocationKey, LocationOption, LocationDistributionItem };

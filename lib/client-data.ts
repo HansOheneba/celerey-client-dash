@@ -1,4 +1,50 @@
 import { mockUser, getUserAge, getUserFullName } from "@/lib/user-data";
+import {
+  mockProperties,
+  getPropertyGeoCountries,
+  findProperty,
+  propertyEquity,
+  propertyLvr,
+  propertyTypeLabel,
+  totalPropertyLienBalance,
+  totalInsurancePremium,
+  totalInsuranceCoverage,
+  isInsuranceExpiringSoon,
+  isInsuranceExpired,
+  insuranceTypeLabel,
+  type Property,
+  type PropertyType,
+  type PropertyInsurance,
+  type InsuranceType,
+  type Lien,
+  PROPERTY_TYPE_OPTIONS,
+  INSURANCE_TYPE_OPTIONS,
+  COUNTRY_GEO_NAME_MAP,
+} from "@/lib/property-data";
+import { mockHoldings, mockValuations } from "@/lib/asset-data";
+
+// Re-export all client-facing mock data and helpers from this single file.
+// When the backend is ready, replace these arrays with API responses —
+// consuming components never need to change their import source.
+export {
+  mockProperties,
+  getPropertyGeoCountries,
+  findProperty,
+  propertyEquity,
+  propertyLvr,
+  propertyTypeLabel,
+  totalPropertyLienBalance,
+  totalInsurancePremium,
+  totalInsuranceCoverage,
+  isInsuranceExpiringSoon,
+  isInsuranceExpired,
+  insuranceTypeLabel,
+  PROPERTY_TYPE_OPTIONS,
+  INSURANCE_TYPE_OPTIONS,
+  COUNTRY_GEO_NAME_MAP,
+};
+export type { Property, PropertyType, PropertyInsurance, InsuranceType, Lien };
+export { mockHoldings, mockValuations };
 
 // ============================================================================
 // PORTFOLIO DATA (Assets Page)
@@ -456,6 +502,60 @@ export type AIInsight = {
   cta?: { label: string };
 };
 
+// ============================================================================
+// LOCATION DISTRIBUTION DATA (geographic breakdown of assets by property)
+// Shape mirrors the property form so backend integration is a straight mapping:
+//   country      → same as Property.country
+//   city         → same as Property.city
+//   value        → Property.market_value (or aggregated investment value for
+//                  that location when the backend provides it)
+//   propertyType → same as Property.property_type
+//   propertyName → same as Property.name
+//
+// To add / remove entries: update this array in lib/client-data.ts only.
+// ============================================================================
+export type LocationEntry = {
+  country: string;
+  city: string;
+  value: number;
+  propertyType: string;
+  propertyName: string;
+};
+
+export const locationDistributionData: LocationEntry[] = [
+  {
+    country: "USA",
+    city: "New York",
+    value: 850000,
+    propertyType: "house",
+    propertyName: "Primary Residence",
+  },
+  {
+    country: "Australia",
+    city: "Sydney",
+    value: 620000,
+    propertyType: "apartment",
+    propertyName: "Rental Unit",
+  },
+  {
+    country: "Ghana",
+    city: "Accra",
+    value: 320000,
+    propertyType: "house",
+    propertyName: "Beach House",
+  },
+  {
+    country: "Nigeria",
+    city: "Lagos",
+    value: 40000,
+    propertyType: "house",
+    propertyName: "Beach House",
+  },
+];
+
+// ============================================================================
+// AI INSIGHTS DATA
+// ============================================================================
 export const aiInsights = [
   {
     id: "optimize-tax",

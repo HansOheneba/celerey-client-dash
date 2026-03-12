@@ -10,20 +10,6 @@ import { DashCard } from "@/components/dashboard/dash-card";
 const GEO_URL =
   "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
-const assetCountries = [
-  "United States of America",
-  "United Kingdom",
-  "Germany",
-  "Japan",
-  "Brazil",
-  "Australia",
-  "India",
-  "Canada",
-  "France",
-  "South Africa",
-  "Ghana",
-];
-
 // palette for random assignment
 const palette = ["#80A4ED", "#2d1b4e", "#BCD3F2", "#B118C8", "#1C1C4F"];
 
@@ -36,7 +22,25 @@ function getCountryColor(name: string) {
   return palette[Math.abs(hash) % palette.length];
 }
 
-export default function AssetMap() {
+/**
+ * AssetMap — world map that highlights countries where the client holds
+ * property/assets.
+ *
+ * Pass `countries` as full geographic names matching the world atlas
+ * (e.g. "United States of America", "United Kingdom").
+ * Use `getPropertyGeoCountries()` from lib/property-data.ts to derive
+ * this list dynamically from the client's property data.
+ *
+ * `propertyCount` is the total number of active properties (may differ
+ * from countries.length when multiple properties share a country).
+ */
+export default function AssetMap({
+  countries,
+  propertyCount,
+}: {
+  countries: string[];
+  propertyCount: number;
+}) {
   const [tooltip, setTooltip] = useState<string | null>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
 
@@ -78,7 +82,7 @@ export default function AssetMap() {
             {({ geographies }) =>
               geographies.map((geo) => {
                 const name = geo.properties.name;
-                const isAsset = assetCountries.includes(name);
+                const isAsset = countries.includes(name);
                 const color = isAsset ? getCountryColor(name) : "#e9ecef";
 
                 return (
@@ -153,7 +157,9 @@ export default function AssetMap() {
             background: "#9ca3af",
           }}
         />
-        {assetCountries.length} countries with assets
+        You have {propertyCount}{" "}
+        {propertyCount === 1 ? "property" : "properties"} across{" "}
+        {countries.length} {countries.length === 1 ? "country" : "countries"}
       </div>
     </DashCard>
   );

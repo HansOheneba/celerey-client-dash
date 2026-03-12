@@ -1,6 +1,6 @@
 "use client";
 
-import { PropertiesTab } from "@/components/dashboard/assets/properties-tab";
+import { PropertiesTab } from "@/components/dashboard/properties/properties-tab";
 
 export default function PropertiesPage() {
   return (
