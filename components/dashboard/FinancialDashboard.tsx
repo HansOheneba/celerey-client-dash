@@ -13,7 +13,7 @@
 
 import * as React from "react";
 import { Separator } from "@/components/ui/separator";
-import { getDashboardData } from "@/lib/selectors/financial";
+import { getDashboardData } from "@/lib/client-data";
 import { advisorData, goalsData } from "@/lib/client-data";
 
 import { OverviewCards } from "./financial/OverviewCards";

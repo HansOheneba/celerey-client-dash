@@ -1,15 +1,20 @@
 "use client";
 
 import { Shield, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import {
   type Property,
   totalInsurancePremium,
   totalInsuranceCoverage,
   isInsuranceExpiringSoon,
   isInsuranceExpired,
-  insuranceTypeLabel,
-} from "@/lib/property-data";
+  propertyInsuranceTypeLabel,
+} from "@/lib/client-data";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -129,7 +134,7 @@ export function InsuranceSummaryCard({
                     {pol.propertyName}
                   </span>{" "}
                   <span className="text-rose-700 dark:text-rose-400">
-                    — {insuranceTypeLabel(pol.insurance_type)} policy from{" "}
+                    {propertyInsuranceTypeLabel(pol.insurance_type)} policy from{" "}
                     {pol.provider} expired on {formatDate(pol.expiry_date)}.
                     Renew immediately.
                   </span>
@@ -148,8 +153,8 @@ export function InsuranceSummaryCard({
                     {pol.propertyName}
                   </span>{" "}
                   <span className="text-amber-700 dark:text-amber-400">
-                    — {insuranceTypeLabel(pol.insurance_type)} policy from{" "}
-                    {pol.provider} expires {formatDate(pol.expiry_date)}.
+                    — {propertyInsuranceTypeLabel(pol.insurance_type)} policy
+                    from {pol.provider} expires {formatDate(pol.expiry_date)}.
                     Consider renewing soon.
                   </span>
                 </div>
@@ -189,7 +194,9 @@ export function InsuranceSummaryCard({
                         {prop.insurance.length}{" "}
                         {prop.insurance.length === 1 ? "policy" : "policies"} ·{" "}
                         {prop.insurance
-                          .map((i) => insuranceTypeLabel(i.insurance_type))
+                          .map((i) =>
+                            propertyInsuranceTypeLabel(i.insurance_type),
+                          )
                           .join(", ")}
                       </div>
                     </div>

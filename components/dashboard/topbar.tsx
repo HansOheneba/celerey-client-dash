@@ -4,7 +4,7 @@ import * as React from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import Breadcrumbs from "./breadcrumbs";
 import { personalData } from "@/lib/client-data";
-import { mockUser, getUserFullName } from "@/lib/user-data";
+import { mockUser, getUserFullName } from "@/lib/client-data";
 
 import {
   DropdownMenu,
@@ -36,7 +36,7 @@ export default function DashboardTopbar() {
   }, []);
 
   return (
-    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-white px-6 py-3">
+    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-white px-6 py-3 shadow-md">
       {/* LEFT SIDE */}
       <div className="flex items-center gap-3">
         <SidebarTrigger />
@@ -45,8 +45,6 @@ export default function DashboardTopbar() {
 
       {/* RIGHT SIDE */}
       <div className="flex items-center gap-6">
-   
-
         {/* Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

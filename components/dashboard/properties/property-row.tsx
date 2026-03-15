@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { Pencil, Shield, AlertTriangle } from "lucide-react";
 import { DashCard, CardContent } from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
 import {
   type Property,
   propertyEquity,
@@ -13,16 +13,8 @@ import {
   totalInsurancePremium,
   isInsuranceExpiringSoon,
   isInsuranceExpired,
-} from "@/lib/property-data";
-import { Shield, AlertTriangle } from "lucide-react";
-
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
+  formatCurrency,
+} from "@/lib/client-data";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -37,6 +29,12 @@ export function PropertyRow({ property }: { property: Property }) {
   const anyExpiringSoon = property.insurance.some(
     (p) => isInsuranceExpiringSoon(p) && !isInsuranceExpired(p),
   );
+
+  const insuranceStatus = anyExpired
+    ? "expired"
+    : anyExpiringSoon
+      ? "expiring"
+      : "ok";
 
   return (
     <DashCard>
@@ -124,35 +122,41 @@ export function PropertyRow({ property }: { property: Property }) {
               </div>
             </div>
 
-            {/* Insurance indicator */}
+            {/* Insurance — clicking goes to insurance tab */}
             <div>
               <div className="text-xs text-muted-foreground">Insurance</div>
               {hasInsurance ? (
-                <div className="flex items-center gap-1">
+                <Link
+                  href="/dashboard/insurance"
+                  className="flex items-center gap-1 group"
+                >
                   <Shield
                     className={cn(
-                      "h-3.5 w-3.5",
-                      anyExpired
+                      "h-3.5 w-3.5 shrink-0",
+                      insuranceStatus === "expired"
                         ? "text-rose-500"
-                        : anyExpiringSoon
+                        : insuranceStatus === "expiring"
                           ? "text-amber-500"
                           : "text-emerald-500",
                     )}
                   />
-                  <span className="text-sm font-semibold tabular-nums">
+                  <span className="text-sm font-semibold tabular-nums group-hover:underline underline-offset-2">
                     {formatCurrency(annualPremium)}/yr
                   </span>
-                  {anyExpired && (
-                    <AlertTriangle className="h-3 w-3 text-rose-500" />
+                  {insuranceStatus === "expired" && (
+                    <AlertTriangle className="h-3 w-3 text-rose-500 shrink-0" />
                   )}
-                  {anyExpiringSoon && !anyExpired && (
-                    <AlertTriangle className="h-3 w-3 text-amber-500" />
+                  {insuranceStatus === "expiring" && (
+                    <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
                   )}
-                </div>
+                </Link>
               ) : (
-                <span className="text-xs text-amber-600 dark:text-amber-400">
-                  None
-                </span>
+                <Link
+                  href="/dashboard/insurance"
+                  className="text-xs text-amber-600 dark:text-amber-400 hover:underline underline-offset-2"
+                >
+                  None — add
+                </Link>
               )}
             </div>
           </div>

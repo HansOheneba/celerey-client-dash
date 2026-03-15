@@ -18,7 +18,7 @@ import type {
   NetWorthBreakdownMetrics,
   CashFlowMetrics,
   SectionFreshness,
-} from "@/lib/types/financial";
+} from "@/lib/client-data";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
 interface OverviewCardsProps {

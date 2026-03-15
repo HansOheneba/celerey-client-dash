@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useClientGate } from "@/lib/useClientGate";
-import { canAccessFeature } from "@/lib/entitlements";
+import { canAccessFeature } from "@/lib/client-data";
 import { motion } from "framer-motion";
 import { ActionItemsCard } from "@/components/dashboard/advisor/action-items-card";
 import { AdvisorHeader } from "@/components/dashboard/advisor/advisor-header";

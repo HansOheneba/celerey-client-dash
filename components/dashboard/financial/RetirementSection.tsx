@@ -10,14 +10,19 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import type {
   RetirementOutputs,
   RetirementConfig,
   SectionFreshness,
-} from "@/lib/types/financial";
+} from "@/lib/client-data";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
 interface RetirementSectionProps {
@@ -165,8 +170,9 @@ export function RetirementSection({
                 width={52}
               />
               <Tooltip
-                formatter={(v: number | undefined) => [
-                  v !== undefined ? fmtUSDFull(v) : "-",
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                formatter={(v: any) => [
+                  typeof v === "number" ? fmtUSDFull(v) : "-",
                   "Balance",
                 ]}
                 labelFormatter={(l: unknown) => `Age ${l}`}

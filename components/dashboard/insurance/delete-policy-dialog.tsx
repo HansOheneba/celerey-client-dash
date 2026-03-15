@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { type InsurancePolicy, categoryLabel } from "@/lib/insurance-data";
+import { type InsurancePolicy, categoryLabel } from "@/lib/client-data";
 
 export function DeletePolicyDialog({
   open,

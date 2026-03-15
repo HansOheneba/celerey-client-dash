@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { SectionFreshness } from "@/lib/types/financial";
+import type { SectionFreshness } from "@/lib/client-data";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 

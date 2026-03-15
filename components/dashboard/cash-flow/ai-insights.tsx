@@ -1,7 +1,12 @@
 import { Lightbulb } from "lucide-react";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/client-data";
 
 export function AIInsights() {
   return (

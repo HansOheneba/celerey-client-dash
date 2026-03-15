@@ -10,7 +10,7 @@ import { LoginCarousel } from "@/components/login/login-carousel";
 import { EmailForm } from "@/components/login/email-form";
 import { OtpForm } from "@/components/login/otp-form";
 import type { AuthStep } from "@/components/login/types";
-import { setAuth } from "../lib/storage";
+import { setAuth } from "../lib/client-data";
 
 export default function Home() {
   const router = useRouter();

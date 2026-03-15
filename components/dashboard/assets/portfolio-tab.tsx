@@ -23,7 +23,7 @@ import {
   mockValuations,
   currentValue,
   assetTypeLabel,
-} from "@/lib/asset-data";
+} from "@/lib/client-data";
 
 export function PortfolioTab() {
   const [location, setLocation] = React.useState<LocationKey>("all");

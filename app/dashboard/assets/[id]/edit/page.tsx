@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { findHolding, mockHoldings } from "@/lib/asset-data";
+import { findHolding, mockHoldings } from "@/lib/client-data";
 import { HoldingForm } from "@/components/dashboard/assets/holding-form";
 
 export default function EditHoldingPage() {

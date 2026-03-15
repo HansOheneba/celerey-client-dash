@@ -22,14 +22,14 @@ import {
 } from "@/components/ui/select";
 import {
   type PropertyInsurance,
-  type InsuranceType,
-  INSURANCE_TYPE_OPTIONS,
-} from "@/lib/property-data";
+  type PropertyInsuranceType,
+  PROPERTY_INSURANCE_TYPE_OPTIONS,
+} from "@/lib/client-data";
 import { InsurancePolicyCard } from "@/components/dashboard/properties/insurance-policy-card";
 
 // ── Types ───────────────────────────────────────────────────────
 export type InsuranceFormValues = {
-  insuranceType: InsuranceType;
+  insuranceType: PropertyInsuranceType;
   provider: string;
   policyNumber: string;
   coverageAmount: string;
@@ -199,14 +199,14 @@ export function InsuranceSection({
                 <Select
                   value={form.insuranceType}
                   onValueChange={(v) =>
-                    update("insuranceType", v as InsuranceType)
+                    update("insuranceType", v as PropertyInsuranceType)
                   }
                 >
                   <SelectTrigger id="insurance-type" className="w-full">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {INSURANCE_TYPE_OPTIONS.map((o) => (
+                    {PROPERTY_INSURANCE_TYPE_OPTIONS.map((o) => (
                       <SelectItem key={o.value} value={o.value}>
                         {o.label}
                       </SelectItem>

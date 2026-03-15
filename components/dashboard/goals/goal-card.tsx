@@ -71,8 +71,7 @@ export function GoalCard({
   return (
     <DashCard
       className={cn(
-        "group relative overflow-hidden shadow-sm transition-all",
-        " hover:shadow-md",
+        "group relative overflow-hidden transition-all",
         goal.completed &&
           cn(
             "border-emerald-500/40 bg-gradient-to-b from-emerald-500/[0.12] via-background/80 to-[#f8f9fb]",

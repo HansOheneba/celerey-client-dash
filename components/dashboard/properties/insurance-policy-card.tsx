@@ -4,10 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { DashCard, CardContent } from "@/components/dashboard/dash-card";
 import {
   type PropertyInsurance,
-  insuranceTypeLabel,
+  propertyInsuranceTypeLabel,
   isInsuranceExpiringSoon,
   isInsuranceExpired,
-} from "@/lib/property-data";
+} from "@/lib/client-data";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -56,7 +56,7 @@ export function InsurancePolicyCard({
                 variant="outline"
                 className="text-xs font-normal capitalize"
               >
-                {insuranceTypeLabel(policy.insurance_type)}
+                {propertyInsuranceTypeLabel(policy.insurance_type)}
               </Badge>
               {expired && (
                 <Badge variant="destructive" className="text-xs font-normal">

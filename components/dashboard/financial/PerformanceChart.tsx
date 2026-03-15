@@ -10,13 +10,18 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Separator } from "@/components/ui/separator";
 import type {
   PerformancePoint,
   PerformanceMetrics,
   SectionFreshness,
-} from "@/lib/types/financial";
+} from "@/lib/client-data";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
 interface PerformanceChartProps {
@@ -92,11 +97,9 @@ export function PerformanceChart({
                 width={52}
               />
               <Tooltip
-                formatter={(
-                  v: number | undefined,
-                  name: string | undefined,
-                ) => [
-                  v !== undefined ? fmtUSD(v) : "-",
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                formatter={(v: any, name: any) => [
+                  typeof v === "number" ? fmtUSD(v) : "-",
                   name === "value" ? "Portfolio" : "Contributions",
                 ]}
               />

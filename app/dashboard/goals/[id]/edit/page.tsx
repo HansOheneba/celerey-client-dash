@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCurrency, userCurrency } from "@/lib/utils";
+import { formatCurrency, userCurrency } from "@/lib/client-data";
 
 type GoalForm = {
   title: string;

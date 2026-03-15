@@ -1,13 +1,19 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, TrendingUp } from "lucide-react";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import {
   type InsurancePolicy,
   policyStatus,
   categoryLabel,
-} from "@/lib/insurance-data";
-import { type Property, totalInsurancePremium } from "@/lib/property-data";
+  type Property,
+  totalInsurancePremium,
+} from "@/lib/client-data";
 
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat(undefined, {

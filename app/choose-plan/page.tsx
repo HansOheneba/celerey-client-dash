@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Info, ArrowRight } from "lucide-react";
 
 import { useClientGate } from "../../lib/useClientGate";
-import { setSubscription, setTrialStartedAt } from "../../lib/storage";
+import { setSubscription, setTrialStartedAt } from "../../lib/client-data";
 
 type FeatureRow = {
   label: string;

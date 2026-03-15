@@ -3,7 +3,7 @@
 
 import * as React from "react";
 
-import { mockUser, getUserFullName } from "@/lib/user-data";
+import { mockUser, getUserFullName } from "@/lib/client-data";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -243,44 +243,44 @@ export function ServiceInquiryDialog({
     setStep(1);
   }
 
-async function handleSubmit(e: React.FormEvent) {
-  e.preventDefault();
-  if (!service || !canSubmit) return;
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!service || !canSubmit) return;
 
-  setLoading(true);
-  try {
-    const payload = {
-      service,
-      fullName: form.fullName.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-      preferredContact: form.preferredContact,
-      timeframe: form.timeframe,
-      country: form.country.trim(),
-      goal: form.goal.trim(),
-      context: form.context.trim(),
-      ...(custom ? { custom: { topic: form.customTopic.trim() } } : {}),
-    };
+    setLoading(true);
+    try {
+      const payload = {
+        service,
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        preferredContact: form.preferredContact,
+        timeframe: form.timeframe,
+        country: form.country.trim(),
+        goal: form.goal.trim(),
+        context: form.context.trim(),
+        ...(custom ? { custom: { topic: form.customTopic.trim() } } : {}),
+      };
 
-    console.log("Concierge request payload:", payload);
+      console.log("Concierge request payload:", payload);
 
-    await onSubmit?.(payload);
+      await onSubmit?.(payload);
 
-    setForm({
-      ...knownDefaults,
-      preferredContact: "Email",
-      timeframe: "This week",
-      goal: "",
-      context: "",
-      customTopic: "",
-    });
+      setForm({
+        ...knownDefaults,
+        preferredContact: "Email",
+        timeframe: "This week",
+        goal: "",
+        context: "",
+        customTopic: "",
+      });
 
-    setStep(1);
-    onOpenChange(false);
-  } finally {
-    setLoading(false);
+      setStep(1);
+      onOpenChange(false);
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

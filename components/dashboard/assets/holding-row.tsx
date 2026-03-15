@@ -11,7 +11,7 @@ import {
   currentValue,
   gainLoss,
   assetTypeLabel,
-} from "@/lib/asset-data";
+} from "@/lib/client-data";
 
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat(undefined, {

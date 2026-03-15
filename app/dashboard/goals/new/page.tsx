@@ -16,8 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cashFlowData, savingsData } from "@/lib/client-data";
-import { formatCurrency, userCurrency } from "@/lib/utils";
+import {
+  cashFlowData,
+  savingsData,
+  formatCurrency,
+  userCurrency,
+} from "@/lib/client-data";
 
 type GoalForm = {
   title: string;

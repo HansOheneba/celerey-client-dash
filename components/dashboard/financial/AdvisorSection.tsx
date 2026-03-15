@@ -9,11 +9,16 @@ import {
   Phone,
   MapPin,
 } from "lucide-react";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { SectionFreshness } from "@/lib/types/financial";
+import type { SectionFreshness } from "@/lib/client-data";
 import type { Advisor, ActionItem, Note, Meeting } from "@/lib/client-data";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 

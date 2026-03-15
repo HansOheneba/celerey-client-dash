@@ -2,7 +2,12 @@
 
 import * as React from "react";
 import { CheckCircle2, Info, Target } from "lucide-react";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -11,7 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { GoalMetrics, SectionFreshness } from "@/lib/types/financial";
+import type { GoalMetrics, SectionFreshness } from "@/lib/client-data";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
 interface GoalsSectionProps {

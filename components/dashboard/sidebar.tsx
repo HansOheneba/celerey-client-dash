@@ -32,7 +32,7 @@ import {
   Settings,
   UserIcon,
 } from "lucide-react";
-import { mockUser, getUserFullName } from "@/lib/user-data";
+import { mockUser, getUserFullName } from "@/lib/client-data";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -131,7 +131,7 @@ export default function DashboardSidebar() {
                     className="absolute left-0 top-1/2 -translate-y-1/2"
                   >
                     <Image
-                      src="https://i.ibb.co/PGVKSsV1/image.png"
+                      src="https://i.ibb.co/Z6CHCxjJ/Celerey-Logo-light.png"
                       alt="Celerey Logo"
                       width={100}
                       height={50}
@@ -144,11 +144,11 @@ export default function DashboardSidebar() {
             </div>
           </div>
         </Link>
-        <SidebarSeparator className="my-2 bg-gray-200 " />
+        <SidebarSeparator className="my-2 bg-white/20" />
       </SidebarHeader>
 
       <SidebarContent className="px-2">
-        <SidebarMenu className="relative">
+        <SidebarMenu className="relative flex flex-col gap-2 mt-2">
           {nav.map((item) => {
             const active =
               item.href === "/dashboard"
@@ -178,7 +178,7 @@ export default function DashboardSidebar() {
                     {active ? (
                       <motion.span
                         layoutId="active-nav-pill"
-                        className="absolute inset-0 bg-[#1B1856]"
+                        className="absolute inset-0 rounded-md bg-white"
                         transition={{
                           type: "spring",
                           stiffness: 420,
@@ -194,7 +194,7 @@ export default function DashboardSidebar() {
                         icon={item.icon}
                         className={[
                           "h-4 w-4 opacity-90",
-                          active ? "text-white" : "text-foreground",
+                          active ? "text-[#160b35]" : "text-white/70",
                         ].join(" ")}
                         fixedWidth
                       />
@@ -209,7 +209,7 @@ export default function DashboardSidebar() {
                             exit={{ opacity: 0, x: -4 }}
                             transition={{ duration: 0.14, ease: "easeOut" }}
                             className={[
-                              active ? "text-white" : "text-foreground",
+                              active ? "text-[#160b35]" : "text-white/70",
                               "whitespace-nowrap",
                             ].join(" ")}
                           >
@@ -225,6 +225,7 @@ export default function DashboardSidebar() {
           })}
         </SidebarMenu>
       </SidebarContent>
+      <SidebarSeparator className="my-2 bg-white/20" />
 
       <SidebarFooter>
         <SidebarMenu>

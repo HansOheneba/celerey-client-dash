@@ -9,8 +9,13 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
-import type { AllocationSlice, SectionFreshness } from "@/lib/types/financial";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
+import type { AllocationSlice, SectionFreshness } from "@/lib/client-data";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
 interface AllocationChartProps {
@@ -67,10 +72,11 @@ export function AllocationChart({
                 ))}
               </Pie>
               <Tooltip
-                formatter={(
-                  value: number | undefined,
-                  name: string | undefined,
-                ) => [value !== undefined ? fmtUSD(value) : "-", name ?? ""]}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                formatter={(value: any, name: any) => [
+                  typeof value === "number" ? fmtUSD(value) : "-",
+                  name ?? "",
+                ]}
               />
               <Legend
                 iconType="circle"

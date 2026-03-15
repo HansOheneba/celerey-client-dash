@@ -10,12 +10,17 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Separator } from "@/components/ui/separator";
 import type {
   NetWorthBreakdownMetrics,
   SectionFreshness,
-} from "@/lib/types/financial";
+} from "@/lib/client-data";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
 interface NetWorthBreakdownProps {
@@ -94,8 +99,9 @@ export function NetWorthBreakdown({
                 tickLine={false}
               />
               <Tooltip
-                formatter={(value: number | undefined) =>
-                  value !== undefined ? fmt(Math.abs(value)) : "-"
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                formatter={(value: any) =>
+                  typeof value === "number" ? fmt(Math.abs(value)) : "-"
                 }
                 cursor={{ fill: "rgba(0,0,0,0.04)" }}
               />

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   type GeneralInsuranceCategory,
   GENERAL_INSURANCE_CATEGORIES,
-} from "@/lib/insurance-data";
+} from "@/lib/client-data";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");

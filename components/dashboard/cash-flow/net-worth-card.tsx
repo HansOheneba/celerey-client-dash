@@ -12,11 +12,18 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Separator } from "@/components/ui/separator";
-import { type NetWorthBreakdown } from "@/lib/net-worth";
-import { assetTypeLabel } from "@/lib/asset-data";
-import { formatCurrency } from "@/lib/utils";
+import {
+  type NetWorthBreakdown,
+  assetTypeLabel,
+  formatCurrency,
+} from "@/lib/client-data";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");

@@ -9,7 +9,7 @@ import {
   categoryLabel,
   policyStatus,
   statusLabel,
-} from "@/lib/insurance-data";
+} from "@/lib/client-data";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");

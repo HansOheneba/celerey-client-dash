@@ -25,7 +25,7 @@ import {
   type InsurancePolicy,
   type GeneralInsuranceCategory,
   GENERAL_INSURANCE_CATEGORIES,
-} from "@/lib/insurance-data";
+} from "@/lib/client-data";
 
 // ── Form values ─────────────────────────────────────────────────
 export type PolicyFormValues = {

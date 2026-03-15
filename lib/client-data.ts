@@ -1,129 +1,1808 @@
-import { mockUser, getUserAge, getUserFullName } from "@/lib/user-data";
-import {
-  mockProperties,
-  getPropertyGeoCountries,
-  findProperty,
-  propertyEquity,
-  propertyLvr,
-  propertyTypeLabel,
-  totalPropertyLienBalance,
-  totalInsurancePremium,
-  totalInsuranceCoverage,
-  isInsuranceExpiringSoon,
-  isInsuranceExpired,
-  insuranceTypeLabel,
-  type Property,
-  type PropertyType,
-  type PropertyInsurance,
-  type InsuranceType,
-  type Lien,
-  PROPERTY_TYPE_OPTIONS,
-  INSURANCE_TYPE_OPTIONS,
-  COUNTRY_GEO_NAME_MAP,
-} from "@/lib/property-data";
-import { mockHoldings, mockValuations } from "@/lib/asset-data";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
-// Re-export all client-facing mock data and helpers from this single file.
-// When the backend is ready, replace these arrays with API responses —
-// consuming components never need to change their import source.
-export {
-  mockProperties,
-  getPropertyGeoCountries,
-  findProperty,
-  propertyEquity,
-  propertyLvr,
-  propertyTypeLabel,
-  totalPropertyLienBalance,
-  totalInsurancePremium,
-  totalInsuranceCoverage,
-  isInsuranceExpiringSoon,
-  isInsuranceExpired,
-  insuranceTypeLabel,
-  PROPERTY_TYPE_OPTIONS,
-  INSURANCE_TYPE_OPTIONS,
-  COUNTRY_GEO_NAME_MAP,
-};
-export type { Property, PropertyType, PropertyInsurance, InsuranceType, Lien };
-export { mockHoldings, mockValuations };
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 // ============================================================================
-// PORTFOLIO DATA (Assets Page)
+// PRIMITIVE TYPES
 // ============================================================================
-export const portfolioData = {
-  totalValue: 1250000,
-  allocation: {
-    stocks: {
-      percentage: 60,
-      value: 750000,
-    },
-    bonds: {
-      percentage: 25,
-      value: 312500,
-    },
-    cash: {
-      percentage: 10,
-      value: 125000,
-    },
-    alternatives: {
-      percentage: 5,
-      value: 62500,
-    },
+
+export type ISODateString = string;
+export type ISOMonthString = string;
+export type ISODateTimeString = string;
+export type CurrencyCode = string;
+
+// ============================================================================
+// ACCOUNT & LIABILITY TYPES
+// ============================================================================
+
+export type AccountType =
+  | "taxable"
+  | "retirement"
+  | "cash"
+  | "crypto"
+  | "other";
+
+export interface Account {
+  id: string;
+  name: string;
+  institution: string;
+  type: AccountType;
+  balance: number;
+  currency: CurrencyCode;
+  updatedAt: ISODateTimeString;
+}
+
+export type LiabilityType =
+  | "mortgage"
+  | "credit_card"
+  | "personal_loan"
+  | "auto_loan"
+  | "student_loan"
+  | "other";
+
+export interface Liability {
+  id: string;
+  name: string;
+  type: LiabilityType;
+  balance: number;
+  interestRatePct: number;
+  minPaymentMonthly: number;
+  dueDay?: number;
+  updatedAt: ISODateTimeString;
+}
+
+export interface PropertyAsset {
+  id: string;
+  name: string;
+  value: number;
+  mortgageLiabilityId?: string;
+  updatedAt: ISODateTimeString;
+}
+
+export interface PerformancePoint {
+  month: ISOMonthString;
+  value: number;
+  contributions: number;
+}
+
+export interface AllocationSlice {
+  label: string;
+  percentage: number;
+  value: number;
+}
+
+export type FilingStatus = "single" | "married" | "other";
+
+export interface TaxProfile {
+  effectiveTaxRatePct: number;
+  marginalTaxRatePct: number;
+  filingStatus: FilingStatus;
+  stateOrRegion?: string;
+  updatedAt: ISODateTimeString;
+}
+
+export interface EmergencyFundConfig {
+  targetMonths: number;
+  currentCashBalance: number;
+  includeAccountIds?: string[];
+  updatedAt: ISODateTimeString;
+}
+
+// ============================================================================
+// INSURANCE TYPES — single unified type for all policies
+// ============================================================================
+
+export type InsuranceCategory =
+  | "life"
+  | "health"
+  | "auto"
+  | "home"
+  | "disability"
+  | "umbrella"
+  | "liability"
+  | "travel"
+  | "pet"
+  | "other";
+
+export const INSURANCE_CATEGORIES: {
+  value: InsuranceCategory;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "life",
+    label: "Life",
+    description: "Term, whole-life, or universal life policies",
   },
-  properties: [
-    {
-      id: "prop-1",
-      name: "Primary Residence",
-      value: 850000,
-      mortgage: 450000,
-      equity: 400000,
-    },
-    {
-      id: "prop-2",
-      name: "Rental Property",
-      value: 525000,
-      mortgage: 325000,
-      equity: 200000,
-    },
-  ],
-  totalRealEstate: 1375000,
-  totalRealEstateEquity: 600000,
+  {
+    value: "health",
+    label: "Health",
+    description: "Medical, dental, and vision coverage",
+  },
+  {
+    value: "auto",
+    label: "Auto",
+    description: "Vehicle liability, collision, and comprehensive",
+  },
+  {
+    value: "home",
+    label: "Home",
+    description: "Homeowners, landlord, flood, and property policies",
+  },
+  {
+    value: "disability",
+    label: "Disability",
+    description: "Short-term and long-term disability income",
+  },
+  {
+    value: "umbrella",
+    label: "Umbrella",
+    description: "Excess liability policies",
+  },
+  {
+    value: "liability",
+    label: "Liability",
+    description: "Personal liability coverage",
+  },
+  {
+    value: "travel",
+    label: "Travel",
+    description: "Trip cancellation, medical abroad, baggage",
+  },
+  {
+    value: "pet",
+    label: "Pet",
+    description: "Veterinary and accident coverage for pets",
+  },
+  { value: "other", label: "Other", description: "Any other insurance type" },
+];
+
+export type InsurancePolicy = {
+  policy_id: string;
+  user_id: string;
+  category: InsuranceCategory;
+  provider: string;
+  name: string;
+  policy_number: string;
+  coverage_amount: number;
+  premium_monthly: number;
+  deductible: number;
+  start_date: string;
+  renewal_date: string;
+  auto_renew: boolean;
+  beneficiary?: string;
+  notes?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InsuranceRenewalStatus = "expired" | "expiring_soon" | "ok";
+
+export interface InsuranceRenewalInfo {
+  policy_id: string;
+  name: string;
+  category: InsuranceCategory;
+  renewalDate: ISODateString;
+  daysUntilRenewal: number;
+  renewalStatus: InsuranceRenewalStatus;
+  premiumMonthly: number;
+  coverageAmount: number;
+}
+
+export interface InsuranceSummaryMetrics {
+  totalPolicies: number;
+  totalMonthlyPremium: number;
+  totalAnnualPremium: number;
+  totalCoverage: number;
+  expiredCount: number;
+  expiringSoonCount: number;
+  premiumToIncomeRatioPct: number;
+  renewals: InsuranceRenewalInfo[];
+}
+
+export function insuranceCategoryLabel(cat: InsuranceCategory): string {
+  return INSURANCE_CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
+}
+
+export function insuranceCategoryDescription(cat: InsuranceCategory): string {
+  return INSURANCE_CATEGORIES.find((c) => c.value === cat)?.description ?? "";
+}
+
+// ============================================================================
+// CASH FLOW TYPES
+// ============================================================================
+
+export interface CashFlowRow {
+  id: string;
+  name: string;
+  amount: number;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  amount: number;
+  essential: boolean;
+}
+
+export type MoneyRow = {
+  id: string;
+  name: string;
+  amount: number;
+};
+
+export type RecurringType = "forever" | "months" | "one-time";
+
+export interface CashFlowEntryDraft {
+  name: string;
+  amount: string;
+  isRecurring: boolean;
+  recurringType: RecurringType;
+  recurringMonths: string;
+  startDate: string;
+  endDate?: string;
+  category: string;
+  note: string;
+}
+
+export interface CashFlowSettings {
+  emergencyFundMonths: number;
+}
+
+export interface CashFlowPoint {
+  month: ISOMonthString;
+  income: number;
+  expenses: number;
+  surplus?: number;
+}
+
+// ============================================================================
+// OTHER DOMAIN TYPES
+// ============================================================================
+
+export interface SectionFreshness {
+  section: string;
+  updatedAt: ISODateTimeString;
+}
+
+export interface RetirementConfig {
+  currentAge: number;
+  retirementAge: number;
+  lifeExpectancy: number;
+  currentInvested: number;
+  monthlySavings: number;
+  existingPensionBalance: number;
+  monthlyPensionContribution: number;
+  expectedReturnPct: number;
+  inflationPct: number;
+  safeWithdrawalRatePct: number;
+  desiredMonthlyIncome: number;
+}
+
+// ============================================================================
+// DASHBOARD METRIC TYPES
+// ============================================================================
+
+export interface NetWorthBreakdownMetrics {
+  totalInvestments: number;
+  totalCash: number;
+  totalPropertyValue: number;
+  totalOtherAssets: number;
+  totalAssets: number;
+  totalMortgages: number;
+  totalShortTermDebt: number;
+  totalLiabilities: number;
+  totalNetWorth: number;
+  liquidNetWorth: number;
+}
+
+export interface CashFlowMetrics {
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  monthlySurplus: number;
+  savingsRate: number;
+  essentialExpenses: number;
+  discretionaryExpenses: number;
+  afterTaxMonthlyIncome: number;
+  estimatedAnnualTaxes: number;
+}
+
+export interface EmergencyFundMetrics {
+  currentBalance: number;
+  targetBalance: number;
+  runwayMonths: number;
+  targetMonths: number;
+  funded: boolean;
+  shortfallOrSurplus: number;
+}
+
+export interface GoalMetrics {
+  id: string;
+  title: string;
+  progressPct: number;
+  requiredMonthly: number;
+  onTrack: boolean;
+  yearsRemaining: number;
+  current: number;
+  target: number;
+  completed: boolean;
+  completedDate?: string;
+}
+
+export interface RetirementOutputs {
+  yearsToRetirement: number;
+  projectedBalanceAtRetirement: number;
+  sustainableAnnualIncome: number;
+  sustainableMonthlyIncome: number;
+  inflationAdjustedSustainableMonthlyIncome: number;
+  incomeGap: number;
+  onTrack: boolean;
+}
+
+export interface PerformanceMetrics {
+  ytdReturnPct: number | null;
+  oneYearReturnPct: number | null;
+  totalContributions: number;
+  totalGrowth: number;
+}
+
+export interface LiquidityMetrics {
+  liquidAssets: number;
+  shortTermLiabilities: number;
+  liquidNetWorth: number;
+  liquidityRatio: number;
+}
+
+export interface DashboardMetrics {
+  netWorth: NetWorthBreakdownMetrics;
+  cashFlow: CashFlowMetrics;
+  emergencyFund: EmergencyFundMetrics;
+  goals: GoalMetrics[];
+  retirement: RetirementOutputs;
+  performance: PerformanceMetrics;
+  liquidity: LiquidityMetrics;
+  insurance: InsuranceSummaryMetrics;
+}
+
+export interface FinancialDomainData {
+  accounts: Account[];
+  liabilities: Liability[];
+  propertyAssets: PropertyAsset[];
+  portfolioPerformance: PerformancePoint[];
+  allocation: AllocationSlice[];
+  taxProfile: TaxProfile;
+  emergencyFund: EmergencyFundConfig;
+  insurancePolicies: InsurancePolicy[];
+  incomeRows: CashFlowRow[];
+  expenseCategories: ExpenseCategory[];
+  freshness: SectionFreshness[];
+  retirement: RetirementConfig;
+  cashFlowHistory: CashFlowPoint[];
+}
+
+// ============================================================================
+// STORAGE UTILITIES
+// ============================================================================
+
+export type SubscriptionStatus = "none" | "trialing" | "active";
+export type AuthState = { loggedIn: boolean; email: string | null };
+export type SubState = {
+  status: SubscriptionStatus;
+  trialStartedAt: string | null;
+};
+
+const AUTH_EMAIL_KEY = "auth_email";
+const AUTH_LOGGED_IN_KEY = "auth_logged_in";
+const SUB_STATUS_KEY = "sub_status";
+const TRIAL_STARTED_AT_KEY = "trial_started_at";
+
+function safeGetItem(key: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(key: string, value: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    /* noop */
+  }
+}
+
+function safeRemoveItem(key: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    /* noop */
+  }
+}
+
+export function getAuth(): AuthState {
+  return {
+    loggedIn: safeGetItem(AUTH_LOGGED_IN_KEY) === "true",
+    email: safeGetItem(AUTH_EMAIL_KEY) ?? null,
+  };
+}
+
+export function setAuth(email: string): void {
+  safeSetItem(AUTH_EMAIL_KEY, email);
+  safeSetItem(AUTH_LOGGED_IN_KEY, "true");
+}
+
+export function clearAuth(): void {
+  safeRemoveItem(AUTH_EMAIL_KEY);
+  safeSetItem(AUTH_LOGGED_IN_KEY, "false");
+}
+
+export function getSubscription(): SubState {
+  const statusRaw = safeGetItem(SUB_STATUS_KEY) ?? "none";
+  const status =
+    statusRaw === "trialing" || statusRaw === "active"
+      ? (statusRaw as SubscriptionStatus)
+      : "none";
+  return { status, trialStartedAt: safeGetItem(TRIAL_STARTED_AT_KEY) ?? null };
+}
+
+export function setSubscription(status: SubscriptionStatus): void {
+  safeSetItem(SUB_STATUS_KEY, status);
+  if (status !== "trialing") safeRemoveItem(TRIAL_STARTED_AT_KEY);
+}
+
+export function setTrialStartedAt(iso: string): void {
+  safeSetItem(TRIAL_STARTED_AT_KEY, iso);
+}
+
+export function clearSubscription(): void {
+  safeSetItem(SUB_STATUS_KEY, "none");
+  safeRemoveItem(TRIAL_STARTED_AT_KEY);
+}
+
+const NETWORTH_HISTORY_KEY = "networth_history_v1";
+
+export type NetWorthHistoryItem = {
+  ts: string;
+  netWorth: number;
+  breakdown?: unknown;
+  percentChange?: number | null;
+  trend?: "up" | "down" | "flat";
+  previousNetWorth?: number | null;
+};
+
+export function getNetWorthHistory(): NetWorthHistoryItem[] {
+  const raw = safeGetItem(NETWORTH_HISTORY_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as NetWorthHistoryItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function pushNetWorthSnapshot(
+  item: NetWorthHistoryItem,
+  maxEntries = 500,
+) {
+  const list = getNetWorthHistory();
+  list.push(item);
+  const trimmed = list.slice(Math.max(0, list.length - maxEntries));
+  try {
+    safeSetItem(NETWORTH_HISTORY_KEY, JSON.stringify(trimmed));
+  } catch {
+    /* noop */
+  }
+}
+
+// ============================================================================
+// ENTITLEMENTS
+// ============================================================================
+
+export type FeatureKey = "premiumInsights" | "exportData" | "advisorChat";
+
+export const trialDisabledFeatures: FeatureKey[] = [
+  "premiumInsights",
+  "exportData",
+  "advisorChat",
+];
+
+export function canAccessFeature(
+  status: SubscriptionStatus,
+  feature: FeatureKey,
+): boolean {
+  if (status === "active") return true;
+  if (status === "trialing") return !trialDisabledFeatures.includes(feature);
+  return false;
+}
+
+// ============================================================================
+// USER PROFILE
+// ============================================================================
+
+export type User = {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number?: string;
+  resident_country: string;
+  city?: string;
+  citizenships?: string[];
+  date_of_birth: string;
+  user_type: "regular" | "enterprise";
+  currency: string;
+  preferred_contact?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  occupation?: string;
+  marital_status?: "single" | "married" | "divorced" | "widowed";
+  risk_profile?: "conservative" | "moderate" | "aggressive";
+  dependents?: number;
+  bio?: string;
+};
+
+export const mockUser: User = {
+  user_id: "u-1",
+  first_name: "John",
+  last_name: "Doe",
+  email: "john@celerey.co",
+  phone_number: "+1 (555) 012-9090",
+  resident_country: "United States",
+  city: "New York",
+  citizenships: ["United States"],
+  date_of_birth: "1982-06-14",
+  user_type: "regular",
+  currency: "USD",
+  preferred_contact: "Email",
+  is_active: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  occupation: "Software Engineer",
+  marital_status: "married",
+  risk_profile: "moderate",
+  dependents: 2,
+  bio: "A tech enthusiast and family man focused on building wealth for the future.",
+};
+
+export function calculateAge(dateOfBirth: string): number {
+  const dob = new Date(dateOfBirth);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate()))
+    age--;
+  return age;
+}
+
+export function getUserFullName(user: User = mockUser): string {
+  return `${user.first_name} ${user.last_name}`;
+}
+
+export function getUserAge(user: User = mockUser): number {
+  return calculateAge(user.date_of_birth);
+}
+
+// ============================================================================
+// ASSET HOLDINGS & VALUATIONS
+// ============================================================================
+
+export type ValuationMethod = "manual" | "market";
+
+export type AssetType =
+  | "stock"
+  | "bond"
+  | "etf"
+  | "mutual_fund"
+  | "crypto"
+  | "cash"
+  | "alternative"
+  | "other";
+
+export const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
+  { value: "stock", label: "Stock" },
+  { value: "bond", label: "Bond" },
+  { value: "etf", label: "ETF" },
+  { value: "mutual_fund", label: "Mutual Fund" },
+  { value: "crypto", label: "Crypto" },
+  { value: "cash", label: "Cash & Equivalents" },
+  { value: "alternative", label: "Alternative" },
+  { value: "other", label: "Other" },
+];
+
+export type AssetHolding = {
+  holding_id: string;
+  user_id: string;
+  asset_type: AssetType;
+  valuation_method: ValuationMethod;
+  initial_value: number;
+  initial_value_date: string;
+  symbol?: string;
+  name: string;
+  quantity?: number;
+  average_cost?: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AssetValuation = {
+  valuation_id: string;
+  holding_id: string;
+  value: number;
+  as_of: string;
+  source: "manual" | "market";
+  created_at: string;
+};
+
+export function latestValuation(
+  holdingId: string,
+  valuations: AssetValuation[],
+): AssetValuation | undefined {
+  return valuations
+    .filter((v) => v.holding_id === holdingId)
+    .sort(
+      (a, b) => new Date(b.as_of).getTime() - new Date(a.as_of).getTime(),
+    )[0];
+}
+
+export function currentValue(
+  holding: AssetHolding,
+  valuations: AssetValuation[],
+): number {
+  const latest = latestValuation(holding.holding_id, valuations);
+  return latest ? latest.value : holding.initial_value;
+}
+
+export function gainLoss(
+  holding: AssetHolding,
+  valuations: AssetValuation[],
+): { amount: number; pct: number } {
+  const cv = currentValue(holding, valuations);
+  const amount = cv - holding.initial_value;
+  const pct =
+    holding.initial_value > 0 ? (amount / holding.initial_value) * 100 : 0;
+  return { amount, pct };
+}
+
+export function assetTypeLabel(type: AssetType): string {
+  return ASSET_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
+}
+
+export function supportsMarket(type: AssetType): boolean {
+  return ["stock", "etf", "crypto", "mutual_fund"].includes(type);
+}
+
+export type SymbolInfo = { symbol: string; name: string; assetType: AssetType };
+
+export const POPULAR_SYMBOLS: SymbolInfo[] = [
+  { symbol: "AAPL", name: "Apple Inc.", assetType: "stock" },
+  { symbol: "MSFT", name: "Microsoft Corp.", assetType: "stock" },
+  { symbol: "GOOGL", name: "Alphabet Inc.", assetType: "stock" },
+  { symbol: "AMZN", name: "Amazon.com Inc.", assetType: "stock" },
+  { symbol: "NVDA", name: "NVIDIA Corp.", assetType: "stock" },
+  { symbol: "META", name: "Meta Platforms Inc.", assetType: "stock" },
+  { symbol: "TSLA", name: "Tesla Inc.", assetType: "stock" },
+  { symbol: "JPM", name: "JPMorgan Chase & Co.", assetType: "stock" },
+  { symbol: "V", name: "Visa Inc.", assetType: "stock" },
+  { symbol: "JNJ", name: "Johnson & Johnson", assetType: "stock" },
+  { symbol: "WMT", name: "Walmart Inc.", assetType: "stock" },
+  { symbol: "PG", name: "Procter & Gamble", assetType: "stock" },
+  { symbol: "MA", name: "Mastercard Inc.", assetType: "stock" },
+  { symbol: "UNH", name: "UnitedHealth Group", assetType: "stock" },
+  { symbol: "KO", name: "Coca-Cola Co.", assetType: "stock" },
+  { symbol: "DIS", name: "Walt Disney Co.", assetType: "stock" },
+  { symbol: "NFLX", name: "Netflix Inc.", assetType: "stock" },
+  { symbol: "AMD", name: "Advanced Micro Devices", assetType: "stock" },
+  { symbol: "PYPL", name: "PayPal Holdings", assetType: "stock" },
+  { symbol: "INTC", name: "Intel Corp.", assetType: "stock" },
+  { symbol: "VOO", name: "Vanguard S&P 500 ETF", assetType: "etf" },
+  { symbol: "VTI", name: "Vanguard Total Stock Market ETF", assetType: "etf" },
+  { symbol: "QQQ", name: "Invesco QQQ Trust", assetType: "etf" },
+  { symbol: "SPY", name: "SPDR S&P 500 ETF Trust", assetType: "etf" },
+  { symbol: "IWM", name: "iShares Russell 2000 ETF", assetType: "etf" },
+  {
+    symbol: "VEA",
+    name: "Vanguard FTSE Developed Markets ETF",
+    assetType: "etf",
+  },
+  {
+    symbol: "VWO",
+    name: "Vanguard FTSE Emerging Markets ETF",
+    assetType: "etf",
+  },
+  { symbol: "BND", name: "Vanguard Total Bond Market ETF", assetType: "etf" },
+  { symbol: "ARKK", name: "ARK Innovation ETF", assetType: "etf" },
+  { symbol: "GLD", name: "SPDR Gold Shares", assetType: "etf" },
+  { symbol: "VNQ", name: "Vanguard Real Estate ETF", assetType: "etf" },
+  { symbol: "SCHD", name: "Schwab U.S. Dividend Equity ETF", assetType: "etf" },
+  {
+    symbol: "VFIAX",
+    name: "Vanguard 500 Index Fund",
+    assetType: "mutual_fund",
+  },
+  {
+    symbol: "FXAIX",
+    name: "Fidelity 500 Index Fund",
+    assetType: "mutual_fund",
+  },
+  {
+    symbol: "VTSAX",
+    name: "Vanguard Total Stock Market Index",
+    assetType: "mutual_fund",
+  },
+  {
+    symbol: "VBTLX",
+    name: "Vanguard Total Bond Market Index",
+    assetType: "mutual_fund",
+  },
+  {
+    symbol: "VWELX",
+    name: "Vanguard Wellington Fund",
+    assetType: "mutual_fund",
+  },
+  {
+    symbol: "SWPPX",
+    name: "Schwab S&P 500 Index Fund",
+    assetType: "mutual_fund",
+  },
+  { symbol: "BTC", name: "Bitcoin", assetType: "crypto" },
+  { symbol: "ETH", name: "Ethereum", assetType: "crypto" },
+  { symbol: "SOL", name: "Solana", assetType: "crypto" },
+  { symbol: "BNB", name: "BNB", assetType: "crypto" },
+  { symbol: "XRP", name: "XRP", assetType: "crypto" },
+  { symbol: "ADA", name: "Cardano", assetType: "crypto" },
+  { symbol: "DOGE", name: "Dogecoin", assetType: "crypto" },
+  { symbol: "AVAX", name: "Avalanche", assetType: "crypto" },
+  { symbol: "DOT", name: "Polkadot", assetType: "crypto" },
+  { symbol: "MATIC", name: "Polygon", assetType: "crypto" },
+];
+
+export function symbolsForType(type: AssetType): SymbolInfo[] {
+  return POPULAR_SYMBOLS.filter((s) => s.assetType === type);
+}
+
+export function isSymbolHeld(
+  symbol: string,
+  holdings: AssetHolding[],
+  excludeHoldingId?: string,
+): boolean {
+  return holdings.some(
+    (h) =>
+      h.is_active &&
+      h.symbol?.toUpperCase() === symbol.toUpperCase() &&
+      h.holding_id !== excludeHoldingId,
+  );
+}
+
+export function findHolding(
+  id: string,
+  holdings: AssetHolding[],
+): AssetHolding | undefined {
+  return holdings.find((h) => h.holding_id === id);
+}
+
+const _assetNow = new Date().toISOString();
+
+export const mockHoldings: AssetHolding[] = [
+  {
+    holding_id: "h-1",
+    user_id: "u-1",
+    asset_type: "stock",
+    valuation_method: "market",
+    initial_value: 100000,
+    initial_value_date: "2024-01-15",
+    symbol: "AAPL",
+    name: "Apple Inc.",
+    quantity: 200,
+    average_cost: 150,
+    is_active: true,
+    created_at: _assetNow,
+    updated_at: _assetNow,
+  },
+  {
+    holding_id: "h-2",
+    user_id: "u-1",
+    asset_type: "etf",
+    valuation_method: "market",
+    initial_value: 250000,
+    initial_value_date: "2023-06-01",
+    symbol: "VOO",
+    name: "Vanguard S&P 500 ETF",
+    quantity: 500,
+    average_cost: 400,
+    is_active: true,
+    created_at: _assetNow,
+    updated_at: _assetNow,
+  },
+  {
+    holding_id: "h-3",
+    user_id: "u-1",
+    asset_type: "bond",
+    valuation_method: "manual",
+    initial_value: 312500,
+    initial_value_date: "2022-11-01",
+    name: "Government Bond Portfolio",
+    is_active: true,
+    created_at: _assetNow,
+    updated_at: _assetNow,
+  },
+  {
+    holding_id: "h-4",
+    user_id: "u-1",
+    asset_type: "cash",
+    valuation_method: "manual",
+    initial_value: 125000,
+    initial_value_date: "2025-01-01",
+    name: "High-Yield Savings",
+    is_active: true,
+    created_at: _assetNow,
+    updated_at: _assetNow,
+  },
+  {
+    holding_id: "h-5",
+    user_id: "u-1",
+    asset_type: "alternative",
+    valuation_method: "manual",
+    initial_value: 50000,
+    initial_value_date: "2024-03-10",
+    name: "Private Equity Fund",
+    is_active: true,
+    created_at: _assetNow,
+    updated_at: _assetNow,
+  },
+  {
+    holding_id: "h-6",
+    user_id: "u-1",
+    asset_type: "crypto",
+    valuation_method: "market",
+    initial_value: 30000,
+    initial_value_date: "2024-08-01",
+    symbol: "BTC",
+    name: "Bitcoin",
+    quantity: 0.45,
+    average_cost: 66667,
+    is_active: true,
+    created_at: _assetNow,
+    updated_at: _assetNow,
+  },
+];
+
+export const mockValuations: AssetValuation[] = [
+  {
+    valuation_id: "v-1",
+    holding_id: "h-1",
+    value: 180000,
+    as_of: "2026-02-01",
+    source: "market",
+    created_at: _assetNow,
+  },
+  {
+    valuation_id: "v-2",
+    holding_id: "h-2",
+    value: 310000,
+    as_of: "2026-02-01",
+    source: "market",
+    created_at: _assetNow,
+  },
+  {
+    valuation_id: "v-3",
+    holding_id: "h-3",
+    value: 320000,
+    as_of: "2026-01-15",
+    source: "manual",
+    created_at: _assetNow,
+  },
+  {
+    valuation_id: "v-4",
+    holding_id: "h-4",
+    value: 128000,
+    as_of: "2026-02-01",
+    source: "manual",
+    created_at: _assetNow,
+  },
+  {
+    valuation_id: "v-5",
+    holding_id: "h-5",
+    value: 62500,
+    as_of: "2026-01-01",
+    source: "manual",
+    created_at: _assetNow,
+  },
+  {
+    valuation_id: "v-6",
+    holding_id: "h-6",
+    value: 45000,
+    as_of: "2026-02-01",
+    source: "market",
+    created_at: _assetNow,
+  },
+];
+
+// ============================================================================
+// PROPERTY DATA
+// ============================================================================
+
+export type Lien = { id: string; name: string; balance: number };
+
+export type PropertyType =
+  | "house"
+  | "apartment"
+  | "condo"
+  | "townhouse"
+  | "land"
+  | "commercial"
+  | "other";
+
+export const PROPERTY_TYPE_OPTIONS: { value: PropertyType; label: string }[] = [
+  { value: "house", label: "House" },
+  { value: "apartment", label: "Apartment" },
+  { value: "condo", label: "Condo" },
+  { value: "townhouse", label: "Townhouse" },
+  { value: "land", label: "Land" },
+  { value: "commercial", label: "Commercial" },
+  { value: "other", label: "Other" },
+];
+
+export type PropertyInsuranceType =
+  | "homeowners"
+  | "landlord"
+  | "flood"
+  | "earthquake"
+  | "umbrella"
+  | "other";
+
+export const PROPERTY_INSURANCE_TYPE_OPTIONS: {
+  value: PropertyInsuranceType;
+  label: string;
+}[] = [
+  { value: "homeowners", label: "Homeowners" },
+  { value: "landlord", label: "Landlord" },
+  { value: "flood", label: "Flood" },
+  { value: "earthquake", label: "Earthquake" },
+  { value: "umbrella", label: "Umbrella" },
+  { value: "other", label: "Other" },
+];
+
+export type PropertyInsurance = {
+  insurance_type: PropertyInsuranceType;
+  provider: string;
+  policy_number: string;
+  coverage_amount: number;
+  annual_premium: number;
+  deductible: number;
+  expiry_date: string;
+};
+
+export const COUNTRY_OPTIONS = [
+  "USA",
+  "UK",
+  "Canada",
+  "Australia",
+  "Ghana",
+  "Nigeria",
+  "South Africa",
+  "UAE",
+  "Singapore",
+  "Germany",
+  "France",
+  "Netherlands",
+  "Switzerland",
+  "Japan",
+  "Other",
+] as const;
+
+export type Property = {
+  property_id: string;
+  user_id: string;
+  name: string;
+  property_type: PropertyType;
+  country: string;
+  city: string;
+  purchase_date: string;
+  market_value: number;
+  mortgage_balance: number;
+  additional_liens?: Lien[];
+  is_primary: boolean;
+  is_active: boolean;
+  insurance: PropertyInsurance[];
+  created_at: string;
+  updated_at: string;
+};
+
+export function totalPropertyLienBalance(p: Property): number {
+  return (
+    p.mortgage_balance +
+    (p.additional_liens?.reduce((s, l) => s + l.balance, 0) ?? 0)
+  );
+}
+
+export function propertyEquity(p: Property): number {
+  return p.market_value - totalPropertyLienBalance(p);
+}
+
+export function propertyLvr(p: Property): number {
+  return p.market_value > 0
+    ? Math.round((totalPropertyLienBalance(p) / p.market_value) * 100)
+    : 0;
+}
+
+export function propertyTypeLabel(type: PropertyType): string {
+  return PROPERTY_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
+}
+
+export function findProperty(
+  id: string,
+  properties: Property[],
+): Property | undefined {
+  return properties.find((p) => p.property_id === id);
+}
+
+export function totalInsurancePremium(p: Property): number {
+  return p.insurance.reduce((sum, i) => sum + i.annual_premium, 0);
+}
+
+export function totalInsuranceCoverage(p: Property): number {
+  return p.insurance.reduce((sum, i) => sum + i.coverage_amount, 0);
+}
+
+export function propertyInsuranceTypeLabel(
+  type: PropertyInsuranceType,
+): string {
+  return (
+    PROPERTY_INSURANCE_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type
+  );
+}
+
+export function isInsuranceExpiringSoon(policy: PropertyInsurance): boolean {
+  const days = Math.ceil(
+    (new Date(policy.expiry_date).getTime() - Date.now()) /
+      (1000 * 60 * 60 * 24),
+  );
+  return days <= 60 && days > 0;
+}
+
+export function isInsuranceExpired(policy: PropertyInsurance): boolean {
+  return new Date(policy.expiry_date) < new Date();
+}
+
+const _propNow = new Date().toISOString();
+
+export const mockProperties: Property[] = [
+  {
+    property_id: "p-223",
+    user_id: "u-1",
+    name: "Test Residence",
+    property_type: "house",
+    country: "",
+    city: "New York",
+    purchase_date: "2018-03-12",
+    market_value: 850000,
+    mortgage_balance: 450000,
+    is_primary: true,
+    is_active: true,
+    insurance: [
+      {
+        insurance_type: "homeowners",
+        provider: "State Farm",
+        policy_number: "HO-2024-88412",
+        coverage_amount: 850000,
+        annual_premium: 2400,
+        deductible: 2500,
+        expiry_date: "2026-09-15",
+      },
+      {
+        insurance_type: "flood",
+        provider: "NFIP",
+        policy_number: "FL-2024-33210",
+        coverage_amount: 250000,
+        annual_premium: 780,
+        deductible: 1500,
+        expiry_date: "2026-06-01",
+      },
+    ],
+    created_at: _propNow,
+    updated_at: _propNow,
+  },
+  {
+    property_id: "p-1",
+    user_id: "u-1",
+    name: "Primary Residence",
+    property_type: "house",
+    country: "USA",
+    city: "New York",
+    purchase_date: "2018-03-12",
+    market_value: 550000,
+    mortgage_balance: 450000,
+    is_primary: true,
+    is_active: true,
+    insurance: [
+      {
+        insurance_type: "homeowners",
+        provider: "State Farm",
+        policy_number: "HO-2024-88412",
+        coverage_amount: 850000,
+        annual_premium: 2400,
+        deductible: 2500,
+        expiry_date: "2026-09-15",
+      },
+      {
+        insurance_type: "flood",
+        provider: "NFIP",
+        policy_number: "FL-2024-33210",
+        coverage_amount: 250000,
+        annual_premium: 780,
+        deductible: 1500,
+        expiry_date: "2026-06-01",
+      },
+    ],
+    created_at: _propNow,
+    updated_at: _propNow,
+  },
+  {
+    property_id: "p-12",
+    user_id: "u-1",
+    name: "Island Getaway",
+    property_type: "land",
+    country: "Thailand",
+    city: "New York",
+    purchase_date: "2018-03-12",
+    market_value: 850000,
+    mortgage_balance: 450000,
+    is_primary: true,
+    is_active: true,
+    insurance: [
+      {
+        insurance_type: "homeowners",
+        provider: "State Farm",
+        policy_number: "HO-2024-88412",
+        coverage_amount: 850000,
+        annual_premium: 2400,
+        deductible: 2500,
+        expiry_date: "2026-09-15",
+      },
+      {
+        insurance_type: "flood",
+        provider: "NFIP",
+        policy_number: "FL-2024-33210",
+        coverage_amount: 250000,
+        annual_premium: 780,
+        deductible: 1500,
+        expiry_date: "2026-06-01",
+      },
+    ],
+    created_at: _propNow,
+    updated_at: _propNow,
+  },
+  {
+    property_id: "p-132",
+    user_id: "u-1",
+    name: "Island Getaway",
+    property_type: "land",
+    country: "South Africa",
+    city: "New York",
+    purchase_date: "2018-03-12",
+    market_value: 450000,
+    mortgage_balance: 450000,
+    is_primary: true,
+    is_active: true,
+    insurance: [
+      {
+        insurance_type: "homeowners",
+        provider: "State Farm",
+        policy_number: "HO-2024-88412",
+        coverage_amount: 850000,
+        annual_premium: 2400,
+        deductible: 2500,
+        expiry_date: "2026-09-15",
+      },
+      {
+        insurance_type: "flood",
+        provider: "NFIP",
+        policy_number: "FL-2024-33210",
+        coverage_amount: 250000,
+        annual_premium: 780,
+        deductible: 1500,
+        expiry_date: "2026-06-01",
+      },
+    ],
+    created_at: _propNow,
+    updated_at: _propNow,
+  },
+  {
+    property_id: "p-2",
+    user_id: "u-1",
+    name: "Rental Unit",
+    property_type: "apartment",
+    country: "Australia",
+    city: "Sydney",
+    purchase_date: "2020-07-20",
+    market_value: 620000,
+    mortgage_balance: 380000,
+    is_primary: false,
+    is_active: true,
+    insurance: [
+      {
+        insurance_type: "landlord",
+        provider: "Allianz",
+        policy_number: "LL-2024-55709",
+        coverage_amount: 620000,
+        annual_premium: 1850,
+        deductible: 2000,
+        expiry_date: "2026-04-10",
+      },
+    ],
+    created_at: _propNow,
+    updated_at: _propNow,
+  },
+  {
+    property_id: "p-3",
+    user_id: "u-1",
+    name: "Beach House",
+    property_type: "house",
+    country: "Ghana",
+    city: "Accra",
+    purchase_date: "2022-01-15",
+    market_value: 390000,
+    mortgage_balance: 0,
+    is_primary: false,
+    is_active: true,
+    insurance: [],
+    created_at: _propNow,
+    updated_at: _propNow,
+  },
+];
+
+export const COUNTRY_GEO_NAME_MAP: Record<string, string> = {
+  USA: "United States of America",
+  UK: "United Kingdom",
+  Australia: "Australia",
+  Canada: "Canada",
+  Ghana: "Ghana",
+  Nigeria: "Nigeria",
+  "South Africa": "South Africa",
+  UAE: "United Arab Emirates",
+  Singapore: "Singapore",
+  Germany: "Germany",
+  France: "France",
+  Netherlands: "Netherlands",
+  Switzerland: "Switzerland",
+  Japan: "Japan",
+};
+
+export function getPropertyGeoCountries(
+  properties: Property[] = mockProperties,
+): string[] {
+  return [
+    ...new Set(
+      properties
+        .filter((p) => p.is_active)
+        .map((p) => COUNTRY_GEO_NAME_MAP[p.country] ?? p.country),
+    ),
+  ];
+}
+
+// ============================================================================
+// MOCK INSURANCE POLICIES — single unified list, all user-managed
+// ============================================================================
+
+const _insNow = new Date().toISOString();
+
+export const mockInsurancePolicies: InsurancePolicy[] = [
+  {
+    policy_id: "ins-1",
+    user_id: "u-1",
+    category: "life",
+    provider: "MetLife",
+    name: "Term Life Insurance",
+    policy_number: "ML-2022-44190",
+    coverage_amount: 2000000,
+    premium_monthly: 250,
+    deductible: 0,
+    start_date: "2022-01-15",
+    renewal_date: "2030-06-01",
+    auto_renew: false,
+    beneficiary: "Spouse",
+    notes: "20-year term policy. Beneficiary: spouse.",
+    is_active: true,
+    created_at: _insNow,
+    updated_at: _insNow,
+  },
+  {
+    policy_id: "ins-2",
+    user_id: "u-1",
+    category: "health",
+    provider: "Blue Cross Blue Shield",
+    name: "Family Health Plan",
+    policy_number: "BC-2025-88320",
+    coverage_amount: 500000,
+    premium_monthly: 450,
+    deductible: 3000,
+    start_date: "2025-01-01",
+    renewal_date: "2026-12-31",
+    auto_renew: true,
+    notes: "PPO plan. Covers all 4 family members.",
+    is_active: true,
+    created_at: _insNow,
+    updated_at: _insNow,
+  },
+  {
+    policy_id: "ins-3",
+    user_id: "u-1",
+    category: "home",
+    provider: "State Farm",
+    name: "Primary Residence Insurance",
+    policy_number: "SF-2024-11209",
+    coverage_amount: 850000,
+    premium_monthly: 180,
+    deductible: 2500,
+    start_date: "2024-04-01",
+    renewal_date: "2026-04-01",
+    auto_renew: true,
+    notes: "Property values have risen. Review coverage limit.",
+    is_active: true,
+    created_at: _insNow,
+    updated_at: _insNow,
+  },
+  {
+    policy_id: "ins-4",
+    user_id: "u-1",
+    category: "home",
+    provider: "Allianz",
+    name: "Rental Property Insurance",
+    policy_number: "AL-2024-55709",
+    coverage_amount: 525000,
+    premium_monthly: 120,
+    deductible: 2000,
+    start_date: "2024-05-01",
+    renewal_date: "2026-05-01",
+    auto_renew: true,
+    notes: "Landlord policy. Includes liability coverage.",
+    is_active: true,
+    created_at: _insNow,
+    updated_at: _insNow,
+  },
+  {
+    policy_id: "ins-5",
+    user_id: "u-1",
+    category: "auto",
+    provider: "GEICO",
+    name: "Auto Insurance - BMW",
+    policy_number: "GK-2025-55412",
+    coverage_amount: 50000,
+    premium_monthly: 85,
+    deductible: 1000,
+    start_date: "2025-03-01",
+    renewal_date: "2026-09-15",
+    auto_renew: true,
+    is_active: true,
+    created_at: _insNow,
+    updated_at: _insNow,
+  },
+  {
+    policy_id: "ins-6",
+    user_id: "u-1",
+    category: "disability",
+    provider: "Guardian",
+    name: "Long-Term Disability",
+    policy_number: "GD-2023-00812",
+    coverage_amount: 120000,
+    premium_monthly: 150,
+    deductible: 0,
+    start_date: "2023-01-01",
+    renewal_date: "2027-01-01",
+    auto_renew: true,
+    notes: "Covers 60% of income. Review benefit amount after pay raise.",
+    is_active: true,
+    created_at: _insNow,
+    updated_at: _insNow,
+  },
+  {
+    policy_id: "ins-7",
+    user_id: "u-1",
+    category: "umbrella",
+    provider: "Chubb",
+    name: "Personal Umbrella Policy",
+    policy_number: "CH-2025-99001",
+    coverage_amount: 2000000,
+    premium_monthly: 45,
+    deductible: 0,
+    start_date: "2025-11-01",
+    renewal_date: "2026-11-01",
+    auto_renew: true,
+    is_active: true,
+    created_at: _insNow,
+    updated_at: _insNow,
+  },
+  {
+    policy_id: "ins-8",
+    user_id: "u-1",
+    category: "travel",
+    provider: "Allianz Travel",
+    name: "Annual Travel Insurance",
+    policy_number: "AT-2025-00192",
+    coverage_amount: 100000,
+    premium_monthly: 40,
+    deductible: 250,
+    start_date: "2025-01-01",
+    renewal_date: "2026-01-01",
+    auto_renew: true,
+    notes: "Covers all international trips under 90 days.",
+    is_active: true,
+    created_at: _insNow,
+    updated_at: _insNow,
+  },
+  {
+    policy_id: "ins-9",
+    user_id: "u-1",
+    category: "pet",
+    provider: "Healthy Paws",
+    name: "Pet Insurance - Max",
+    policy_number: "HP-2025-88201",
+    coverage_amount: 20000,
+    premium_monthly: 40,
+    deductible: 500,
+    start_date: "2025-03-01",
+    renewal_date: "2026-03-01",
+    auto_renew: true,
+    is_active: true,
+    created_at: _insNow,
+    updated_at: _insNow,
+  },
+];
+
+// ============================================================================
+// MOCK FINANCIAL DOMAIN DATA
+// ============================================================================
+
+export const mockAccounts: Account[] = [
+  {
+    id: "acc-brokerage",
+    name: "Brokerage Account",
+    institution: "Fidelity",
+    type: "taxable",
+    balance: 440000,
+    currency: "USD",
+    updatedAt: "2026-03-01T08:00:00Z",
+  },
+  {
+    id: "acc-401k",
+    name: "401(k)",
+    institution: "Vanguard",
+    type: "retirement",
+    balance: 380000,
+    currency: "USD",
+    updatedAt: "2026-03-01T08:00:00Z",
+  },
+  {
+    id: "acc-roth",
+    name: "Roth IRA",
+    institution: "Vanguard",
+    type: "retirement",
+    balance: 180000,
+    currency: "USD",
+    updatedAt: "2026-03-01T08:00:00Z",
+  },
+  {
+    id: "acc-checking",
+    name: "Checking Account",
+    institution: "Chase",
+    type: "cash",
+    balance: 55000,
+    currency: "USD",
+    updatedAt: "2026-03-03T10:00:00Z",
+  },
+  {
+    id: "acc-savings",
+    name: "High-Yield Savings",
+    institution: "Marcus",
+    type: "cash",
+    balance: 70000,
+    currency: "USD",
+    updatedAt: "2026-03-03T10:00:00Z",
+  },
+  {
+    id: "acc-hysa2",
+    name: "Emergency Reserve",
+    institution: "Ally",
+    type: "cash",
+    balance: 62500,
+    currency: "USD",
+    updatedAt: "2026-03-03T10:00:00Z",
+  },
+  {
+    id: "acc-crypto",
+    name: "Crypto Portfolio",
+    institution: "Coinbase",
+    type: "crypto",
+    balance: 62500,
+    currency: "USD",
+    updatedAt: "2026-03-02T06:30:00Z",
+  },
+];
+
+export const mockLiabilities: Liability[] = [
+  {
+    id: "liab-mort-1",
+    name: "Primary Residence Mortgage",
+    type: "mortgage",
+    balance: 450000,
+    interestRatePct: 3.25,
+    minPaymentMonthly: 2100,
+    dueDay: 1,
+    updatedAt: "2026-03-01T08:00:00Z",
+  },
+  {
+    id: "liab-mort-2",
+    name: "Rental Property Mortgage",
+    type: "mortgage",
+    balance: 325000,
+    interestRatePct: 3.75,
+    minPaymentMonthly: 1650,
+    dueDay: 1,
+    updatedAt: "2026-03-01T08:00:00Z",
+  },
+  {
+    id: "liab-cc-1",
+    name: "Chase Sapphire Card",
+    type: "credit_card",
+    balance: 8500,
+    interestRatePct: 19.99,
+    minPaymentMonthly: 250,
+    dueDay: 15,
+    updatedAt: "2026-03-03T10:00:00Z",
+  },
+  {
+    id: "liab-auto-1",
+    name: "Auto Loan - BMW",
+    type: "auto_loan",
+    balance: 22000,
+    interestRatePct: 4.9,
+    minPaymentMonthly: 520,
+    dueDay: 10,
+    updatedAt: "2026-03-01T08:00:00Z",
+  },
+  {
+    id: "liab-personal-1",
+    name: "Personal Loan",
+    type: "personal_loan",
+    balance: 15000,
+    interestRatePct: 8.5,
+    minPaymentMonthly: 350,
+    dueDay: 20,
+    updatedAt: "2026-03-01T08:00:00Z",
+  },
+];
+
+export const mockPropertyAssets: PropertyAsset[] = [
+  {
+    id: "prop-1",
+    name: "Primary Residence",
+    value: 850000,
+    mortgageLiabilityId: "liab-mort-1",
+    updatedAt: "2026-02-28T08:00:00Z",
+  },
+  {
+    id: "prop-2",
+    name: "Rental Property",
+    value: 525000,
+    mortgageLiabilityId: "liab-mort-2",
+    updatedAt: "2026-02-28T08:00:00Z",
+  },
+];
+
+export const mockPortfolioPerformance: PerformancePoint[] = [
+  { month: "2025-01", value: 1000000, contributions: 14300 },
+  { month: "2025-02", value: 1024000, contributions: 14300 },
+  { month: "2025-03", value: 1011000, contributions: 14300 },
+  { month: "2025-04", value: 1038000, contributions: 14300 },
+  { month: "2025-05", value: 1065000, contributions: 14300 },
+  { month: "2025-06", value: 1052000, contributions: 14300 },
+  { month: "2025-07", value: 1088000, contributions: 14300 },
+  { month: "2025-08", value: 1115000, contributions: 14300 },
+  { month: "2025-09", value: 1103000, contributions: 14300 },
+  { month: "2025-10", value: 1140000, contributions: 14300 },
+  { month: "2025-11", value: 1178000, contributions: 14300 },
+  { month: "2025-12", value: 1210000, contributions: 14300 },
+  { month: "2026-01", value: 1228000, contributions: 14300 },
+  { month: "2026-02", value: 1241000, contributions: 14300 },
+  { month: "2026-03", value: 1250000, contributions: 14300 },
+];
+
+export const mockAllocation: AllocationSlice[] = [
+  { label: "Stocks", percentage: 60, value: 750000 },
+  { label: "Bonds", percentage: 25, value: 312500 },
+  { label: "Cash", percentage: 10, value: 125000 },
+  { label: "Alternatives", percentage: 5, value: 62500 },
+];
+
+export const mockTaxProfile: TaxProfile = {
+  effectiveTaxRatePct: 22,
+  marginalTaxRatePct: 35,
+  filingStatus: "married",
+  stateOrRegion: "New York",
+  updatedAt: "2026-01-15T00:00:00Z",
+};
+
+export const mockEmergencyFund: EmergencyFundConfig = {
+  targetMonths: 6,
+  currentCashBalance: 85000,
+  includeAccountIds: ["acc-checking", "acc-hysa2"],
+  updatedAt: "2026-03-03T10:00:00Z",
 };
 
 // ============================================================================
-// PERSONAL DATA
+// CASH FLOW DATA
 // ============================================================================
+
+export const cashFlowData: {
+  income: CashFlowRow[];
+  expenses: ExpenseCategory[];
+  settings: CashFlowSettings;
+} = {
+  income: [
+    { id: "i_salary", name: "Salary", amount: 22000 },
+    { id: "i_rent", name: "Rental Income", amount: 2800 },
+    { id: "i_div", name: "Dividends", amount: 2500 },
+    { id: "i_side", name: "Passive Income", amount: 1200 },
+  ],
+  expenses: [
+    { id: "e_housing", name: "Housing", amount: 4200, essential: true },
+    { id: "e_living", name: "Living", amount: 3500, essential: true },
+    { id: "e_ins", name: "Insurance", amount: 1230, essential: true },
+    { id: "e_child", name: "Children", amount: 2100, essential: true },
+    { id: "e_disc", name: "Discretionary", amount: 1800, essential: false },
+    { id: "e_other", name: "Other", amount: 1370, essential: false },
+  ],
+  settings: { emergencyFundMonths: 6 },
+};
+
+export const mockIncomeRows = cashFlowData.income;
+export const mockExpenseCategories = cashFlowData.expenses;
+
+// ============================================================================
+// CASH FLOW HISTORY
+// ============================================================================
+
+export const mockCashFlowHistory: CashFlowPoint[] = [
+  { month: "2025-01", income: 28500, expenses: 14200, surplus: 14300 },
+  { month: "2025-02", income: 28500, expenses: 15100, surplus: 13400 },
+  { month: "2025-03", income: 28500, expenses: 13800, surplus: 14700 },
+  { month: "2025-04", income: 28500, expenses: 14600, surplus: 13900 },
+  { month: "2025-05", income: 28500, expenses: 16200, surplus: 12300 },
+  { month: "2025-06", income: 28500, expenses: 14900, surplus: 13600 },
+  { month: "2025-07", income: 28500, expenses: 15300, surplus: 13200 },
+  { month: "2025-08", income: 28500, expenses: 14700, surplus: 13800 },
+  { month: "2025-09", income: 28500, expenses: 15800, surplus: 12700 },
+  { month: "2025-10", income: 28500, expenses: 14400, surplus: 14100 },
+  { month: "2025-11", income: 28500, expenses: 17200, surplus: 11300 },
+  { month: "2025-12", income: 31000, expenses: 19800, surplus: 11200 },
+  { month: "2026-01", income: 28500, expenses: 14200, surplus: 14300 },
+  { month: "2026-02", income: 28500, expenses: 15100, surplus: 13400 },
+  { month: "2026-03", income: 28500, expenses: 14200, surplus: 14300 },
+];
+
+// ============================================================================
+// FRESHNESS & RETIREMENT CONFIG
+// ============================================================================
+
+export const mockFreshness: SectionFreshness[] = [
+  { section: "overview", updatedAt: "2026-03-04T06:00:00Z" },
+  { section: "portfolio", updatedAt: "2026-03-01T08:00:00Z" },
+  { section: "cash-flow", updatedAt: "2026-03-03T10:00:00Z" },
+  { section: "goals", updatedAt: "2026-03-01T08:00:00Z" },
+  { section: "retirement", updatedAt: "2026-02-28T08:00:00Z" },
+  { section: "insurance", updatedAt: "2026-03-01T08:00:00Z" },
+  { section: "advisor", updatedAt: "2026-03-01T08:00:00Z" },
+  { section: "tax", updatedAt: "2026-01-15T00:00:00Z" },
+];
+
+export const mockRetirementConfig: RetirementConfig = {
+  currentAge: 43,
+  retirementAge: 60,
+  lifeExpectancy: 75,
+  currentInvested: 1250000,
+  monthlySavings: 14300,
+  existingPensionBalance: 185000,
+  monthlyPensionContribution: 3200,
+  expectedReturnPct: 7,
+  inflationPct: 3,
+  safeWithdrawalRatePct: 4,
+  desiredMonthlyIncome: 18500,
+};
+
+// ============================================================================
+// FINANCIAL DOMAIN DATA
+// ============================================================================
+
+export const financialDomainData: FinancialDomainData = {
+  accounts: mockAccounts,
+  liabilities: mockLiabilities,
+  propertyAssets: mockPropertyAssets,
+  portfolioPerformance: mockPortfolioPerformance,
+  allocation: mockAllocation,
+  taxProfile: mockTaxProfile,
+  emergencyFund: mockEmergencyFund,
+  insurancePolicies: mockInsurancePolicies,
+  incomeRows: cashFlowData.income,
+  expenseCategories: cashFlowData.expenses,
+  freshness: mockFreshness,
+  retirement: mockRetirementConfig,
+  cashFlowHistory: mockCashFlowHistory,
+};
+
+export function getFinancialDomainData(): FinancialDomainData {
+  return financialDomainData;
+}
+
+// ============================================================================
+// PORTFOLIO DATA
+// ============================================================================
+
+export const portfolioData = {
+  totalValue: mockRetirementConfig.currentInvested,
+  allocation: {
+    stocks: { percentage: 60, value: 750000 },
+    bonds: { percentage: 25, value: 312500 },
+    cash: { percentage: 10, value: 125000 },
+    alternatives: { percentage: 5, value: 62500 },
+  },
+  properties: mockPropertyAssets.map((prop) => {
+    const mortgage =
+      mockLiabilities.find((l) => l.id === prop.mortgageLiabilityId)?.balance ??
+      0;
+    return {
+      id: prop.id,
+      name: prop.name,
+      value: prop.value,
+      mortgage,
+      equity: prop.value - mortgage,
+    };
+  }),
+  totalRealEstate: mockPropertyAssets.reduce((s, p) => s + p.value, 0),
+  totalRealEstateEquity: mockPropertyAssets.reduce((s, p) => {
+    const mortgage =
+      mockLiabilities.find((l) => l.id === p.mortgageLiabilityId)?.balance ?? 0;
+    return s + (p.value - mortgage);
+  }, 0),
+};
+
+// ============================================================================
+// PERSONAL / SAVINGS / ASSUMPTIONS / LIFESTYLE
+// ============================================================================
+
 export const personalData = {
   name: getUserFullName(mockUser),
   get currentAge() {
     return getUserAge(mockUser);
   },
-  retirementAge: 60,
-  lifeExpectancy: 75,
+  retirementAge: mockRetirementConfig.retirementAge,
+  lifeExpectancy: mockRetirementConfig.lifeExpectancy,
 };
 
-// ============================================================================
-// SAVINGS & CONTRIBUTIONS
-// ============================================================================
 export const savingsData = {
-  monthlySavings: 14300,
+  monthlySavings: mockRetirementConfig.monthlySavings,
   annualBonus: 50000,
-  expectedAnnualRaise: 0.03, // 3% annual raise
+  expectedAnnualRaise: 0.03,
 };
 
-// ============================================================================
-// INVESTMENT ASSUMPTIONS
-// ============================================================================
 export const investmentAssumptions = {
-  expectedReturnPct: 7, // 7% expected annual return
-  inflationPct: 3, // 3% inflation
-  safeWithdrawalRatePct: 4, // 4% SWR rule
+  expectedReturnPct: mockRetirementConfig.expectedReturnPct,
+  inflationPct: mockRetirementConfig.inflationPct,
+  safeWithdrawalRatePct: mockRetirementConfig.safeWithdrawalRatePct,
 };
 
-// ============================================================================
-// RETIREMENT LIFESTYLE
-// ============================================================================
 export const retirementLifestyle = {
-  desiredMonthlyIncome: 18500, // Desired monthly income in today's dollars
+  desiredMonthlyIncome: mockRetirementConfig.desiredMonthlyIncome,
   expectedExpenses: {
     housing: 4000,
     healthcare: 2500,
@@ -137,25 +1816,9 @@ export const retirementLifestyle = {
 };
 
 // ============================================================================
-// COMPUTED VALUES (derived from above data)
-// ============================================================================
-export const computedData = {
-  yearsToRetirement: personalData.retirementAge - personalData.currentAge,
-  monthlyExpenses: Object.values(retirementLifestyle.expectedExpenses).reduce(
-    (a, b) => a + b,
-    0,
-  ),
-  currentInvested: portfolioData.totalValue,
-  totalNetWorth: portfolioData.totalValue + portfolioData.totalRealEstateEquity,
-};
-
-// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Get all client data as a single object
- */
 export function getClientData() {
   return {
     portfolio: portfolioData,
@@ -163,106 +1826,43 @@ export function getClientData() {
     savings: savingsData,
     assumptions: investmentAssumptions,
     lifestyle: retirementLifestyle,
-    computed: computedData,
+    computed: {
+      yearsToRetirement: personalData.retirementAge - personalData.currentAge,
+      monthlyExpenses: Object.values(
+        retirementLifestyle.expectedExpenses,
+      ).reduce((a, b) => a + b, 0),
+      currentInvested: portfolioData.totalValue,
+      totalNetWorth:
+        portfolioData.totalValue + portfolioData.totalRealEstateEquity,
+    },
   };
 }
 
-/**
- * Update portfolio total and cascade to computed values
- */
 export function updatePortfolioValue(newValue: number) {
   portfolioData.totalValue = newValue;
-  computedData.currentInvested = newValue;
-  computedData.totalNetWorth =
-    portfolioData.totalValue + portfolioData.totalRealEstateEquity;
 }
-
-/**
- * Update savings amount
- */
 export function updateMonthlySavings(amount: number) {
   savingsData.monthlySavings = amount;
 }
-
-/**
- * Update retirement age and recalculate years to retirement
- */
 export function updateRetirementAge(age: number) {
   personalData.retirementAge = age;
-  computedData.yearsToRetirement =
-    personalData.retirementAge - personalData.currentAge;
 }
-
-// Current age is now automatically derived from the user's date of birth.
-// No manual update needed — it stays in sync with the User profile.
-
-/**
- * Update desired monthly income
- */
 export function updateDesiredMonthlyIncome(amount: number) {
   retirementLifestyle.desiredMonthlyIncome = amount;
 }
-
-/**
- * Update investment assumptions
- */
 export function updateInvestmentAssumptions(
   assumptions: Partial<typeof investmentAssumptions>,
 ) {
   Object.assign(investmentAssumptions, assumptions);
 }
-
-/**
- * Get retirement projection inputs
- */
 export function getRetirementProjectionInputs() {
-  return {
-    currentAge: personalData.currentAge,
-    retirementAge: personalData.retirementAge,
-    lifeExpectancy: personalData.lifeExpectancy,
-    currentInvested: portfolioData.totalValue,
-    monthlySavings: savingsData.monthlySavings,
-    expectedReturnPct: investmentAssumptions.expectedReturnPct,
-    inflationPct: investmentAssumptions.inflationPct,
-    safeWithdrawalRatePct: investmentAssumptions.safeWithdrawalRatePct,
-    desiredMonthlyIncome: retirementLifestyle.desiredMonthlyIncome,
-    existingPensionBalance: 185000,
-    monthlyPensionContribution: 3200,
-  };
+  return { ...mockRetirementConfig };
 }
-
-// ============================================================================
-// CASH FLOW DATA
-// ============================================================================
-export type MoneyRow = {
-  id: string;
-  name: string;
-  amount: number;
-};
-
-export const cashFlowData = {
-  income: [
-    { id: "i_salary", name: "Salary", amount: 22000 },
-    { id: "i_rent", name: "Rental Income", amount: 2800 },
-    { id: "i_div", name: "Dividends", amount: 2500 },
-    { id: "i_side", name: "Passive Income", amount: 1200 },
-  ] as MoneyRow[],
-  expenses: [
-    { id: "e_housing", name: "Housing", amount: 4200 },
-    { id: "e_living", name: "Living", amount: 3500 },
-    { id: "e_ins", name: "Insurance", amount: 1230 },
-    { id: "e_child", name: "Children", amount: 2100 },
-    { id: "e_disc", name: "Discretionary", amount: 1800 },
-    { id: "e_other", name: "Other", amount: 1370 },
-  ] as MoneyRow[],
-  settings: {
-    emergencyFundMonths: 6,
-  },
-};
 
 // ============================================================================
 // GOALS DATA
 // ============================================================================
+
 export type Goal = {
   id: string;
   title: string;
@@ -270,7 +1870,7 @@ export type Goal = {
   current: number;
   target: number;
   completed: boolean;
-  completedDate?: string; // Optional: when the goal was completed
+  completedDate?: string;
 };
 
 export type Scenario = {
@@ -319,7 +1919,6 @@ export const goalsData = {
       target: 120000,
       completed: false,
     },
-
     {
       id: "wedding",
       title: "Daughter's Wedding Fund",
@@ -328,7 +1927,6 @@ export const goalsData = {
       target: 100000,
       completed: false,
     },
-    // Completed goals
     {
       id: "emergency",
       title: "Emergency Fund",
@@ -396,6 +1994,7 @@ export const goalsData = {
 // ============================================================================
 // ADVISOR DATA
 // ============================================================================
+
 export type Advisor = {
   initials: string;
   name: string;
@@ -416,13 +2015,7 @@ export type ActionItem = {
   dueLabel: string;
   done: boolean;
 };
-
-export type Note = {
-  id: string;
-  dateLabel: string;
-  text: string;
-};
-
+export type Note = { id: string; dateLabel: string; text: string };
 export type Meeting = {
   title: string;
   dateLabel: string;
@@ -440,7 +2033,7 @@ export const advisorData = {
     email: "j.addo@celerey.co",
     phone: "+1 (555) 012-9090",
     availability: "limited" as const,
-    bio: "James supports high-net-worth families with long-term portfolio strategy, tax-aware planning, and risk management. His style is structured and calm - focusing on clear decisions, measurable outcomes, and fewer surprises.",
+    bio: "James supports high-net-worth families with long-term portfolio strategy, tax-aware planning, and risk management.",
     specialties: [
       "Tax-aware investing",
       "Retirement & longevity planning",
@@ -491,8 +2084,9 @@ export const advisorData = {
 };
 
 // ============================================================================
-// AI INSIGHTS DATA
+// AI INSIGHTS
 // ============================================================================
+
 export type AIInsight = {
   id: string;
   kind: "opportunity" | "risk" | "milestone" | "action";
@@ -502,18 +2096,49 @@ export type AIInsight = {
   cta?: { label: string };
 };
 
+export const aiInsights: AIInsight[] = [
+  {
+    id: "optimize-tax",
+    kind: "opportunity",
+    title: "Optimize Tax Position",
+    description:
+      "You could save approximately $12,400 annually by restructuring your investment income through a family trust.",
+    priority: "high",
+    cta: { label: "Discuss with Advisor" },
+  },
+  {
+    id: "concentration",
+    kind: "risk",
+    title: "Portfolio Concentration",
+    description:
+      "Technology stocks represent 35% of your equity allocation. Consider diversifying to reduce sector risk.",
+    priority: "medium",
+    cta: { label: "Review Portfolio" },
+  },
+  {
+    id: "milestone",
+    kind: "milestone",
+    title: "Goal Milestone Reached",
+    description:
+      "Your vacation home fund has crossed the 40% threshold. You're 6 months ahead of schedule.",
+    priority: "low",
+    cta: { label: "View Details" },
+  },
+  {
+    id: "insurance",
+    kind: "action",
+    title: "Insurance Renewal Due",
+    description:
+      "Primary Residence Insurance renews in 17 days. Review coverage before auto-renewing.",
+    priority: "medium",
+    cta: { label: "Review Now" },
+  },
+];
+
 // ============================================================================
-// LOCATION DISTRIBUTION DATA (geographic breakdown of assets by property)
-// Shape mirrors the property form so backend integration is a straight mapping:
-//   country      → same as Property.country
-//   city         → same as Property.city
-//   value        → Property.market_value (or aggregated investment value for
-//                  that location when the backend provides it)
-//   propertyType → same as Property.property_type
-//   propertyName → same as Property.name
-//
-// To add / remove entries: update this array in lib/client-data.ts only.
+// LOCATION DISTRIBUTION DATA
 // ============================================================================
+
 export type LocationEntry = {
   country: string;
   city: string;
@@ -554,115 +2179,687 @@ export const locationDistributionData: LocationEntry[] = [
 ];
 
 // ============================================================================
-// AI INSIGHTS DATA
+// UTILS
 // ============================================================================
-export const aiInsights = [
-  {
-    id: "optimize-tax",
-    kind: "opportunity" as const,
-    title: "Optimize Tax Position",
-    description:
-      "You could save approximately $12,400 annually by restructuring your investment income through a family trust.",
-    priority: "high" as const,
-    cta: { label: "Discuss with Advisor" },
-  },
-  {
-    id: "concentration",
-    kind: "risk" as const,
-    title: "Portfolio Concentration",
-    description:
-      "Technology stocks represent 35% of your equity allocation. Consider diversifying to reduce sector risk.",
-    priority: "medium" as const,
-    cta: { label: "Review Portfolio" },
-  },
-  {
-    id: "milestone",
-    kind: "milestone" as const,
-    title: "Goal Milestone Reached",
-    description:
-      "Your vacation home fund has crossed the 40% threshold. You're 6 months ahead of schedule.",
-    priority: "low" as const,
-    cta: { label: "View Details" },
-  },
-  {
-    id: "insurance",
-    kind: "action" as const,
-    title: "Insurance Review Due",
-    description:
-      "Your home insurance hasn't been reviewed in 18 months. Property values have increased significantly.",
-    priority: "medium" as const,
-    cta: { label: "Schedule Review" },
-  },
-] as AIInsight[];
+
+export const userCurrency: string = mockUser.currency;
+
+export function formatCurrency(n: number, currency?: string): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: currency ?? mockUser.currency,
+    maximumFractionDigits: 0,
+  }).format(n);
+}
 
 // ============================================================================
-// DOMAIN MODEL RE-EXPORTS
-// The new modular domain types/data/selectors live in:
-//   lib/types/financial.ts
-//   lib/data/financial.ts
-//   lib/selectors/financial.ts
-// Re-exported here so consuming code can import from a single location.
+// NET WORTH CALCULATION
 // ============================================================================
-export type {
-  Account,
-  AccountType,
-  Liability,
-  LiabilityType,
-  PropertyAsset,
-  PerformancePoint,
-  AllocationSlice,
-  TaxProfile,
-  FilingStatus,
-  EmergencyFundConfig,
-  InsurancePolicy as FinancialInsurancePolicy,
-  InsurancePolicyType,
-  CashFlowRow,
-  ExpenseCategory,
-  SectionFreshness,
-  FinancialDomainData,
-  RetirementConfig,
-  GoalMetrics,
-  RetirementOutputs,
-  PerformanceMetrics,
-  CashFlowMetrics,
-  NetWorthBreakdownMetrics,
-  EmergencyFundMetrics,
-  LiquidityMetrics,
-  InsuranceReviewStatus,
-  DashboardMetrics,
-} from "@/lib/types/financial";
 
-export {
-  getFinancialDomainData,
-  financialDomainData,
-  mockAccounts,
-  mockLiabilities,
-  mockPropertyAssets,
-  mockPortfolioPerformance,
-  mockAllocation,
-  mockTaxProfile,
-  mockEmergencyFund,
-  mockInsurancePoliciesFinancial,
-  mockIncomeRows,
-  mockExpenseCategories,
-  mockFreshness,
-  mockRetirementConfig,
-} from "@/lib/data/financial";
+export type OtherAsset = { id: string; name: string; value: number };
+export const mockOtherAssets: OtherAsset[] = [];
 
-export {
-  selectNetWorthBreakdown,
-  selectCashFlowMetrics,
-  selectEmergencyFundMetrics,
-  selectGoalMetrics,
-  selectGoalMetricsForScenario,
-  selectRetirementOutputs,
-  selectPerformanceMetrics,
-  selectLiquidityMetrics,
-  selectInsuranceReviewStatus,
-  selectTotalNetWorth,
-  selectMonthlyIncome,
-  selectMonthlyExpenses,
-  selectSavingsRate,
-  selectDashboardMetrics,
-  getDashboardData,
-} from "@/lib/selectors/financial";
+export type NetWorthBreakdown = {
+  investmentAssets: number;
+  cashAssets: number;
+  propertyValues: number;
+  otherAssets: OtherAsset[];
+  totalOtherAssets: number;
+  totalAssets: number;
+  mortgageBalances: number;
+  totalLiabilities: number;
+  netWorth: number;
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  monthlySavings: number;
+  savingsRate: number;
+  annualPropertyInsurance: number;
+  annualGeneralInsurance: number;
+  totalAnnualInsurance: number;
+  monthlyInsuranceCost: number;
+  debtToAssetRatio: number;
+  liquidityRatio: number;
+  insuranceToIncomeRatio: number;
+  investmentByType: { type: string; value: number }[];
+  propertyBreakdown: {
+    name: string;
+    marketValue: number;
+    mortgage: number;
+    equity: number;
+    insuranceCost: number;
+  }[];
+};
+
+export function calculateNetWorth(
+  holdings: AssetHolding[] = mockHoldings,
+  valuations: AssetValuation[] = mockValuations,
+  properties: Property[] = mockProperties.filter((p) => p.is_active),
+  income: { amount: number }[] = cashFlowData.income,
+  expenses: { amount: number }[] = cashFlowData.expenses,
+  otherAssets: OtherAsset[] = mockOtherAssets,
+): NetWorthBreakdown {
+  const activeHoldings = holdings.filter((h) => h.is_active);
+  const typeMap = new Map<string, number>();
+  let investmentAssets = 0;
+  let cashAssets = 0;
+
+  for (const h of activeHoldings) {
+    const val = currentValue(h, valuations);
+    if (h.asset_type === "cash") cashAssets += val;
+    else investmentAssets += val;
+    typeMap.set(h.asset_type, (typeMap.get(h.asset_type) ?? 0) + val);
+  }
+
+  const investmentByType = [...typeMap.entries()]
+    .map(([type, value]) => ({ type, value }))
+    .sort((a, b) => b.value - a.value);
+
+  const propertyValues = properties.reduce((s, p) => s + p.market_value, 0);
+  const mortgageBalances = properties.reduce(
+    (s, p) => s + totalPropertyLienBalance(p),
+    0,
+  );
+  const propertyBreakdown = properties.map((p) => ({
+    name: p.name,
+    marketValue: p.market_value,
+    mortgage: totalPropertyLienBalance(p),
+    equity: propertyEquity(p),
+    insuranceCost: totalInsurancePremium(p),
+  }));
+
+  const totalOtherAssets = otherAssets.reduce((s, a) => s + a.value, 0);
+  const totalAssets =
+    investmentAssets + cashAssets + propertyValues + totalOtherAssets;
+  const totalLiabilities = mortgageBalances;
+  const netWorth = totalAssets - totalLiabilities;
+
+  const monthlyIncome = income.reduce((s, i) => s + i.amount, 0);
+  const monthlyExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  const monthlySavings = monthlyIncome - monthlyExpenses;
+  const savingsRate =
+    monthlyIncome > 0 ? (monthlySavings / monthlyIncome) * 100 : 0;
+
+  const annualPropertyInsurance = properties.reduce(
+    (s, p) => s + totalInsurancePremium(p),
+    0,
+  );
+  const annualGeneralInsurance = mockInsurancePolicies
+    .filter((p) => p.is_active)
+    .reduce((s, p) => s + p.premium_monthly * 12, 0);
+  const totalAnnualInsurance = annualPropertyInsurance + annualGeneralInsurance;
+  const monthlyInsuranceCost = Math.round(totalAnnualInsurance / 12);
+  const debtToAssetRatio =
+    totalAssets > 0 ? Math.round((totalLiabilities / totalAssets) * 100) : 0;
+  const liquidityRatio =
+    monthlyExpenses > 0
+      ? Math.round((cashAssets / monthlyExpenses) * 10) / 10
+      : 0;
+  const annualIncome = monthlyIncome * 12;
+  const insuranceToIncomeRatio =
+    annualIncome > 0
+      ? Math.round((totalAnnualInsurance / annualIncome) * 1000) / 10
+      : 0;
+
+  return {
+    investmentAssets,
+    cashAssets,
+    propertyValues,
+    otherAssets,
+    totalOtherAssets,
+    totalAssets,
+    mortgageBalances,
+    totalLiabilities,
+    netWorth,
+    monthlyIncome,
+    monthlyExpenses,
+    monthlySavings,
+    savingsRate,
+    annualPropertyInsurance,
+    annualGeneralInsurance,
+    totalAnnualInsurance,
+    monthlyInsuranceCost,
+    debtToAssetRatio,
+    liquidityRatio,
+    insuranceToIncomeRatio,
+    investmentByType,
+    propertyBreakdown,
+  };
+}
+
+export type NetWorthSnapshot = {
+  ts: string;
+  netWorth: number;
+  breakdown: NetWorthBreakdown;
+};
+
+export function createNetWorthSnapshot(
+  holdings: AssetHolding[] = mockHoldings,
+  valuations: AssetValuation[] = mockValuations,
+  properties: Property[] = mockProperties.filter((p) => p.is_active),
+  income: { amount: number }[] = cashFlowData.income,
+  expenses: { amount: number }[] = cashFlowData.expenses,
+): NetWorthSnapshot {
+  const breakdown = calculateNetWorth(
+    holdings,
+    valuations,
+    properties,
+    income,
+    expenses,
+  );
+  return {
+    ts: new Date().toISOString(),
+    netWorth: breakdown.netWorth,
+    breakdown,
+  };
+}
+
+export function computePercentChange(
+  previous: number,
+  current: number,
+): number | null {
+  if (!isFinite(previous) || previous === 0) return null;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+export function recordNetWorthSnapshot(opts?: {
+  dedupeDays?: number;
+  maxEntries?: number;
+}): NetWorthSnapshot {
+  const snap = createNetWorthSnapshot();
+  try {
+    const history = getNetWorthHistory();
+    if (opts?.dedupeDays && history.length > 0) {
+      const last = history[history.length - 1];
+      const days =
+        (new Date(snap.ts).getTime() - new Date(last.ts).getTime()) /
+        (1000 * 60 * 60 * 24);
+      if (days < opts.dedupeDays) return snap;
+    }
+    const prev = history.length > 0 ? history[history.length - 1] : null;
+    const rawPct = prev
+      ? computePercentChange(prev.netWorth, snap.netWorth)
+      : null;
+    const pct = rawPct === null ? null : Math.round(rawPct * 10) / 10;
+    const trend: "up" | "down" | "flat" | undefined =
+      pct === null ? undefined : pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+    pushNetWorthSnapshot(
+      {
+        ts: snap.ts,
+        netWorth: snap.netWorth,
+        breakdown: snap.breakdown,
+        percentChange: pct,
+        trend,
+        previousNetWorth: prev?.netWorth ?? null,
+      },
+      opts?.maxEntries ?? 500,
+    );
+  } catch {
+    /* noop */
+  }
+  return snap;
+}
+
+export function getLatestNetWorthChange(): {
+  percent: number | null;
+  since: string | null;
+  previous?: number;
+  current?: number;
+} {
+  const history = getNetWorthHistory();
+  if (history.length === 0) return { percent: null, since: null };
+  const latest = history[history.length - 1];
+  const prev = history.length > 1 ? history[history.length - 2] : null;
+  if (!prev) return { percent: null, since: null, current: latest.netWorth };
+  const pct = computePercentChange(prev.netWorth, latest.netWorth);
+  return {
+    percent: pct === null ? null : Math.round(pct * 10) / 10,
+    since: prev.ts,
+    previous: prev.netWorth,
+    current: latest.netWorth,
+  };
+}
+
+// ============================================================================
+// FINANCIAL SELECTORS
+// ============================================================================
+
+function _sum(values: number[]): number {
+  return values.reduce((acc, v) => acc + v, 0);
+}
+
+function _futureValue(
+  presentValue: number,
+  monthlyContribution: number,
+  annualReturnPct: number,
+  years: number,
+): number {
+  const r = annualReturnPct / 100 / 12;
+  const n = years * 12;
+  if (r === 0) return presentValue + monthlyContribution * n;
+  const growth = Math.pow(1 + r, n);
+  return presentValue * growth + monthlyContribution * ((growth - 1) / r);
+}
+
+function _requiredMonthlyContribution(
+  currentBalance: number,
+  targetBalance: number,
+  annualReturnPct: number,
+  years: number,
+): number {
+  if (years <= 0) return 0;
+  const r = annualReturnPct / 100 / 12;
+  const n = years * 12;
+  if (r === 0) {
+    const gap = targetBalance - currentBalance;
+    return gap > 0 ? gap / n : 0;
+  }
+  const growth = Math.pow(1 + r, n);
+  const gap = targetBalance - currentBalance * growth;
+  if (gap <= 0) return 0;
+  return gap / ((growth - 1) / r);
+}
+
+function _computeLiquidComponents(data: FinancialDomainData): {
+  liquidAssets: number;
+  shortTermDebt: number;
+  liquidNetWorth: number;
+} {
+  const liquidAssets = _sum(
+    data.accounts
+      .filter((a) => a.type === "cash" || a.type === "taxable")
+      .map((a) => a.balance),
+  );
+  const shortTermTypes: Liability["type"][] = [
+    "credit_card",
+    "personal_loan",
+    "auto_loan",
+    "student_loan",
+    "other",
+  ];
+  const shortTermDebt = _sum(
+    data.liabilities
+      .filter((l) => shortTermTypes.includes(l.type))
+      .map((l) => l.balance),
+  );
+  return {
+    liquidAssets,
+    shortTermDebt,
+    liquidNetWorth: liquidAssets - shortTermDebt,
+  };
+}
+
+export function selectNetWorthBreakdown(
+  data: FinancialDomainData,
+): NetWorthBreakdownMetrics {
+  const totalInvestments = _sum(
+    data.accounts
+      .filter((a) => ["taxable", "retirement", "crypto"].includes(a.type))
+      .map((a) => a.balance),
+  );
+  const totalCash = _sum(
+    data.accounts.filter((a) => a.type === "cash").map((a) => a.balance),
+  );
+  const totalOtherAssets = _sum(
+    data.accounts.filter((a) => a.type === "other").map((a) => a.balance),
+  );
+  const totalPropertyValue = _sum(data.propertyAssets.map((p) => p.value));
+  const totalAssets =
+    totalInvestments + totalCash + totalOtherAssets + totalPropertyValue;
+  const totalMortgages = _sum(
+    data.liabilities.filter((l) => l.type === "mortgage").map((l) => l.balance),
+  );
+  const { shortTermDebt: totalShortTermDebt, liquidNetWorth } =
+    _computeLiquidComponents(data);
+  const totalLiabilities = totalMortgages + totalShortTermDebt;
+  return {
+    totalInvestments,
+    totalCash,
+    totalPropertyValue,
+    totalOtherAssets,
+    totalAssets,
+    totalMortgages,
+    totalShortTermDebt,
+    totalLiabilities,
+    totalNetWorth: totalAssets - totalLiabilities,
+    liquidNetWorth,
+  };
+}
+
+export function selectMonthlyIncome(data: FinancialDomainData): number {
+  return _sum(data.incomeRows.map((r) => r.amount));
+}
+
+export function selectMonthlyExpenses(data: FinancialDomainData): number {
+  return _sum(data.expenseCategories.map((e) => e.amount));
+}
+
+export function selectEssentialExpenses(categories: ExpenseCategory[]): number {
+  return _sum(categories.filter((c) => c.essential).map((c) => c.amount));
+}
+
+export function selectCashFlowMetrics(
+  data: FinancialDomainData,
+): CashFlowMetrics {
+  const monthlyIncome = selectMonthlyIncome(data);
+  const monthlyExpenses = selectMonthlyExpenses(data);
+  const monthlySurplus = monthlyIncome - monthlyExpenses;
+  const savingsRate =
+    monthlyIncome > 0 ? (monthlySurplus / monthlyIncome) * 100 : 0;
+  const essentialExpenses = selectEssentialExpenses(data.expenseCategories);
+  const discretionaryExpenses = _sum(
+    data.expenseCategories.filter((c) => !c.essential).map((c) => c.amount),
+  );
+  const annualIncome = monthlyIncome * 12;
+  const estimatedAnnualTaxes =
+    (data.taxProfile.effectiveTaxRatePct / 100) * annualIncome;
+  return {
+    monthlyIncome,
+    monthlyExpenses,
+    monthlySurplus,
+    savingsRate,
+    essentialExpenses,
+    discretionaryExpenses,
+    afterTaxMonthlyIncome: (annualIncome - estimatedAnnualTaxes) / 12,
+    estimatedAnnualTaxes,
+  };
+}
+
+export function selectSavingsRate(data: FinancialDomainData): number {
+  return selectCashFlowMetrics(data).savingsRate;
+}
+
+export function selectEmergencyFundMetrics(
+  data: FinancialDomainData,
+): EmergencyFundMetrics {
+  const essentialExpenses = selectEssentialExpenses(data.expenseCategories);
+  const currentBalance = data.emergencyFund.currentCashBalance;
+  const targetMonths = data.emergencyFund.targetMonths;
+  const targetBalance = essentialExpenses * targetMonths;
+  const runwayMonths =
+    essentialExpenses > 0 ? currentBalance / essentialExpenses : 0;
+  return {
+    currentBalance,
+    targetBalance,
+    runwayMonths,
+    targetMonths,
+    funded: runwayMonths >= targetMonths,
+    shortfallOrSurplus: currentBalance - targetBalance,
+  };
+}
+
+export function selectGoalMetrics(
+  goals: Goal[],
+  data: FinancialDomainData,
+  assumedAnnualReturnPct: number,
+): GoalMetrics[] {
+  const availableSurplus = selectCashFlowMetrics(data).monthlySurplus;
+  return goals.map((goal) => {
+    const progressPct =
+      goal.target > 0 ? (goal.current / goal.target) * 100 : 100;
+    const required = goal.completed
+      ? 0
+      : _requiredMonthlyContribution(
+          goal.current,
+          goal.target,
+          assumedAnnualReturnPct,
+          goal.yearsRemaining,
+        );
+    return {
+      id: goal.id,
+      title: goal.title,
+      progressPct: Math.min(progressPct, 100),
+      requiredMonthly: required,
+      onTrack: goal.completed ? true : required <= availableSurplus,
+      yearsRemaining: goal.yearsRemaining,
+      current: goal.current,
+      target: goal.target,
+      completed: goal.completed,
+      completedDate: goal.completedDate,
+    };
+  });
+}
+
+export function selectGoalMetricsForScenario(
+  goals: Goal[],
+  data: FinancialDomainData,
+  assumedAnnualReturnPct: number,
+  scenario: Scenario,
+): GoalMetrics[] {
+  const adjustedSurplus =
+    selectCashFlowMetrics(data).monthlySurplus * scenario.monthlyMultiplier;
+  return goals.map((goal) => {
+    const progressPct =
+      goal.target > 0 ? (goal.current / goal.target) * 100 : 100;
+    const required = goal.completed
+      ? 0
+      : _requiredMonthlyContribution(
+          goal.current,
+          goal.target,
+          assumedAnnualReturnPct,
+          goal.yearsRemaining,
+        );
+    const adjustedRequired = required * scenario.monthlyMultiplier;
+    return {
+      id: goal.id,
+      title: goal.title,
+      progressPct: Math.min(progressPct, 100),
+      requiredMonthly: adjustedRequired,
+      onTrack: goal.completed ? true : adjustedRequired <= adjustedSurplus,
+      yearsRemaining: goal.yearsRemaining,
+      current: goal.current,
+      target: goal.target,
+      completed: goal.completed,
+      completedDate: goal.completedDate,
+    };
+  });
+}
+
+export function selectRetirementOutputs(
+  config: RetirementConfig,
+): RetirementOutputs {
+  const yearsToRetirement = config.retirementAge - config.currentAge;
+  const retirementYears = Math.max(
+    1,
+    config.lifeExpectancy - config.retirementAge,
+  );
+  const realRate =
+    (1 + config.expectedReturnPct / 100) / (1 + config.inflationPct / 100) - 1;
+  const pvFactor =
+    Math.abs(realRate) < 1e-9
+      ? retirementYears
+      : (1 - Math.pow(1 + realRate, -retirementYears)) / realRate;
+  const effectiveSWR =
+    pvFactor > 0 ? 1 / pvFactor : config.safeWithdrawalRatePct / 100;
+
+  if (yearsToRetirement <= 0) {
+    const sustainableAnnualIncome = config.currentInvested * effectiveSWR;
+    return {
+      yearsToRetirement: 0,
+      projectedBalanceAtRetirement: config.currentInvested,
+      sustainableAnnualIncome,
+      sustainableMonthlyIncome: sustainableAnnualIncome / 12,
+      inflationAdjustedSustainableMonthlyIncome: sustainableAnnualIncome / 12,
+      incomeGap: 0,
+      onTrack: true,
+    };
+  }
+
+  const projectedBalanceAtRetirement =
+    _futureValue(
+      config.currentInvested,
+      config.monthlySavings,
+      config.expectedReturnPct,
+      yearsToRetirement,
+    ) +
+    _futureValue(
+      config.existingPensionBalance,
+      config.monthlyPensionContribution,
+      config.expectedReturnPct,
+      yearsToRetirement,
+    );
+
+  const sustainableAnnualIncome = projectedBalanceAtRetirement * effectiveSWR;
+  const sustainableMonthlyIncome = sustainableAnnualIncome / 12;
+  const inflationFactor = Math.pow(
+    1 + config.inflationPct / 100,
+    yearsToRetirement,
+  );
+  const inflationAdjustedSustainableMonthlyIncome =
+    sustainableMonthlyIncome / inflationFactor;
+  const incomeGap =
+    config.desiredMonthlyIncome - inflationAdjustedSustainableMonthlyIncome;
+
+  return {
+    yearsToRetirement,
+    projectedBalanceAtRetirement,
+    sustainableAnnualIncome,
+    sustainableMonthlyIncome,
+    inflationAdjustedSustainableMonthlyIncome,
+    incomeGap,
+    onTrack: incomeGap <= 0,
+  };
+}
+
+export function selectPerformanceMetrics(
+  points: PerformancePoint[],
+): PerformanceMetrics {
+  if (points.length === 0)
+    return {
+      ytdReturnPct: null,
+      oneYearReturnPct: null,
+      totalContributions: 0,
+      totalGrowth: 0,
+    };
+  const sorted = [...points].sort((a, b) => a.month.localeCompare(b.month));
+  const latest = sorted[sorted.length - 1]!;
+  const currentYear = latest.month.slice(0, 4);
+  const prevYearEnd = sorted
+    .filter((p) => p.month.startsWith(`${+currentYear - 1}`))
+    .pop();
+  const ytdReturnPct =
+    prevYearEnd && prevYearEnd.value > 0
+      ? ((latest.value - prevYearEnd.value) / prevYearEnd.value) * 100
+      : null;
+  const oneYearAgoDate = new Date(latest.month + "-01");
+  oneYearAgoDate.setFullYear(oneYearAgoDate.getFullYear() - 1);
+  const oneYearAgoKey = oneYearAgoDate.toISOString().slice(0, 7);
+  const oneYearAgoPoint = sorted.find((p) => p.month === oneYearAgoKey);
+  const oneYearReturnPct =
+    oneYearAgoPoint && oneYearAgoPoint.value > 0
+      ? ((latest.value - oneYearAgoPoint.value) / oneYearAgoPoint.value) * 100
+      : null;
+  const totalContributions = _sum(sorted.map((p) => p.contributions));
+  const totalGrowth =
+    sorted.length >= 2
+      ? latest.value -
+        sorted[0]!.value -
+        (totalContributions - sorted[0]!.contributions)
+      : 0;
+  return { ytdReturnPct, oneYearReturnPct, totalContributions, totalGrowth };
+}
+
+export function selectLiquidityMetrics(
+  data: FinancialDomainData,
+): LiquidityMetrics {
+  const {
+    liquidAssets,
+    shortTermDebt: shortTermLiabilities,
+    liquidNetWorth,
+  } = _computeLiquidComponents(data);
+  const essentialExpenses = selectEssentialExpenses(data.expenseCategories);
+  return {
+    liquidAssets,
+    shortTermLiabilities,
+    liquidNetWorth,
+    liquidityRatio:
+      essentialExpenses > 0 ? liquidAssets / essentialExpenses : 0,
+  };
+}
+
+export function selectInsuranceSummary(
+  policies: InsurancePolicy[],
+  monthlyIncome: number,
+  asOf: Date = new Date(),
+): InsuranceSummaryMetrics {
+  const activePolicies = policies.filter((p) => p.is_active);
+
+  const renewals: InsuranceRenewalInfo[] = activePolicies.map((p) => {
+    const daysUntilRenewal = Math.ceil(
+      (new Date(p.renewal_date).getTime() - asOf.getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
+    const renewalStatus: InsuranceRenewalStatus =
+      daysUntilRenewal < 0
+        ? "expired"
+        : daysUntilRenewal <= 60
+          ? "expiring_soon"
+          : "ok";
+    return {
+      policy_id: p.policy_id,
+      name: p.name,
+      category: p.category,
+      renewalDate: p.renewal_date,
+      daysUntilRenewal,
+      renewalStatus,
+      premiumMonthly: p.premium_monthly,
+      coverageAmount: p.coverage_amount,
+    };
+  });
+
+  const totalMonthlyPremium = activePolicies.reduce(
+    (s, p) => s + p.premium_monthly,
+    0,
+  );
+  const totalAnnualPremium = totalMonthlyPremium * 12;
+  const totalCoverage = activePolicies.reduce(
+    (s, p) => s + p.coverage_amount,
+    0,
+  );
+  const annualIncome = monthlyIncome * 12;
+  const premiumToIncomeRatioPct =
+    annualIncome > 0
+      ? Math.round((totalAnnualPremium / annualIncome) * 1000) / 10
+      : 0;
+
+  return {
+    totalPolicies: activePolicies.length,
+    totalMonthlyPremium,
+    totalAnnualPremium,
+    totalCoverage,
+    expiredCount: renewals.filter((r) => r.renewalStatus === "expired").length,
+    expiringSoonCount: renewals.filter(
+      (r) => r.renewalStatus === "expiring_soon",
+    ).length,
+    premiumToIncomeRatioPct,
+    renewals: renewals.sort((a, b) => a.daysUntilRenewal - b.daysUntilRenewal),
+  };
+}
+
+export function selectTotalNetWorth(data: FinancialDomainData): number {
+  return selectNetWorthBreakdown(data).totalNetWorth;
+}
+
+export function selectDashboardMetrics(
+  data: FinancialDomainData,
+  goals: Goal[],
+): DashboardMetrics {
+  const cashFlow = selectCashFlowMetrics(data);
+  return {
+    netWorth: selectNetWorthBreakdown(data),
+    cashFlow,
+    emergencyFund: selectEmergencyFundMetrics(data),
+    goals: selectGoalMetrics(goals, data, data.retirement.expectedReturnPct),
+    retirement: selectRetirementOutputs(data.retirement),
+    performance: selectPerformanceMetrics(data.portfolioPerformance),
+    liquidity: selectLiquidityMetrics(data),
+    insurance: selectInsuranceSummary(
+      data.insurancePolicies,
+      cashFlow.monthlyIncome,
+    ),
+  };
+}
+
+export function getDashboardData() {
+  const data = getFinancialDomainData();
+  return { data, metrics: selectDashboardMetrics(data, goalsData.goals) };
+}

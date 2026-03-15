@@ -37,8 +37,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
           "grid auto-rows-min grid-rows-[auto_auto] items-start gap-1",
           "px-6",
           "has-data-[slot=card-action]:grid-cols-[1fr_auto]",
-          // when header is used with a divider class, give it breathing room
-          "[.border-b]:pb-5",
+        
         ].join(" "),
         className,
       )}

@@ -4,7 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Lightbulb, Home } from "lucide-react";
 
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +28,7 @@ import {
   type PropertyInsurance,
   PROPERTY_TYPE_OPTIONS,
   COUNTRY_OPTIONS,
-} from "@/lib/property-data";
+} from "@/lib/client-data";
 import { InsuranceSection } from "./insurance-section";
 
 // ── Form state ──────────────────────────────────────────────────

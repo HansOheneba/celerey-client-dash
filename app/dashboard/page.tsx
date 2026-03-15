@@ -7,6 +7,8 @@ import {
   ArrowUpRight,
   ArrowUp,
   ArrowDown,
+  TrendingUp,
+  TrendingDown,
   CalendarDays,
   Download,
   LineChart,
@@ -14,45 +16,79 @@ import {
   Goal,
   Shield,
   MessageSquareText,
+  PiggyBank,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Flame,
+  Target,
 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useClientGate } from "../../lib/useClientGate";
-import { canAccessFeature, type FeatureKey } from "../../lib/entitlements";
 import {
+  canAccessFeature,
+  type FeatureKey,
   getClientData,
   goalsData,
   cashFlowData,
   advisorData,
-} from "@/lib/client-data";
-import { mockHoldings, mockValuations, currentValue } from "@/lib/asset-data";
-import { mockUser, getUserFullName } from "@/lib/user-data";
-import { mockProperties } from "@/lib/property-data";
-import { mockInsurancePolicies } from "@/lib/insurance-data";
-import {
+  mockHoldings,
+  mockValuations,
+  currentValue,
+  mockUser,
+  getUserFullName,
+  mockProperties,
+  mockInsurancePolicies,
   createNetWorthSnapshot,
   recordNetWorthSnapshot,
   getLatestNetWorthChange,
-} from "@/lib/net-worth";
-import { formatCurrency } from "@/lib/utils";
+  formatCurrency,
+  mockRetirementConfig,
+  selectRetirementOutputs,
+  mockPortfolioPerformance,
+  mockCashFlowHistory,
+  type CashFlowPoint,
+} from "@/lib/client-data";
 
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 import QuizCard from "@/components/dashboard/risk/quizCard";
 import { MetricCard } from "@/components/dashboard/overview/metric-card";
 import { LockedFeatureCard } from "@/components/dashboard/overview/locked-feature-card";
 import { MiniStat } from "@/components/dashboard/overview/mini-stat";
+import { KpiStrip } from "@/components/dashboard/kpi-strip";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Snapshot = {
   netWorth: number;
   portfolioValue: number;
   monthlyCashFlow: number;
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  savingsRate: number;
   goalsActive: number;
   goalsTotal: number;
   goalsCompleted: number;
   insurancePolicies: number;
+  insuranceReviewDue: number;
+  emergencyFundMonths: number;
+  emergencyFundTarget: number;
+  retirementOnTrack: boolean;
+  yearsToRetirement: number;
+  projectedRetirementBalance: number;
 };
 
 type UpcomingItem = {
@@ -70,6 +106,79 @@ type ActivityRow = {
   status: "Pending" | "Completed";
 };
 
+// ─── Cash Flow Chart Config ───────────────────────────────────────────────────
+
+const cashFlowChartConfig = {
+  income: {
+    label: "Income",
+    color: "var(--chart-1)",
+  },
+  expenses: {
+    label: "Expenses",
+    color: "var(--chart-2)",
+  },
+} satisfies ChartConfig;
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+      {children}
+    </p>
+  );
+}
+
+function StatPill({
+  label,
+  value,
+  positive,
+}: {
+  label: string;
+  value: string;
+  positive?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span
+        className={`text-sm font-semibold ${
+          positive === true
+            ? "text-emerald-600"
+            : positive === false
+              ? "text-red-500"
+              : "text-foreground"
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function InsuranceStatusBadge({ reviewDue }: { reviewDue: number }) {
+  if (reviewDue === 0)
+    return (
+      <Badge
+        variant="outline"
+        className="text-emerald-600 border-emerald-200 bg-emerald-50 gap-1"
+      >
+        <CheckCircle2 className="h-3 w-3" /> All up to date
+      </Badge>
+    );
+  return (
+    <Badge
+      variant="outline"
+      className="text-amber-600 border-amber-200 bg-amber-50 gap-1"
+    >
+      <AlertCircle className="h-3 w-3" /> {reviewDue} review
+      {reviewDue > 1 ? "s" : ""} due
+    </Badge>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
@@ -77,12 +186,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!ready) return;
-
     if (!auth.loggedIn) {
       router.replace("/");
       return;
     }
-
     if (auth.loggedIn && sub.status === "none") {
       router.replace("/choose-plan");
       return;
@@ -94,7 +201,7 @@ export default function DashboardPage() {
       try {
         window.localStorage.setItem("upgrade_intent", "true");
       } catch {
-        // noop
+        /* noop */
       }
     }
     router.push("/choose-plan");
@@ -109,22 +216,19 @@ export default function DashboardPage() {
     };
   }, [sub.status]);
 
-  const snapshot: Snapshot = useMemo(() => {
-    const client = getClientData();
+  // ── Snapshot ──────────────────────────────────────────────────────────────
 
+  const snapshot: Snapshot = useMemo(() => {
     const income = cashFlowData.income.reduce((s, i) => s + i.amount, 0);
     const expenses = cashFlowData.expenses.reduce((s, e) => s + e.amount, 0);
+    const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
 
     const nw = createNetWorthSnapshot();
 
-    // Compute portfolio value from holdings & valuations (matches Portfolio page)
-    const holdings = mockHoldings.filter((h) => h.is_active);
-    const portfolioValue = holdings.reduce(
-      (s, h) => s + currentValue(h, mockValuations),
-      0,
-    );
+    const portfolioValue = mockHoldings
+      .filter((h) => h.is_active)
+      .reduce((s, h) => s + currentValue(h, mockValuations), 0);
 
-    // Count insurance policies: active general policies + property insurances
     const generalActivePolicies = mockInsurancePolicies.filter(
       (p) => p.is_active,
     ).length;
@@ -132,51 +236,92 @@ export default function DashboardPage() {
       .filter((p) => p.is_active)
       .reduce((sum, p) => sum + (p.insurance?.length ?? 0), 0);
 
+    // Insurance reviews due (policies not reviewed in 12+ months)
+    const now = new Date();
+  const insuranceReviewDue = mockInsurancePolicies.filter((p) => {
+    if (!p.is_active) return false;
+    const days = Math.ceil(
+      (new Date(p.renewal_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
+    return days >= 0 && days <= 60;
+  }).length;
+
+    // Emergency fund
+    const essentialExpenses = cashFlowData.expenses
+      .filter((e) => e.essential)
+      .reduce((s, e) => s + e.amount, 0);
+    const emergencyFundMonths =
+      essentialExpenses > 0 ? 85000 / essentialExpenses : 0;
+
+    // Retirement
+    const retirementOutputs = selectRetirementOutputs(mockRetirementConfig);
+
     return {
-      netWorth: nw.netWorth ?? client.computed?.totalNetWorth ?? 0,
-      portfolioValue: portfolioValue ?? client.portfolio?.totalValue ?? 0,
+      netWorth: nw.netWorth ?? 0,
+      portfolioValue,
       monthlyCashFlow: Math.round(income - expenses),
+      monthlyIncome: income,
+      monthlyExpenses: expenses,
+      savingsRate,
       goalsActive: goalsData.goals.filter((g) => !g.completed).length,
       goalsTotal: goalsData.goals.length,
       goalsCompleted: goalsData.goals.filter((g) => g.completed).length,
       insurancePolicies: generalActivePolicies + propertyInsCount,
-    } as Snapshot;
+      insuranceReviewDue,
+      emergencyFundMonths: Math.round(emergencyFundMonths * 10) / 10,
+      emergencyFundTarget: mockRetirementConfig.currentAge > 0 ? 6 : 6,
+      retirementOnTrack: retirementOutputs.onTrack,
+      yearsToRetirement: retirementOutputs.yearsToRetirement,
+      projectedRetirementBalance:
+        retirementOutputs.projectedBalanceAtRetirement,
+    };
   }, []);
+
+  // ── Net worth change ──────────────────────────────────────────────────────
 
   const [netWorthPercent, setNetWorthPercent] = React.useState<number | null>(
     null,
   );
 
-  const [netWorthChangeText, setNetWorthChangeText] = React.useState<
-    string | null
-  >(null);
-
   useEffect(() => {
-    if (!ready) return;
-    if (!auth.loggedIn) return;
-
+    if (!ready || !auth.loggedIn) return;
     try {
-      // record a snapshot (dedupe per day) and compute change vs previous
       recordNetWorthSnapshot({ dedupeDays: 1 });
       const change = getLatestNetWorthChange();
-      if (change && change.percent !== null && change.since) {
-        const upDown =
-          change.percent > 0 ? "up" : change.percent < 0 ? "down" : "no change";
-        const pct = Math.abs(change.percent).toFixed(1);
-        const sinceDate = new Date(change.since).toLocaleDateString();
-        setNetWorthChangeText(
-          `Your net worth is ${upDown} ${pct}% since ${sinceDate}`,
-        );
+      if (change?.percent !== null && change?.since) {
         setNetWorthPercent(change.percent);
       }
     } catch {
-      // noop
+      /* noop */
     }
   }, [ready, auth.loggedIn]);
 
+  // ── Cash flow chart data ──────────────────────────────────────────────────
+
+  const cashFlowChartData = useMemo(() => {
+    return [...mockCashFlowHistory]
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .slice(-6)
+      .map((p: CashFlowPoint) => ({
+        ...p,
+        label: new Date(p.month + "-01").toLocaleDateString("en-US", {
+          month: "short",
+          year: "2-digit",
+        }),
+      }));
+  }, []);
+
+  // ── Goals summary ─────────────────────────────────────────────────────────
+
+  const topGoals = useMemo(
+    () => goalsData.goals.filter((g) => !g.completed).slice(0, 3),
+    [],
+  );
+
+  // ── Upcoming & activity ───────────────────────────────────────────────────
+
   const upcoming: UpcomingItem[] = useMemo(() => {
     const items: UpcomingItem[] = [];
-
     if (advisorData.upcomingMeeting) {
       items.push({
         id: "advisor-1",
@@ -185,8 +330,7 @@ export default function DashboardPage() {
         meta: "Advisor",
       });
     }
-
-    if (advisorData.actionItems && advisorData.actionItems.length > 0) {
+    if (advisorData.actionItems.length > 0) {
       const ai = advisorData.actionItems[0];
       items.push({
         id: `action-${ai.id}`,
@@ -195,37 +339,32 @@ export default function DashboardPage() {
         meta: "Action",
       });
     }
-
     if (items.length === 0) {
       items.push({ id: "u-fallback", title: "No upcoming items", time: "—" });
     }
-
     return items;
   }, []);
 
   const activity: ActivityRow[] = useMemo(() => {
     const rows: ActivityRow[] = [];
-
     goalsData.goals.slice(0, 3).forEach((g) =>
       rows.push({
         id: `g-${g.id}`,
-        title: g.completed ? `Completed ${g.title}` : `${g.title} updated`,
+        title: g.completed ? `Completed: ${g.title}` : `${g.title} updated`,
         category: "Goal",
         date: g.completedDate ?? new Date().toLocaleDateString(),
         status: g.completed ? "Completed" : "Pending",
       }),
     );
-
     cashFlowData.income.slice(0, 2).forEach((c) =>
       rows.push({
         id: `c-${c.id}`,
-        title: `New ${c.name} entry`,
+        title: `${c.name} recorded`,
         category: "Cash Flow",
         date: new Date().toLocaleDateString(),
         status: "Completed",
       }),
     );
-
     advisorData.actionItems.slice(0, 2).forEach((a) =>
       rows.push({
         id: `a-${a.id}`,
@@ -235,294 +374,610 @@ export default function DashboardPage() {
         status: a.done ? "Completed" : "Pending",
       }),
     );
-
     return rows;
   }, []);
 
-  const greetingName = useMemo(() => {
-    const client = getClientData();
-    const full = client.personal?.name ?? "";
-    if (full) return full.split(" ")[0] ?? "";
+  // ── Greeting ──────────────────────────────────────────────────────────────
 
-    const email = auth.email?.trim();
-    if (!email) return "";
-    const prefix = email.split("@")[0] ?? "";
-    const cleaned = prefix.replace(/[._-]+/g, " ").trim();
-    if (!cleaned) return email;
-    return cleaned
-      .split(" ")
-      .map((w) => (w ? w[0]!.toUpperCase() + w.slice(1) : ""))
-      .join(" ");
+  const greetingName = useMemo(() => {
+    const full = getClientData().personal?.name ?? "";
+    if (full) return full.split(" ")[0] ?? "";
+    const prefix = (auth.email ?? "").split("@")[0] ?? "";
+    return prefix.replace(/[._-]+/g, " ").trim();
   }, [auth.email]);
 
   const timeGreeting = useMemo(() => {
-    const now = new Date();
-    const hour = now.getHours();
-    if (hour < 12) return "Good Morning!";
-    if (hour < 18) return "Good Afternoon!";
-    return "Good Evening!";
+    const h = new Date().getHours();
+    if (h < 12) return "Good Morning";
+    if (h < 18) return "Good Afternoon";
+    return "Good Evening";
   }, []);
 
-  const motionContainer = useMemo(() => {
-    if (reduceMotion) return undefined;
-    return {
-      hidden: { opacity: 0 },
-      show: {
-        opacity: 1,
-        transition: { staggerChildren: 0.06, delayChildren: 0.05 },
-      },
-    };
-  }, [reduceMotion]);
+  // ── Motion ────────────────────────────────────────────────────────────────
 
-  const motionItem = useMemo(() => {
-    if (reduceMotion) return undefined;
-    return {
-      hidden: { opacity: 0, y: 10 },
-      show: { opacity: 1, y: 0, transition: { duration: 0.35 } },
-    };
-  }, [reduceMotion]);
+  const mc = reduceMotion
+    ? undefined
+    : {
+        hidden: { opacity: 0 },
+        show: {
+          opacity: 1,
+          transition: { staggerChildren: 0.06, delayChildren: 0.05 },
+        },
+      };
+
+  const mi = reduceMotion
+    ? undefined
+    : {
+        hidden: { opacity: 0, y: 12 },
+        show: { opacity: 1, y: 0, transition: { duration: 0.35 } },
+      };
 
   if (!ready) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <div className="text-sm text-muted-foreground animate-pulse">
+          Loading…
+        </div>
       </div>
     );
   }
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <motion.div
       initial={reduceMotion ? undefined : "hidden"}
       animate={reduceMotion ? undefined : "show"}
-      variants={motionContainer}
+      variants={mc}
       className="w-full"
     >
-      <div className="mx-auto px-6 py-8 space-y-6">
-        <motion.div variants={motionItem} className="space-y-3">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">
-                Hi{greetingName ? ` ${greetingName}` : ""},{" "}
-              </p>
-              <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
-                {timeGreeting}
-              </h1>
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Here is your account snapshot and what is next.
-                </p>
-                {/* Enhanced net worth snapshot */}
-                <div className="text-base font-medium flex items-center gap-2 mt-1">
-                  {netWorthPercent !== null ? (
-                    <>
-                      {netWorthPercent > 0 ? (
-                        <ArrowUp className="h-5 w-5 text-green-600" />
-                      ) : netWorthPercent < 0 ? (
-                        <ArrowDown className="h-5 w-5 text-red-600" />
-                      ) : (
-                        <span className="h-5 w-5" />
-                      )}
-                      <span
-                        className={
-                          netWorthPercent > 0
-                            ? "text-green-600"
-                            : netWorthPercent < 0
-                              ? "text-red-600"
-                              : "text-muted-foreground"
-                        }
-                      >
-                        {netWorthPercent > 0
-                          ? `Up by ${Math.abs(netWorthPercent).toFixed(1)}%`
-                          : netWorthPercent < 0
-                            ? `Down by ${Math.abs(netWorthPercent).toFixed(1)}%`
-                            : "No change"}
-                        <span className="text-xs text-muted-foreground ml-2">
-                          (this month)
-                        </span>
-                      </span>
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {getUserFullName(mockUser)}, {mockUser.occupation},{" "}
-                        {mockUser.marital_status}, {mockUser.risk_profile} risk
-                      </span>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-            </div>
+      <div className="mx-auto px-6 py-8 space-y-8">
+        {/* ── Header ── */}
+        <motion.div
+          variants={mi}
+          className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"
+        >
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">
+              Hi{greetingName ? ` ${greetingName}` : ""},
+            </p>
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
+              {timeGreeting}
+            </h1>
+          </div>
 
-            <div className="flex items-center gap-2">
-              <div className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm text-muted-foreground">
-                <CalendarDays className="h-4 w-4" />
-                <span>12 Jan 2023 • 12 Jan 2024</span>
-              </div>
-
-              <Button
-                className="gap-2"
-                variant="secondary"
-                onClick={() => {
-                  if (access.exportData) {
-                    router.push("/export");
-                    return;
-                  }
-                  handleUpgradeIntent();
-                }}
-              >
-                Export <Download className="h-4 w-4" />
-              </Button>
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+              <CalendarDays className="h-4 w-4" />
+              <span>
+                As of{" "}
+                {new Date().toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
             </div>
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-4 space-y-4">
-            <motion.div variants={motionItem}>
-              <MetricCard
-                title="Net worth"
-                value={formatCurrency(snapshot.netWorth)}
-                valueClassName="text-primary"
-                trend={
-                  netWorthPercent !== null
-                    ? {
-                        value: `${Math.abs(netWorthPercent).toFixed(1)}%`,
-                        dir:
-                          netWorthPercent > 0
-                            ? "up"
-                            : netWorthPercent < 0
-                              ? "down"
-                              : "flat",
-                      }
-                    : undefined
-                }
-                icon={<Wallet className="h-5 w-5" />}
-                helper="Assets minus liabilities"
-                onOpen={() => router.push("/dashboard/cash-flow")}
-              />
-            </motion.div>
+        {/* ── Top KPI Row ── */}
+        <motion.div variants={mi}>
+          <SectionLabel>At a glance</SectionLabel>
+          <KpiStrip
+            cols={4}
+            items={[
+              {
+                label: "Net Worth",
+                value: formatCurrency(snapshot.netWorth),
+                subline: "Assets minus liabilities",
+                tone: snapshot.netWorth >= 0 ? "good" : "danger",
+                icon: <Wallet className="h-4 w-4 text-primary" />,
+                onClick: () => router.push("/dashboard/cash-flow"),
+              },
+              {
+                label: "Portfolio Value",
+                value: formatCurrency(snapshot.portfolioValue),
+                subline: `${mockHoldings.filter((h) => h.is_active).length} holdings`,
+                tone: "neutral",
+                icon: <LineChart className="h-4 w-4 text-blue-500" />,
+                onClick: () => router.push("/dashboard/assets"),
+              },
+              {
+                label: "Monthly Surplus",
+                value: formatCurrency(snapshot.monthlyCashFlow),
+                subline: `${formatCurrency(snapshot.monthlyIncome)} in · ${formatCurrency(snapshot.monthlyExpenses)} out`,
+                tone: snapshot.monthlyCashFlow >= 0 ? "good" : "danger",
+                icon: <PiggyBank className="h-4 w-4 text-emerald-500" />,
+                onClick: () => router.push("/dashboard/cash-flow"),
+              },
+              {
+                label: "Emergency Fund",
+                value: `${snapshot.emergencyFundMonths}mo`,
+                subline: `Target ${snapshot.emergencyFundTarget} months · ${snapshot.emergencyFundMonths >= snapshot.emergencyFundTarget ? "Funded" : "Below target"}`,
+                tone:
+                  snapshot.emergencyFundMonths >= snapshot.emergencyFundTarget
+                    ? "good"
+                    : "warning",
+                icon: <Shield className="h-4 w-4 text-violet-500" />,
+                onClick: () => router.push("/dashboard/cash-flow"),
+              },
+            ]}
+          />
+        </motion.div>
 
-            <motion.div variants={motionItem}>
-              <MetricCard
-                title="Goals active"
-                value={`${snapshot.goalsActive} / ${snapshot.goalsTotal}`}
-                valueClassName="text-primary"
-                helper={`Active ${snapshot.goalsActive} • Total ${snapshot.goalsTotal} • Completed ${snapshot.goalsCompleted}`}
-                icon={<Goal className="h-5 w-5" />}
-                onOpen={() => router.push("dashboard/goals")}
-              />
-            </motion.div>
-
-            <motion.div variants={motionItem}>
-              <MetricCard
-                title="Portfolio value"
-                value={formatCurrency(snapshot.portfolioValue)}
-                icon={<LineChart className="h-5 w-5" />}
-                helper="Investments and holdings"
-                onOpen={() => router.push("/dashboard/assets")}
-              />
-            </motion.div>
-
-            <motion.div variants={motionItem}>
-              <MetricCard
-                title="Insurance policies"
-                value={`${snapshot.insurancePolicies}`}
-                icon={<Shield className="h-5 w-5" />}
-                helper="Coverage overview"
-                onOpen={() => router.push("/dashboard/insurance")}
-              />
-            </motion.div>
-          </div>
-
-          <div className="lg:col-span-5">
-            <motion.div variants={motionItem} className="h-full">
-              <Card className="h-full">
+        {/* ── Main Content Grid ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left column: Cash Flow Chart + Goals */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* Cash Flow Chart */}
+            <motion.div variants={mi}>
+              <SectionLabel>Cash flow</SectionLabel>
+              <Card>
                 <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="text-lg">Performance</CardTitle>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-base">
+                        Income vs Expenses
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Last 6 months
+                      </p>
+                    </div>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      aria-label="Open performance"
-                      onClick={() => router.push("/performance")}
+                      size="sm"
+                      className="text-xs gap-1"
+                      onClick={() => router.push("/dashboard/cash-flow")}
                     >
-                      <ArrowUpRight className="h-4 w-4" />
+                      View details <ArrowUpRight className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  {/* Summary stats above chart */}
+                  <div className="flex gap-6 pt-2">
+                    <StatPill
+                      label="Monthly income"
+                      value={formatCurrency(snapshot.monthlyIncome)}
+                      positive={true}
+                    />
+                    <StatPill
+                      label="Monthly expenses"
+                      value={formatCurrency(snapshot.monthlyExpenses)}
+                      positive={false}
+                    />
+                    <StatPill
+                      label="Surplus"
+                      value={formatCurrency(snapshot.monthlyCashFlow)}
+                      positive={snapshot.monthlyCashFlow > 0}
+                    />
+                    <StatPill
+                      label="Savings rate"
+                      value={`${snapshot.savingsRate.toFixed(1)}%`}
+                      positive={snapshot.savingsRate >= 20}
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent className="px-2 pt-2 sm:px-6">
+                  <ChartContainer
+                    config={cashFlowChartConfig}
+                    className="aspect-auto h-[220px] w-full"
+                  >
+                    <AreaChart data={cashFlowChartData}>
+                      <defs>
+                        <linearGradient
+                          id="fillIncome"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="var(--color-income)"
+                            stopOpacity={0.25}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="var(--color-income)"
+                            stopOpacity={0.02}
+                          />
+                        </linearGradient>
+                        <linearGradient
+                          id="fillExpenses"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="var(--color-expenses)"
+                            stopOpacity={0.25}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="var(--color-expenses)"
+                            stopOpacity={0.02}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        vertical={false}
+                        strokeDasharray="3 3"
+                        className="stroke-muted"
+                      />
+                      <XAxis
+                        dataKey="label"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        className="text-xs text-muted-foreground"
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        width={72}
+                        tickFormatter={(v) => formatCurrency(v)}
+                        className="text-xs text-muted-foreground"
+                      />
+                      <ChartTooltip
+                        cursor={false}
+                        content={
+                          <ChartTooltipContent
+                            labelFormatter={(v) => v}
+                            formatter={(v) => formatCurrency(v as number)}
+                            indicator="dot"
+                          />
+                        }
+                      />
+                      <Area
+                        dataKey="income"
+                        type="natural"
+                        fill="url(#fillIncome)"
+                        stroke="var(--color-income)"
+                        strokeWidth={2}
+                        stackId="none"
+                      />
+                      <Area
+                        dataKey="expenses"
+                        type="natural"
+                        fill="url(#fillExpenses)"
+                        stroke="var(--color-expenses)"
+                        strokeWidth={2}
+                        stackId="none"
+                      />
+                    </AreaChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Goals Progress */}
+            <motion.div variants={mi}>
+              <SectionLabel>Financial goals</SectionLabel>
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">
+                      Goals in progress
+                    </CardTitle>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground">
+                        {snapshot.goalsCompleted} of {snapshot.goalsTotal}{" "}
+                        completed
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs gap-1"
+                        onClick={() => router.push("/dashboard/goals")}
+                      >
+                        All goals <ArrowUpRight className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {topGoals.map((goal) => {
+                    const pct = Math.min(
+                      (goal.current / goal.target) * 100,
+                      100,
+                    );
+                    return (
+                      <div key={goal.id} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <Target className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="font-medium">{goal.title}</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span>
+                              {formatCurrency(goal.current)} /{" "}
+                              {formatCurrency(goal.target)}
+                            </span>
+                            <span className="font-semibold text-foreground">
+                              {pct.toFixed(0)}%
+                            </span>
+                            {goal.yearsRemaining > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {goal.yearsRemaining}yr
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <Progress value={pct} className="h-1.5" />
+                      </div>
+                    );
+                  })}
+                  <Separator />
+                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                    <span>{snapshot.goalsCompleted} goals completed</span>
+                    <span className="flex items-center gap-1 text-emerald-600">
+                      <CheckCircle2 className="h-3 w-3" />{" "}
+                      {snapshot.goalsActive} active
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Recent Activity */}
+            <motion.div variants={mi}>
+              <SectionLabel>Recent activity</SectionLabel>
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Latest updates</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs gap-1"
+                      onClick={() => router.push("/activity")}
+                    >
+                      View all <ArrowUpRight className="h-3 w-3" />
                     </Button>
                   </div>
                 </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <div className="text-sm text-muted-foreground">
-                    Portfolio and cash flow trend for the selected period.
-                  </div>
-
-                  <div className="h-65 rounded-md border flex items-center justify-center text-sm text-muted-foreground">
-                    Chart placeholder
-                  </div>
-
-                  <Separator />
-
-                  <div className="grid grid-cols-1 gap-3">
-                    <MiniStat
-                      label="Monthly cash flow"
-                      value={formatCurrency(snapshot.monthlyCashFlow)}
-                    />
+                <CardContent>
+                  <div className="w-full overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-muted-foreground border-b">
+                          <th className="py-2.5 pr-4 font-medium text-xs">
+                            Item
+                          </th>
+                          <th className="py-2.5 pr-4 font-medium text-xs">
+                            Category
+                          </th>
+                          <th className="py-2.5 pr-4 font-medium text-xs">
+                            Date
+                          </th>
+                          <th className="py-2.5 font-medium text-xs text-right">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activity.map((row) => (
+                          <tr
+                            key={row.id}
+                            className="border-b last:border-b-0 hover:bg-muted/40 transition-colors cursor-pointer"
+                            onClick={() => router.push("/activity")}
+                          >
+                            <td className="py-3 pr-4 font-medium">
+                              {row.title}
+                            </td>
+                            <td className="py-3 pr-4">
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-normal"
+                              >
+                                {row.category}
+                              </Badge>
+                            </td>
+                            <td className="py-3 pr-4 text-muted-foreground text-xs">
+                              {row.date}
+                            </td>
+                            <td className="py-3 text-right">
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${
+                                  row.status === "Completed"
+                                    ? "text-emerald-600 border-emerald-200 bg-emerald-50"
+                                    : "text-amber-600 border-amber-200 bg-amber-50"
+                                }`}
+                              >
+                                {row.status}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
           </div>
 
-          <div className="lg:col-span-3 space-y-4">
-            <motion.div variants={motionItem}>
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="text-lg">Upcoming</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Open schedule"
-                      onClick={() => router.push("/schedule")}
+          {/* Right column */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Retirement */}
+            <motion.div variants={mi}>
+              <SectionLabel>Retirement</SectionLabel>
+              <Card
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => router.push("/dashboard/retirement")}
+              >
+                <CardContent className="pt-5 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-amber-500/10">
+                        <Flame className="h-4 w-4 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">
+                          Retirement track
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {snapshot.yearsToRetirement} years away
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${
+                        snapshot.retirementOnTrack
+                          ? "text-emerald-600 border-emerald-200 bg-emerald-50"
+                          : "text-amber-600 border-amber-200 bg-amber-50"
+                      }`}
                     >
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Button>
+                      {snapshot.retirementOnTrack ? (
+                        <>
+                          <TrendingUp className="h-3 w-3 mr-1" /> On track
+                        </>
+                      ) : (
+                        <>
+                          <TrendingDown className="h-3 w-3 mr-1" /> Needs
+                          attention
+                        </>
+                      )}
+                    </Badge>
                   </div>
-                </CardHeader>
+                  <Separator />
+                  <div className="grid grid-cols-2 gap-3">
+                    <StatPill
+                      label="Retire at"
+                      value={`Age ${mockRetirementConfig.retirementAge}`}
+                    />
+                    <StatPill
+                      label="Monthly savings"
+                      value={formatCurrency(
+                        mockRetirementConfig.monthlySavings,
+                      )}
+                    />
+                    <StatPill
+                      label="Projected balance"
+                      value={formatCurrency(
+                        snapshot.projectedRetirementBalance,
+                      )}
+                    />
+                    <StatPill
+                      label="Target income"
+                      value={
+                        formatCurrency(
+                          mockRetirementConfig.desiredMonthlyIncome,
+                        ) + "/mo"
+                      }
+                    />
+                  </div>
+                  <Progress
+                    value={Math.min(
+                      (mockRetirementConfig.currentInvested /
+                        snapshot.projectedRetirementBalance) *
+                        100,
+                      100,
+                    )}
+                    className="h-1.5"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(mockRetirementConfig.currentInvested)}{" "}
+                    invested today toward projected{" "}
+                    {formatCurrency(snapshot.projectedRetirementBalance)}
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-                <CardContent className="space-y-3">
+            {/* Insurance */}
+            <motion.div variants={mi}>
+              <SectionLabel>Insurance</SectionLabel>
+              <Card
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => router.push("/dashboard/insurance")}
+              >
+                <CardContent className="pt-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-violet-500/10">
+                        <Shield className="h-4 w-4 text-violet-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">Coverage</p>
+                        <p className="text-xs text-muted-foreground">
+                          {snapshot.insurancePolicies} active policies
+                        </p>
+                      </div>
+                    </div>
+                    <InsuranceStatusBadge
+                      reviewDue={snapshot.insuranceReviewDue}
+                    />
+                  </div>
+                  <Separator />
+                  {mockInsurancePolicies
+                    .filter((p) => p.is_active)
+                    .slice(0, 4)
+                    .map((p) => (
+                      <div
+                        key={p.policy_id}
+                        className="flex items-center justify-between text-xs"
+                      >
+                        <span className="text-muted-foreground capitalize">
+                          {p.category} — {p.name}
+                        </span>
+                        <span className="font-medium">
+                          {formatCurrency(p.premium_monthly)}/mo
+                        </span>
+                      </div>
+                    ))}
+                  <p className="text-xs text-muted-foreground pt-1">
+                    {mockInsurancePolicies.filter((p) => p.is_active).length -
+                      4 >
+                    0
+                      ? `+${mockInsurancePolicies.filter((p) => p.is_active).length - 4} more policies`
+                      : "All policies shown"}
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Upcoming */}
+            <motion.div variants={mi}>
+              <SectionLabel>Upcoming</SectionLabel>
+              <Card>
+                <CardContent className="pt-5 space-y-3">
                   {upcoming.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-md border px-3 py-3 flex items-start justify-between gap-3"
+                      className="rounded-md border px-3 py-3 flex items-start justify-between gap-3 hover:bg-muted/40 transition-colors cursor-pointer"
+                      onClick={() => router.push("/schedule")}
                     >
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         <div className="text-sm font-medium">{item.title}</div>
                         <div className="text-xs text-muted-foreground">
                           {item.time}
-                          {item.meta ? ` • ${item.meta}` : ""}
+                          {item.meta ? ` · ${item.meta}` : ""}
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Open item"
-                        onClick={() => router.push("/schedule")}
-                      >
-                        <ArrowUpRight className="h-4 w-4" />
-                      </Button>
+                      <ArrowUpRight className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     </div>
                   ))}
-
                   <Button
                     variant="secondary"
-                    className="w-full justify-between"
+                    className="w-full justify-between text-xs"
                     onClick={() => router.push("/schedule/new")}
                   >
-                    Add new schedule <ArrowUpRight className="h-4 w-4" />
+                    Add new schedule <ArrowUpRight className="h-3 w-3" />
                   </Button>
                 </CardContent>
               </Card>
             </motion.div>
 
-            <motion.div variants={motionItem}>
+            {/* Advisor */}
+            <motion.div variants={mi}>
               <LockedFeatureCard
                 title="Advisor"
                 description="Talk to an advisor for guidance and planning."
@@ -533,72 +988,12 @@ export default function DashboardPage() {
               />
             </motion.div>
 
-            {/* ✅ REPLACED: AI insights -> Risk attitude quiz card */}
-            <motion.div variants={motionItem}>
+            {/* Risk quiz */}
+            <motion.div variants={mi}>
               <QuizCard />
             </motion.div>
           </div>
         </div>
-
-        <motion.div variants={motionItem}>
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between gap-3">
-                <CardTitle className="text-lg">Recent activity</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Open activity"
-                  onClick={() => router.push("/activity")}
-                >
-                  <ArrowUpRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-
-            <CardContent>
-              <div className="w-full overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted-foreground border-b">
-                      <th className="py-3 pr-4 font-medium">Item</th>
-                      <th className="py-3 pr-4 font-medium">Category</th>
-                      <th className="py-3 pr-4 font-medium">Date</th>
-                      <th className="py-3 pr-4 font-medium">Status</th>
-                      <th className="py-3 font-medium text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activity.map((row) => (
-                      <tr key={row.id} className="border-b last:border-b-0">
-                        <td className="py-3 pr-4">
-                          <div className="font-medium">{row.title}</div>
-                        </td>
-                        <td className="py-3 pr-4 text-muted-foreground">
-                          {row.category}
-                        </td>
-                        <td className="py-3 pr-4 text-muted-foreground">
-                          {row.date}
-                        </td>
-                        <td className="py-3 pr-4">{row.status}</td>
-                        <td className="py-3 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Open row"
-                            onClick={() => router.push("/activity")}
-                          >
-                            <ArrowUpRight className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
     </motion.div>
   );

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { aiInsights } from "@/lib/client-data";
 import { useClientGate } from "@/lib/useClientGate";
-import { canAccessFeature } from "@/lib/entitlements";
+import { canAccessFeature } from "@/lib/client-data";
 import { useRouter } from "next/navigation";
 
 type Priority = "high" | "medium" | "low";

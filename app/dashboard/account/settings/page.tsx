@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { mockUser, getUserFullName, type User } from "@/lib/user-data";
+import { mockUser, getUserFullName, type User } from "@/lib/client-data";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

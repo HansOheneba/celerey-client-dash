@@ -4,7 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Search, AlertTriangle } from "lucide-react";
 
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +30,7 @@ import {
   symbolsForType,
   isSymbolHeld,
   mockHoldings,
-} from "@/lib/asset-data";
+} from "@/lib/client-data";
 
 // ── Form state ──────────────────────────────────────────────────
 export type HoldingFormValues = {

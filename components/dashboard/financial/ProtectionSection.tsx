@@ -2,14 +2,19 @@
 
 import * as React from "react";
 import { Shield, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import type {
   InsuranceReviewStatus,
   InsurancePolicyType,
   SectionFreshness,
-} from "@/lib/types/financial";
+} from "@/lib/client-data";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
 interface ProtectionSectionProps {

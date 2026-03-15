@@ -1,6 +1,6 @@
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import AdminSidebar from "@/components/dashboard/sidebar";
-import AdminTopbar from "@/components/dashboard/topbar";
+import DashboardTopbar from "@/components/dashboard/topbar";
 
 export default function RootLayout({
   children,
@@ -12,9 +12,12 @@ export default function RootLayout({
       <div className="flex min-h-svh w-full overflow-x-hidden">
         <AdminSidebar />
 
-        <SidebarInset className="min-w-0">
-          <AdminTopbar />
-          <div className="p-6 bg-gray-50">{children}</div>
+        <SidebarInset className="min-w-0 flex flex-col h-svh overflow-hidden">
+          <DashboardTopbar />
+
+          <main className="flex-1 overflow-y-auto bg-blue-50/20 p-6">
+            {children}
+          </main>
         </SidebarInset>
       </div>
     </SidebarProvider>

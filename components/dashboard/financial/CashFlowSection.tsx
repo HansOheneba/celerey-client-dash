@@ -11,7 +11,12 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import type {
@@ -20,7 +25,7 @@ import type {
   SectionFreshness,
   CashFlowRow,
   ExpenseCategory,
-} from "@/lib/types/financial";
+} from "@/lib/client-data";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
 interface CashFlowSectionProps {
@@ -107,8 +112,9 @@ export function CashFlowSection({
                 width={52}
               />
               <Tooltip
-                formatter={(v: number | undefined) =>
-                  v !== undefined ? fmtUSD(v) : "-"
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                formatter={(v: any) =>
+                  typeof v === "number" ? fmtUSD(v) : "-"
                 }
               />
               <Bar dataKey="amount" radius={[4, 4, 0, 0]} fill="#6366f1" />

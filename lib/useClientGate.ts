@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAuth, getSubscription, AuthState, SubState } from "./storage";
+import {
+  getAuth,
+  getSubscription,
+  AuthState,
+  SubState,
+} from "@/lib/client-data";
 
 export function useClientGate(): {
   ready: boolean;

@@ -1,43 +1,23 @@
 "use client";
 
-import {
-  Shield,
-  AlertTriangle,
-  CheckCircle2,
-  ExternalLink,
-} from "lucide-react";
 import Link from "next/link";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import { ArrowUpRight, Shield } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  type InsurancePolicy,
-  policyStatus,
-  categoryLabel,
-  statusLabel,
-} from "@/lib/insurance-data";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   type Property,
   totalInsurancePremium,
   totalInsuranceCoverage,
   isInsuranceExpiringSoon,
   isInsuranceExpired,
-  insuranceTypeLabel,
-} from "@/lib/property-data";
+  propertyInsuranceTypeLabel,
+  formatCurrency,
+} from "@/lib/client-data";
 
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+function sum(nums: number[]): number {
+  return nums.reduce((a, b) => a + b, 0);
 }
 
 export function PropertyInsuranceBridge({
@@ -45,76 +25,92 @@ export function PropertyInsuranceBridge({
 }: {
   properties: Property[];
 }) {
-  const allPropertyPolicies = properties.flatMap((p) =>
-    p.insurance.map((ins) => ({ ...ins, propertyName: p.name })),
+  const allPolicies = properties.flatMap((p) =>
+    p.insurance.map((ins) => ({
+      ...ins,
+      propertyName: p.name,
+      propertyId: p.property_id,
+    })),
   );
 
-  const totalPropPremiums = properties.reduce(
-    (s, p) => s + totalInsurancePremium(p),
-    0,
-  );
-  const totalPropCoverage = properties.reduce(
-    (s, p) => s + totalInsuranceCoverage(p),
-    0,
-  );
-
-  const expiringSoon = allPropertyPolicies.filter(
+  const totalPremiums = sum(properties.map((p) => totalInsurancePremium(p)));
+  const totalCoverage = sum(properties.map((p) => totalInsuranceCoverage(p)));
+  const expired = allPolicies.filter((p) => isInsuranceExpired(p));
+  const expiringSoon = allPolicies.filter(
     (p) => isInsuranceExpiringSoon(p) && !isInsuranceExpired(p),
   );
-  const expired = allPropertyPolicies.filter((p) => isInsuranceExpired(p));
   const uninsured = properties.filter((p) => p.insurance.length === 0);
-
   const hasAlerts =
-    uninsured.length > 0 || expiringSoon.length > 0 || expired.length > 0;
+    expired.length > 0 || expiringSoon.length > 0 || uninsured.length > 0;
+
+  if (properties.length === 0) return null;
 
   return (
-    <DashCard>
-      <CardHeader>
+    <Card>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-base">Property Insurance</CardTitle>
           </div>
-          <Button variant="outline" size="sm" className="rounded-full" asChild>
+          <Button variant="ghost" size="sm" className="text-xs gap-1" asChild>
             <Link href="/dashboard/properties">
-              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-              Manage in Properties
+              View properties <ArrowUpRight className="h-3 w-3" />
             </Link>
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Insurance on your real estate holdings. Managed per-property.
+        <p className="text-xs text-muted-foreground">
+          Insurance attached to your real estate holdings. Managed in the{" "}
+          <Link
+            href="/dashboard/properties"
+            className="underline underline-offset-2 hover:text-foreground transition-colors"
+          >
+            Properties tab
+          </Link>
+          .
         </p>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Summary stats */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div>
-            <div className="text-xs text-muted-foreground">Policies</div>
-            <div className="text-lg font-semibold tabular-nums">
-              {allPropertyPolicies.length}
-            </div>
+        {/* Summary */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-0.5">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Policies
+            </p>
+            <p className="text-lg font-bold tabular-nums">
+              {allPolicies.length}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Across {properties.length}{" "}
+              {properties.length === 1 ? "property" : "properties"}
+            </p>
           </div>
-          <div>
-            <div className="text-xs text-muted-foreground">Total Coverage</div>
-            <div className="text-lg font-semibold tabular-nums">
-              {formatCurrency(totalPropCoverage)}
-            </div>
+          <div className="space-y-0.5">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Total Coverage
+            </p>
+            <p className="text-lg font-bold tabular-nums">
+              {formatCurrency(totalCoverage)}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Combined insured value
+            </p>
           </div>
-          <div>
-            <div className="text-xs text-muted-foreground">Annual Premiums</div>
-            <div className="text-lg font-semibold tabular-nums">
-              {formatCurrency(totalPropPremiums)}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground">Properties</div>
-            <div className="text-lg font-semibold tabular-nums">
-              {properties.length}
-            </div>
+          <div className="space-y-0.5">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Annual Premium
+            </p>
+            <p className="text-lg font-bold tabular-nums">
+              {formatCurrency(totalPremiums)}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {formatCurrency(Math.round(totalPremiums / 12))}/mo
+            </p>
           </div>
         </div>
+
+        <Separator />
 
         {/* Alerts */}
         {hasAlerts && (
@@ -122,90 +118,136 @@ export function PropertyInsuranceBridge({
             {uninsured.map((prop) => (
               <div
                 key={prop.property_id}
-                className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm"
+                className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3"
               >
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <span className="text-amber-700 dark:text-amber-400">
-                  <span className="font-medium text-amber-800 dark:text-amber-300">
-                    {prop.name}
-                  </span>{" "}
-                  has no insurance coverage.
-                </span>
+                <div className="h-1.5 w-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  <span className="font-medium">{prop.name}</span> has no
+                  insurance.{" "}
+                  <Link
+                    href="/dashboard/properties"
+                    className="underline underline-offset-2"
+                  >
+                    Go to Properties
+                  </Link>
+                </p>
               </div>
             ))}
-
             {expired.map((pol, i) => (
               <div
                 key={`exp-${i}`}
-                className="flex items-start gap-2 rounded-lg border border-rose-500/20 bg-rose-500/5 p-3 text-sm"
+                className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-800 p-3"
               >
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
-                <span className="text-rose-700 dark:text-rose-400">
-                  <span className="font-medium text-rose-800 dark:text-rose-300">
-                    {pol.propertyName}
-                  </span>{" "}
-                  — {insuranceTypeLabel(pol.insurance_type)} expired{" "}
-                  {formatDate(pol.expiry_date)}.
-                </span>
+                <div className="h-1.5 w-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                <p className="text-xs text-red-700 dark:text-red-300">
+                  <span className="font-medium">{pol.propertyName}</span> —{" "}
+                  {propertyInsuranceTypeLabel(pol.insurance_type)} expired{" "}
+                  {new Date(pol.expiry_date).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                  .{" "}
+                  <Link
+                    href="/dashboard/properties"
+                    className="underline underline-offset-2"
+                  >
+                    Renew in Properties
+                  </Link>
+                </p>
               </div>
             ))}
-
             {expiringSoon.map((pol, i) => (
               <div
-                key={`warn-${i}`}
-                className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm"
+                key={`soon-${i}`}
+                className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3"
               >
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <span className="text-amber-700 dark:text-amber-400">
-                  <span className="font-medium text-amber-800 dark:text-amber-300">
-                    {pol.propertyName}
-                  </span>{" "}
-                  — {insuranceTypeLabel(pol.insurance_type)} expires{" "}
-                  {formatDate(pol.expiry_date)}.
-                </span>
+                <div className="h-1.5 w-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  <span className="font-medium">{pol.propertyName}</span> —{" "}
+                  {propertyInsuranceTypeLabel(pol.insurance_type)} expires{" "}
+                  {new Date(pol.expiry_date).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                  .{" "}
+                  <Link
+                    href="/dashboard/properties"
+                    className="underline underline-offset-2"
+                  >
+                    Review in Properties
+                  </Link>
+                </p>
               </div>
             ))}
           </div>
         )}
 
-        {!hasAlerts && allPropertyPolicies.length > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 text-sm text-emerald-800 dark:text-emerald-300">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            All properties are insured with current policies.
+        {!hasAlerts && allPolicies.length > 0 && (
+          <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-3">
+            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+            <p className="text-xs text-emerald-700 dark:text-emerald-300">
+              All properties are insured with current policies.
+            </p>
           </div>
         )}
 
         {/* Per-property breakdown */}
-        {allPropertyPolicies.length > 0 && (
-          <div className="divide-y divide-muted/40">
+        {allPolicies.length > 0 && (
+          <div className="space-y-2.5">
             {properties
               .filter((p) => p.insurance.length > 0)
-              .map((prop) => (
-                <div
-                  key={prop.property_id}
-                  className="flex items-center justify-between py-2.5"
-                >
-                  <div>
-                    <div className="text-sm font-medium">{prop.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {prop.insurance
-                        .map((i) => insuranceTypeLabel(i.insurance_type))
-                        .join(", ")}
+              .map((prop) => {
+                const propExpired = prop.insurance.some(isInsuranceExpired);
+                const propSoon = prop.insurance.some(
+                  (i) => isInsuranceExpiringSoon(i) && !isInsuranceExpired(i),
+                );
+                return (
+                  <Link
+                    key={prop.property_id}
+                    href="/dashboard/properties"
+                    className="flex items-center justify-between gap-4 hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
+                  >
+                    <div className="min-w-0 py-1">
+                      <p className="text-xs font-medium truncate">
+                        {prop.name}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {prop.insurance
+                          .map((i) =>
+                            propertyInsuranceTypeLabel(i.insurance_type),
+                          )
+                          .join(", ")}
+                      </p>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold tabular-nums">
-                      {formatCurrency(totalInsuranceCoverage(prop))}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {propExpired && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0 text-red-600 border-red-200 bg-red-50"
+                        >
+                          Expired
+                        </Badge>
+                      )}
+                      {propSoon && !propExpired && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0 text-amber-600 border-amber-200 bg-amber-50"
+                        >
+                          Expiring
+                        </Badge>
+                      )}
+                      <span className="text-xs font-medium tabular-nums">
+                        {formatCurrency(totalInsurancePremium(prop))}/yr
+                      </span>
                     </div>
-                    <div className="text-xs text-muted-foreground tabular-nums">
-                      {formatCurrency(totalInsurancePremium(prop))}/yr
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  </Link>
+                );
+              })}
           </div>
         )}
       </CardContent>
-    </DashCard>
+    </Card>
   );
 }
