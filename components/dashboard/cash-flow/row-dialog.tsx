@@ -34,7 +34,7 @@ export function RowDialog({
   setDraft: (draft: RowDraft) => void;
   onSubmit: () => void;
 }) {
-  const amountNum = Number(draft.amount);
+  const amountNum = Number(draft.amount.replace(/,/g, ""));
   const validAmount = Number.isFinite(amountNum) && amountNum >= 0;
 
   return (
@@ -59,10 +59,16 @@ export function RowDialog({
             <Label htmlFor="row_amount">Monthly amount</Label>
             <Input
               id="row_amount"
-              type="number"
-              value={draft.amount}
+              type="text"
+              inputMode="numeric"
+              value={draft.amount.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
               placeholder="0"
-              onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  amount: e.target.value.replace(/[^\d]/g, ""),
+                })
+              }
             />
             {!validAmount ? (
               <p className="text-xs text-muted-foreground">

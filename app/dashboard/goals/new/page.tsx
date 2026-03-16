@@ -502,11 +502,16 @@ export default function NewGoalPage() {
                   </Label>
                   <Input
                     id="timeline-value"
-                    type="number"
-                    min="1"
+                    type="text"
+                    inputMode="numeric"
                     placeholder={form.timelineUnit === "months" ? "24" : "10"}
                     value={form.timelineValue}
-                    onChange={(e) => update("timelineValue", e.target.value)}
+                    onChange={(e) =>
+                      update(
+                        "timelineValue",
+                        e.target.value.replace(/[^\d]/g, ""),
+                      )
+                    }
                     required
                   />
                   <p className="text-xs text-muted-foreground">

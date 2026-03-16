@@ -84,6 +84,8 @@ import { CashFlowChart } from "@/components/dashboard/cash-flow/cash-flow-chart"
 import {
   cashFlowData,
   calculateNetWorth,
+  selectEmergencyFundMetrics,
+  financialDomainData,
   formatCurrency,
   mockCashFlowHistory,
   type CashFlowPoint,
@@ -421,14 +423,16 @@ function EnhancedRowDialog({
                 </span>
                 <Input
                   id="row-amount"
-                  type="number"
-                  min="0"
-                  step="1"
+                  type="text"
+                  inputMode="numeric"
                   placeholder="0"
                   className="pl-7"
-                  value={draft.amount}
+                  value={draft.amount.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                   onChange={(e) =>
-                    setDraft((d) => ({ ...d, amount: e.target.value }))
+                    setDraft((d) => ({
+                      ...d,
+                      amount: e.target.value.replace(/[^\d]/g, ""),
+                    }))
                   }
                 />
               </div>
@@ -799,10 +803,10 @@ export default function CashFlowPage() {
   const savingsRate = totalIncome > 0 ? (surplus / totalIncome) * 100 : 0;
   const burn = burnRate(totalExpenses, totalIncome);
 
-const netWorth = React.useMemo(
-  () => calculateNetWorth(undefined, undefined, undefined, income, expenses),
-  [income, expenses],
-);
+  const netWorth = React.useMemo(
+    () => calculateNetWorth(undefined, undefined, undefined, income, expenses),
+    [income, expenses],
+  );
 
   const avgIncome = avgFromHistory(mockCashFlowHistory, "income");
   const avgExpenses = avgFromHistory(mockCashFlowHistory, "expenses");
@@ -818,6 +822,11 @@ const netWorth = React.useMemo(
         mockCashFlowHistory,
       ),
     [totalIncome, totalExpenses, savingsRate],
+  );
+
+  const efMetrics = React.useMemo(
+    () => selectEmergencyFundMetrics(financialDomainData),
+    [],
   );
 
   const cashFlowKpis: KpiItem[] = [
@@ -859,9 +868,15 @@ const netWorth = React.useMemo(
     },
     {
       label: "Emergency Fund",
-      value: `${settings.emergencyFundMonths}mo`,
-      subline: "Target 6 months",
-      tone: settings.emergencyFundMonths >= 6 ? "good" : "warning",
+      value: `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
+      subline: efMetrics.funded
+        ? `${formatCurrency(efMetrics.currentBalance)} · target ${efMetrics.targetMonths}mo`
+        : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} below ${efMetrics.targetMonths}mo target`,
+      tone: efMetrics.funded
+        ? "good"
+        : efMetrics.runwayMonths >= 3
+          ? "warning"
+          : "danger",
     },
   ];
 

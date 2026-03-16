@@ -3,28 +3,26 @@
 import * as React from "react";
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowUpRight,
-  ArrowUp,
-  ArrowDown,
-  TrendingUp,
-  TrendingDown,
-  CalendarDays,
-  Download,
-  LineChart,
-  Wallet,
-  Goal,
-  Shield,
-  MessageSquareText,
-  PiggyBank,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Flame,
-  Target,
-} from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faArrowUpRightFromSquare,
+  faArrowTrendUp,
+  faArrowTrendDown,
+  faCalendarDays,
+  faWallet,
+  faShield,
+  faCommentDots,
+  faPiggyBank,
+  faCircleExclamation,
+  faCircleCheck,
+  faClock,
+  faFire,
+  faBullseye,
+  faInfoCircle,
+} from "@fortawesome/free-solid-svg-icons";
 
 import { useClientGate } from "../../lib/useClientGate";
 import {
@@ -37,8 +35,6 @@ import {
   mockHoldings,
   mockValuations,
   currentValue,
-  mockUser,
-  getUserFullName,
   mockProperties,
   mockInsurancePolicies,
   createNetWorthSnapshot,
@@ -47,7 +43,8 @@ import {
   formatCurrency,
   mockRetirementConfig,
   selectRetirementOutputs,
-  mockPortfolioPerformance,
+  selectEmergencyFundMetrics,
+  financialDomainData,
   mockCashFlowHistory,
   type CashFlowPoint,
 } from "@/lib/client-data";
@@ -55,7 +52,6 @@ import {
 import {
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,12 +59,22 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import QuizCard from "@/components/dashboard/risk/quizCard";
-import { MetricCard } from "@/components/dashboard/overview/metric-card";
 import { LockedFeatureCard } from "@/components/dashboard/overview/locked-feature-card";
-import { MiniStat } from "@/components/dashboard/overview/mini-stat";
 import { KpiStrip } from "@/components/dashboard/kpi-strip";
+
+// ─── Brand colors ─────────────────────────────────────────────────────────────
+
+const PRIMARY = "#151339";
+const INCOME_COLOR = "#1e3a5f";
+const EXPENSES_COLOR = "#7eb8e8";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -84,19 +90,12 @@ type Snapshot = {
   goalsCompleted: number;
   insurancePolicies: number;
   insuranceReviewDue: number;
-  emergencyFundMonths: number;
-  emergencyFundTarget: number;
   retirementOnTrack: boolean;
   yearsToRetirement: number;
   projectedRetirementBalance: number;
 };
 
-type UpcomingItem = {
-  id: string;
-  title: string;
-  time: string;
-  meta?: string;
-};
+type UpcomingItem = { id: string; title: string; time: string; meta?: string };
 
 type ActivityRow = {
   id: string;
@@ -106,17 +105,11 @@ type ActivityRow = {
   status: "Pending" | "Completed";
 };
 
-// ─── Cash Flow Chart Config ───────────────────────────────────────────────────
+// ─── Chart config ─────────────────────────────────────────────────────────────
 
 const cashFlowChartConfig = {
-  income: {
-    label: "Income",
-    color: "var(--chart-1)",
-  },
-  expenses: {
-    label: "Expenses",
-    color: "var(--chart-2)",
-  },
+  income: { label: "Income", color: INCOME_COLOR },
+  expenses: { label: "Expenses", color: EXPENSES_COLOR },
 } satisfies ChartConfig;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -129,18 +122,40 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+function InfoTip({ content }: { content: string }) {
+  return (
+    <UITooltip>
+      <TooltipTrigger asChild>
+        <span className="cursor-help inline-flex">
+          <FontAwesomeIcon
+            icon={faInfoCircle}
+            className="h-3 w-3 text-muted-foreground hover:text-foreground transition-colors"
+          />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[220px] text-xs">
+        {content}
+      </TooltipContent>
+    </UITooltip>
+  );
+}
+
 function StatPill({
   label,
   value,
   positive,
+  tip,
 }: {
   label: string;
   value: string;
   positive?: boolean;
+  tip?: string;
 }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground flex items-center gap-1">
+        {label} {tip && <InfoTip content={tip} />}
+      </span>
       <span
         className={`text-sm font-semibold ${
           positive === true
@@ -163,7 +178,8 @@ function InsuranceStatusBadge({ reviewDue }: { reviewDue: number }) {
         variant="outline"
         className="text-emerald-600 border-emerald-200 bg-emerald-50 gap-1"
       >
-        <CheckCircle2 className="h-3 w-3" /> All up to date
+        <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" /> All up to
+        date
       </Badge>
     );
   return (
@@ -171,9 +187,48 @@ function InsuranceStatusBadge({ reviewDue }: { reviewDue: number }) {
       variant="outline"
       className="text-amber-600 border-amber-200 bg-amber-50 gap-1"
     >
-      <AlertCircle className="h-3 w-3" /> {reviewDue} review
-      {reviewDue > 1 ? "s" : ""} due
+      <FontAwesomeIcon icon={faCircleExclamation} className="h-3 w-3" />{" "}
+      {reviewDue} review{reviewDue > 1 ? "s" : ""} due
     </Badge>
+  );
+}
+
+function CashFlowTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const income = payload.find((p: any) => p.dataKey === "income");
+  const expenses = payload.find((p: any) => p.dataKey === "expenses");
+  return (
+    <div className="rounded-lg border bg-background px-3 py-2.5 text-xs space-y-1.5 min-w-[160px]">
+      <p className="font-semibold text-foreground mb-1">{label}</p>
+      {income && (
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: INCOME_COLOR }}
+            />
+            <span className="text-muted-foreground">Income</span>
+          </div>
+          <span className="font-medium text-foreground">
+            {formatCurrency(income.value)}
+          </span>
+        </div>
+      )}
+      {expenses && (
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: EXPENSES_COLOR }}
+            />
+            <span className="text-muted-foreground">Expenses</span>
+          </div>
+          <span className="font-medium text-foreground">
+            {formatCurrency(expenses.value)}
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -216,44 +271,37 @@ export default function DashboardPage() {
     };
   }, [sub.status]);
 
+  // ── Emergency fund ────────────────────────────────────────────────────────
+
+  const efMetrics = useMemo(
+    () => selectEmergencyFundMetrics(financialDomainData),
+    [],
+  );
+
   // ── Snapshot ──────────────────────────────────────────────────────────────
 
   const snapshot: Snapshot = useMemo(() => {
     const income = cashFlowData.income.reduce((s, i) => s + i.amount, 0);
     const expenses = cashFlowData.expenses.reduce((s, e) => s + e.amount, 0);
     const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
-
     const nw = createNetWorthSnapshot();
-
     const portfolioValue = mockHoldings
       .filter((h) => h.is_active)
       .reduce((s, h) => s + currentValue(h, mockValuations), 0);
-
     const generalActivePolicies = mockInsurancePolicies.filter(
       (p) => p.is_active,
     ).length;
     const propertyInsCount = mockProperties
       .filter((p) => p.is_active)
       .reduce((sum, p) => sum + (p.insurance?.length ?? 0), 0);
-
-    // Insurance reviews due (policies not reviewed in 12+ months)
-    const now = new Date();
-  const insuranceReviewDue = mockInsurancePolicies.filter((p) => {
-    if (!p.is_active) return false;
-    const days = Math.ceil(
-      (new Date(p.renewal_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-    );
-    return days >= 0 && days <= 60;
-  }).length;
-
-    // Emergency fund
-    const essentialExpenses = cashFlowData.expenses
-      .filter((e) => e.essential)
-      .reduce((s, e) => s + e.amount, 0);
-    const emergencyFundMonths =
-      essentialExpenses > 0 ? 85000 / essentialExpenses : 0;
-
-    // Retirement
+    const insuranceReviewDue = mockInsurancePolicies.filter((p) => {
+      if (!p.is_active) return false;
+      const days = Math.ceil(
+        (new Date(p.renewal_date).getTime() - Date.now()) /
+          (1000 * 60 * 60 * 24),
+      );
+      return days >= 0 && days <= 60;
+    }).length;
     const retirementOutputs = selectRetirementOutputs(mockRetirementConfig);
 
     return {
@@ -268,8 +316,6 @@ export default function DashboardPage() {
       goalsCompleted: goalsData.goals.filter((g) => g.completed).length,
       insurancePolicies: generalActivePolicies + propertyInsCount,
       insuranceReviewDue,
-      emergencyFundMonths: Math.round(emergencyFundMonths * 10) / 10,
-      emergencyFundTarget: mockRetirementConfig.currentAge > 0 ? 6 : 6,
       retirementOnTrack: retirementOutputs.onTrack,
       yearsToRetirement: retirementOutputs.yearsToRetirement,
       projectedRetirementBalance:
@@ -288,9 +334,8 @@ export default function DashboardPage() {
     try {
       recordNetWorthSnapshot({ dedupeDays: 1 });
       const change = getLatestNetWorthChange();
-      if (change?.percent !== null && change?.since) {
+      if (change?.percent !== null && change?.since)
         setNetWorthPercent(change.percent);
-      }
     } catch {
       /* noop */
     }
@@ -311,7 +356,14 @@ export default function DashboardPage() {
       }));
   }, []);
 
-  // ── Goals summary ─────────────────────────────────────────────────────────
+  const yMax = useMemo(() => {
+    const max = Math.max(
+      ...cashFlowChartData.flatMap((d) => [d.income, d.expenses]),
+    );
+    return Math.ceil(max / 10000) * 10000;
+  }, [cashFlowChartData]);
+
+  // ── Goals ─────────────────────────────────────────────────────────────────
 
   const topGoals = useMemo(
     () => goalsData.goals.filter((g) => !g.completed).slice(0, 3),
@@ -339,9 +391,8 @@ export default function DashboardPage() {
         meta: "Action",
       });
     }
-    if (items.length === 0) {
+    if (items.length === 0)
       items.push({ id: "u-fallback", title: "No upcoming items", time: "—" });
-    }
     return items;
   }, []);
 
@@ -404,7 +455,6 @@ export default function DashboardPage() {
           transition: { staggerChildren: 0.06, delayChildren: 0.05 },
         },
       };
-
   const mi = reduceMotion
     ? undefined
     : {
@@ -422,33 +472,30 @@ export default function DashboardPage() {
     );
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   return (
-    <motion.div
-      initial={reduceMotion ? undefined : "hidden"}
-      animate={reduceMotion ? undefined : "show"}
-      variants={mc}
-      className="w-full"
-    >
-      <div className="mx-auto px-6 py-8 space-y-8">
-        {/* ── Header ── */}
-        <motion.div
-          variants={mi}
-          className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"
-        >
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">
-              Hi{greetingName ? ` ${greetingName}` : ""},
-            </p>
-            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
-              {timeGreeting}
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-2">
+    <TooltipProvider>
+      <motion.div
+        initial={reduceMotion ? undefined : "hidden"}
+        animate={reduceMotion ? undefined : "show"}
+        variants={mc}
+        className="w-full"
+      >
+        <div className="mx-auto px-6 py-8 space-y-8">
+          {/* ── Header ── */}
+          <motion.div
+            variants={mi}
+            className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"
+          >
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">
+                Hi{greetingName ? ` ${greetingName}` : ""},
+              </p>
+              <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
+                {timeGreeting}
+              </h1>
+            </div>
             <div className="inline-flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
-              <CalendarDays className="h-4 w-4" />
+              <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
               <span>
                 As of{" "}
                 {new Date().toLocaleDateString("en-US", {
@@ -458,543 +505,573 @@ export default function DashboardPage() {
                 })}
               </span>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* ── Top KPI Row ── */}
-        <motion.div variants={mi}>
-          <SectionLabel>At a glance</SectionLabel>
-          <KpiStrip
-            cols={4}
-            items={[
-              {
-                label: "Net Worth",
-                value: formatCurrency(snapshot.netWorth),
-                subline: "Assets minus liabilities",
-                tone: snapshot.netWorth >= 0 ? "good" : "danger",
-                icon: <Wallet className="h-4 w-4 text-primary" />,
-                onClick: () => router.push("/dashboard/cash-flow"),
-              },
-              {
-                label: "Portfolio Value",
-                value: formatCurrency(snapshot.portfolioValue),
-                subline: `${mockHoldings.filter((h) => h.is_active).length} holdings`,
-                tone: "neutral",
-                icon: <LineChart className="h-4 w-4 text-blue-500" />,
-                onClick: () => router.push("/dashboard/assets"),
-              },
-              {
-                label: "Monthly Surplus",
-                value: formatCurrency(snapshot.monthlyCashFlow),
-                subline: `${formatCurrency(snapshot.monthlyIncome)} in · ${formatCurrency(snapshot.monthlyExpenses)} out`,
-                tone: snapshot.monthlyCashFlow >= 0 ? "good" : "danger",
-                icon: <PiggyBank className="h-4 w-4 text-emerald-500" />,
-                onClick: () => router.push("/dashboard/cash-flow"),
-              },
-              {
-                label: "Emergency Fund",
-                value: `${snapshot.emergencyFundMonths}mo`,
-                subline: `Target ${snapshot.emergencyFundTarget} months · ${snapshot.emergencyFundMonths >= snapshot.emergencyFundTarget ? "Funded" : "Below target"}`,
-                tone:
-                  snapshot.emergencyFundMonths >= snapshot.emergencyFundTarget
+          {/* ── KPI Strip ── */}
+          <motion.div variants={mi}>
+            <SectionLabel>At a glance</SectionLabel>
+            <KpiStrip
+              cols={4}
+              items={[
+                {
+                  label: "Net Worth",
+                  value: formatCurrency(snapshot.netWorth),
+                  subline: "Assets minus liabilities",
+                  tone: snapshot.netWorth >= 0 ? "good" : "danger",
+                  onClick: () => router.push("/dashboard/cash-flow"),
+                },
+                {
+                  label: "Portfolio Value",
+                  value: formatCurrency(snapshot.portfolioValue),
+                  subline: `${mockHoldings.filter((h) => h.is_active).length} active holdings`,
+                  tone: "neutral",
+                  onClick: () => router.push("/dashboard/assets"),
+                },
+                {
+                  label: "Monthly Surplus",
+                  value: formatCurrency(snapshot.monthlyCashFlow),
+                  subline: `${formatCurrency(snapshot.monthlyIncome)} in · ${formatCurrency(snapshot.monthlyExpenses)} out`,
+                  tone: snapshot.monthlyCashFlow >= 0 ? "good" : "danger",
+                  onClick: () => router.push("/dashboard/cash-flow"),
+                },
+                {
+                  label: "Emergency Fund",
+                  value: `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
+                  subline: efMetrics.funded
+                    ? `${formatCurrency(efMetrics.currentBalance)} · Fully funded`
+                    : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} short of ${efMetrics.targetMonths}mo target`,
+                  tone: efMetrics.funded
                     ? "good"
-                    : "warning",
-                icon: <Shield className="h-4 w-4 text-violet-500" />,
-                onClick: () => router.push("/dashboard/cash-flow"),
-              },
-            ]}
-          />
-        </motion.div>
+                    : efMetrics.runwayMonths >= 3
+                      ? "warning"
+                      : "danger",
+                  onClick: () => router.push("/dashboard/cash-flow"),
+                },
+              ]}
+            />
+          </motion.div>
 
-        {/* ── Main Content Grid ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left column: Cash Flow Chart + Goals */}
-          <div className="lg:col-span-8 space-y-6">
-            {/* Cash Flow Chart */}
-            <motion.div variants={mi}>
-              <SectionLabel>Cash flow</SectionLabel>
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-base">
-                        Income vs Expenses
-                      </CardTitle>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Last 6 months
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs gap-1"
-                      onClick={() => router.push("/dashboard/cash-flow")}
-                    >
-                      View details <ArrowUpRight className="h-3 w-3" />
-                    </Button>
-                  </div>
-
-                  {/* Summary stats above chart */}
-                  <div className="flex gap-6 pt-2">
-                    <StatPill
-                      label="Monthly income"
-                      value={formatCurrency(snapshot.monthlyIncome)}
-                      positive={true}
-                    />
-                    <StatPill
-                      label="Monthly expenses"
-                      value={formatCurrency(snapshot.monthlyExpenses)}
-                      positive={false}
-                    />
-                    <StatPill
-                      label="Surplus"
-                      value={formatCurrency(snapshot.monthlyCashFlow)}
-                      positive={snapshot.monthlyCashFlow > 0}
-                    />
-                    <StatPill
-                      label="Savings rate"
-                      value={`${snapshot.savingsRate.toFixed(1)}%`}
-                      positive={snapshot.savingsRate >= 20}
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="px-2 pt-2 sm:px-6">
-                  <ChartContainer
-                    config={cashFlowChartConfig}
-                    className="aspect-auto h-[220px] w-full"
-                  >
-                    <AreaChart data={cashFlowChartData}>
-                      <defs>
-                        <linearGradient
-                          id="fillIncome"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="var(--color-income)"
-                            stopOpacity={0.25}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="var(--color-income)"
-                            stopOpacity={0.02}
-                          />
-                        </linearGradient>
-                        <linearGradient
-                          id="fillExpenses"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="var(--color-expenses)"
-                            stopOpacity={0.25}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="var(--color-expenses)"
-                            stopOpacity={0.02}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        vertical={false}
-                        strokeDasharray="3 3"
-                        className="stroke-muted"
-                      />
-                      <XAxis
-                        dataKey="label"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        className="text-xs text-muted-foreground"
-                      />
-                      <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        width={72}
-                        tickFormatter={(v) => formatCurrency(v)}
-                        className="text-xs text-muted-foreground"
-                      />
-                      <ChartTooltip
-                        cursor={false}
-                        content={
-                          <ChartTooltipContent
-                            labelFormatter={(v) => v}
-                            formatter={(v) => formatCurrency(v as number)}
-                            indicator="dot"
-                          />
-                        }
-                      />
-                      <Area
-                        dataKey="income"
-                        type="natural"
-                        fill="url(#fillIncome)"
-                        stroke="var(--color-income)"
-                        strokeWidth={2}
-                        stackId="none"
-                      />
-                      <Area
-                        dataKey="expenses"
-                        type="natural"
-                        fill="url(#fillExpenses)"
-                        stroke="var(--color-expenses)"
-                        strokeWidth={2}
-                        stackId="none"
-                      />
-                    </AreaChart>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Goals Progress */}
-            <motion.div variants={mi}>
-              <SectionLabel>Financial goals</SectionLabel>
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">
-                      Goals in progress
-                    </CardTitle>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground">
-                        {snapshot.goalsCompleted} of {snapshot.goalsTotal}{" "}
-                        completed
-                      </span>
+          {/* ── Main Grid ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left column */}
+            <div className="lg:col-span-8 space-y-6">
+              {/* Cash Flow Chart */}
+              <motion.div variants={mi}>
+                <SectionLabel>Cash flow</SectionLabel>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-base">
+                          Income vs Expenses
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Last 6 months
+                        </p>
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-xs gap-1"
-                        onClick={() => router.push("/dashboard/goals")}
+                        onClick={() => router.push("/dashboard/cash-flow")}
                       >
-                        All goals <ArrowUpRight className="h-3 w-3" />
+                        View details{" "}
+                        <FontAwesomeIcon
+                          icon={faArrowUpRightFromSquare}
+                          className="h-3 w-3"
+                        />
                       </Button>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {topGoals.map((goal) => {
-                    const pct = Math.min(
-                      (goal.current / goal.target) * 100,
-                      100,
-                    );
-                    return (
-                      <div key={goal.id} className="space-y-1.5">
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <Target className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="font-medium">{goal.title}</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>
-                              {formatCurrency(goal.current)} /{" "}
-                              {formatCurrency(goal.target)}
-                            </span>
-                            <span className="font-semibold text-foreground">
-                              {pct.toFixed(0)}%
-                            </span>
-                            {goal.yearsRemaining > 0 && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {goal.yearsRemaining}yr
+
+                    {/* Summary stats */}
+                    <div className="flex gap-6 pt-2 flex-wrap">
+                      <StatPill
+                        label="Monthly income"
+                        value={formatCurrency(snapshot.monthlyIncome)}
+                        positive={true}
+                        tip="Total income across all sources this month."
+                      />
+                      <StatPill
+                        label="Monthly expenses"
+                        value={formatCurrency(snapshot.monthlyExpenses)}
+                        positive={false}
+                        tip="Total outgoings this month including essential and discretionary spend."
+                      />
+                      <StatPill
+                        label="Surplus"
+                        value={formatCurrency(snapshot.monthlyCashFlow)}
+                        positive={snapshot.monthlyCashFlow > 0}
+                        tip="What remains after all expenses. Positive means you are saving money this month."
+                      />
+                      <StatPill
+                        label="Savings rate"
+                        value={`${snapshot.savingsRate.toFixed(1)}%`}
+                        positive={snapshot.savingsRate >= 20}
+                        tip="Percentage of income saved. Financial advisors recommend at least 20%."
+                      />
+                    </div>
+
+                    {/* Legend */}
+                    <div className="flex items-center gap-4 pt-1">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span
+                          className="inline-block h-2 w-6 rounded-full"
+                          style={{ backgroundColor: INCOME_COLOR }}
+                        />
+                        Income
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span
+                          className="inline-block h-2 w-6 rounded-full"
+                          style={{ backgroundColor: EXPENSES_COLOR }}
+                        />
+                        Expenses
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="px-2 pt-2 sm:px-6">
+                    <ChartContainer
+                      config={cashFlowChartConfig}
+                      className="aspect-auto h-[220px] w-full"
+                    >
+                      <LineChart
+                        data={cashFlowChartData}
+                        margin={{ left: 12, right: 12 }}
+                      >
+                        <CartesianGrid
+                          vertical={false}
+                          strokeDasharray="3 3"
+                          className="stroke-muted"
+                        />
+                        <XAxis
+                          dataKey="label"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          className="text-xs text-muted-foreground"
+                        />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          width={72}
+                          domain={[0, yMax]}
+                          tickFormatter={(v) => formatCurrency(v)}
+                          className="text-xs text-muted-foreground"
+                        />
+                        <ChartTooltip
+                          cursor={false}
+                          content={<CashFlowTooltip />}
+                        />
+                        <Line
+                          dataKey="income"
+                          type="monotone"
+                          stroke={INCOME_COLOR}
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                        <Line
+                          dataKey="expenses"
+                          type="monotone"
+                          stroke={EXPENSES_COLOR}
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Goals */}
+              <motion.div variants={mi}>
+                <SectionLabel>Financial goals</SectionLabel>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">
+                        Goals in progress
+                      </CardTitle>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          {snapshot.goalsCompleted} of {snapshot.goalsTotal}{" "}
+                          completed
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs gap-1"
+                          onClick={() => router.push("/dashboard/goals")}
+                        >
+                          All goals{" "}
+                          <FontAwesomeIcon
+                            icon={faArrowUpRightFromSquare}
+                            className="h-3 w-3"
+                          />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {topGoals.map((goal) => {
+                      const pct = Math.min(
+                        (goal.current / goal.target) * 100,
+                        100,
+                      );
+                      return (
+                        <div key={goal.id} className="space-y-1.5">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <FontAwesomeIcon
+                                icon={faBullseye}
+                                className="h-3.5 w-3.5"
+                                style={{ color: PRIMARY }}
+                              />
+                              <span className="font-medium">{goal.title}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span>
+                                {formatCurrency(goal.current)} /{" "}
+                                {formatCurrency(goal.target)}
                               </span>
-                            )}
+                              <span className="font-semibold text-foreground">
+                                {pct.toFixed(0)}%
+                              </span>
+                              {goal.yearsRemaining > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <FontAwesomeIcon
+                                    icon={faClock}
+                                    className="h-3 w-3"
+                                  />
+                                  {goal.yearsRemaining}yr
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Progress value={pct} className="h-1.5" />
+                        </div>
+                      );
+                    })}
+                    <Separator />
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                      <span>{snapshot.goalsCompleted} goals completed</span>
+                      <span className="flex items-center gap-1 text-emerald-600">
+                        <FontAwesomeIcon
+                          icon={faCircleCheck}
+                          className="h-3 w-3"
+                        />{" "}
+                        {snapshot.goalsActive} active
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Recent Activity */}
+              <motion.div variants={mi}>
+                <SectionLabel>Recent activity</SectionLabel>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">
+                        Latest updates
+                      </CardTitle>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs gap-1"
+                        onClick={() => router.push("/activity")}
+                      >
+                        View all{" "}
+                        <FontAwesomeIcon
+                          icon={faArrowUpRightFromSquare}
+                          className="h-3 w-3"
+                        />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="w-full overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-muted-foreground border-b">
+                            <th className="py-2.5 pr-4 font-medium text-xs">
+                              Item
+                            </th>
+                            <th className="py-2.5 pr-4 font-medium text-xs">
+                              Category
+                            </th>
+                            <th className="py-2.5 pr-4 font-medium text-xs">
+                              Date
+                            </th>
+                            <th className="py-2.5 font-medium text-xs text-right">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activity.map((row) => (
+                            <tr
+                              key={row.id}
+                              className="border-b last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                              onClick={() => router.push("/activity")}
+                            >
+                              <td className="py-3 pr-4 font-medium">
+                                {row.title}
+                              </td>
+                              <td className="py-3 pr-4">
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs font-normal"
+                                >
+                                  {row.category}
+                                </Badge>
+                              </td>
+                              <td className="py-3 pr-4 text-muted-foreground text-xs">
+                                {row.date}
+                              </td>
+                              <td className="py-3 text-right">
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs ${
+                                    row.status === "Completed"
+                                      ? "text-emerald-600 border-emerald-200 bg-emerald-50"
+                                      : "text-amber-600 border-amber-200 bg-amber-50"
+                                  }`}
+                                >
+                                  {row.status}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Right column */}
+            <div className="lg:col-span-4 space-y-6">
+              {/* Retirement */}
+              <motion.div variants={mi}>
+                <SectionLabel>Retirement</SectionLabel>
+                <Card
+                  className="cursor-pointer hover:bg-muted/20 transition-colors"
+                  onClick={() => router.push("/dashboard/retirement")}
+                >
+                  <CardContent className="pt-5 space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                   
+                        <div>
+                          <p className="text-sm font-semibold">
+                            Retirement track
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {snapshot.yearsToRetirement} years away
+                          </p>
+                        </div>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          snapshot.retirementOnTrack
+                            ? "text-emerald-600 border-emerald-200 bg-emerald-50"
+                            : "text-amber-600 border-amber-200 bg-amber-50"
+                        }`}
+                      >
+                        {snapshot.retirementOnTrack ? (
+                          <>
+                            <FontAwesomeIcon
+                              icon={faArrowTrendUp}
+                              className="h-3 w-3 mr-1"
+                            />{" "}
+                            On track
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon
+                              icon={faArrowTrendDown}
+                              className="h-3 w-3 mr-1"
+                            />{" "}
+                            Needs attention
+                          </>
+                        )}
+                      </Badge>
+                    </div>
+
+                    <Separator />
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <StatPill
+                        label="Retire at"
+                        value={`Age ${mockRetirementConfig.retirementAge}`}
+                        tip="Your target retirement age."
+                      />
+                      <StatPill
+                        label="Monthly savings"
+                        value={formatCurrency(
+                          mockRetirementConfig.monthlySavings,
+                        )}
+                        tip="Combined monthly contributions to investments and pension."
+                      />
+                      <StatPill
+                        label="Projected balance"
+                        value={formatCurrency(
+                          snapshot.projectedRetirementBalance,
+                        )}
+                        tip="Estimated portfolio value at your target retirement age based on current contributions and expected returns."
+                      />
+                      <StatPill
+                        label="Target income"
+                        value={
+                          formatCurrency(
+                            mockRetirementConfig.desiredMonthlyIncome,
+                          ) + "/mo"
+                        }
+                        tip="Your desired monthly income in retirement in today's dollars."
+                      />
+                    </div>
+
+                    <Progress
+                      value={Math.min(
+                        (mockRetirementConfig.currentInvested /
+                          snapshot.projectedRetirementBalance) *
+                          100,
+                        100,
+                      )}
+                      className="h-1.5"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(mockRetirementConfig.currentInvested)}{" "}
+                      invested today toward projected{" "}
+                      {formatCurrency(snapshot.projectedRetirementBalance)}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Insurance */}
+              <motion.div variants={mi}>
+                <SectionLabel>Insurance</SectionLabel>
+                <Card
+                  className="cursor-pointer hover:bg-muted/20 transition-colors"
+                  onClick={() => router.push("/dashboard/insurance")}
+                >
+                  <CardContent className="pt-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+              
+                        <div>
+                          <p className="text-sm font-semibold">Coverage</p>
+                          <p className="text-xs text-muted-foreground">
+                            {snapshot.insurancePolicies} active policies
+                          </p>
+                        </div>
+                      </div>
+                      <InsuranceStatusBadge
+                        reviewDue={snapshot.insuranceReviewDue}
+                      />
+                    </div>
+
+                    <Separator />
+
+                    {mockInsurancePolicies
+                      .filter((p) => p.is_active)
+                      .slice(0, 4)
+                      .map((p) => (
+                        <div
+                          key={p.policy_id}
+                          className="flex items-center justify-between text-xs"
+                        >
+                          <span className="text-muted-foreground capitalize">
+                            {p.category} · {p.name}
+                          </span>
+                          <span className="font-medium tabular-nums">
+                            {formatCurrency(p.premium_monthly)}/mo
+                          </span>
+                        </div>
+                      ))}
+
+                    {mockInsurancePolicies.filter((p) => p.is_active).length >
+                      4 && (
+                      <p className="text-xs text-muted-foreground pt-1">
+                        +
+                        {mockInsurancePolicies.filter((p) => p.is_active)
+                          .length - 4}{" "}
+                        more policies
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Upcoming */}
+              <motion.div variants={mi}>
+                <SectionLabel>Upcoming</SectionLabel>
+                <Card>
+                  <CardContent className="pt-5 space-y-3">
+                    {upcoming.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-md border px-3 py-3 flex items-start justify-between gap-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                        onClick={() => router.push("/schedule")}
+                      >
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-medium">
+                            {item.title}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {item.time}
+                            {item.meta ? ` · ${item.meta}` : ""}
                           </div>
                         </div>
-                        <Progress value={pct} className="h-1.5" />
-                      </div>
-                    );
-                  })}
-                  <Separator />
-                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                    <span>{snapshot.goalsCompleted} goals completed</span>
-                    <span className="flex items-center gap-1 text-emerald-600">
-                      <CheckCircle2 className="h-3 w-3" />{" "}
-                      {snapshot.goalsActive} active
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Recent Activity */}
-            <motion.div variants={mi}>
-              <SectionLabel>Recent activity</SectionLabel>
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">Latest updates</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs gap-1"
-                      onClick={() => router.push("/activity")}
-                    >
-                      View all <ArrowUpRight className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="w-full overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-left text-muted-foreground border-b">
-                          <th className="py-2.5 pr-4 font-medium text-xs">
-                            Item
-                          </th>
-                          <th className="py-2.5 pr-4 font-medium text-xs">
-                            Category
-                          </th>
-                          <th className="py-2.5 pr-4 font-medium text-xs">
-                            Date
-                          </th>
-                          <th className="py-2.5 font-medium text-xs text-right">
-                            Status
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {activity.map((row) => (
-                          <tr
-                            key={row.id}
-                            className="border-b last:border-b-0 hover:bg-muted/40 transition-colors cursor-pointer"
-                            onClick={() => router.push("/activity")}
-                          >
-                            <td className="py-3 pr-4 font-medium">
-                              {row.title}
-                            </td>
-                            <td className="py-3 pr-4">
-                              <Badge
-                                variant="outline"
-                                className="text-xs font-normal"
-                              >
-                                {row.category}
-                              </Badge>
-                            </td>
-                            <td className="py-3 pr-4 text-muted-foreground text-xs">
-                              {row.date}
-                            </td>
-                            <td className="py-3 text-right">
-                              <Badge
-                                variant="outline"
-                                className={`text-xs ${
-                                  row.status === "Completed"
-                                    ? "text-emerald-600 border-emerald-200 bg-emerald-50"
-                                    : "text-amber-600 border-amber-200 bg-amber-50"
-                                }`}
-                              >
-                                {row.status}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-
-          {/* Right column */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Retirement */}
-            <motion.div variants={mi}>
-              <SectionLabel>Retirement</SectionLabel>
-              <Card
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => router.push("/dashboard/retirement")}
-              >
-                <CardContent className="pt-5 space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-amber-500/10">
-                        <Flame className="h-4 w-4 text-amber-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">
-                          Retirement track
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {snapshot.yearsToRetirement} years away
-                        </p>
-                      </div>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={`text-xs ${
-                        snapshot.retirementOnTrack
-                          ? "text-emerald-600 border-emerald-200 bg-emerald-50"
-                          : "text-amber-600 border-amber-200 bg-amber-50"
-                      }`}
-                    >
-                      {snapshot.retirementOnTrack ? (
-                        <>
-                          <TrendingUp className="h-3 w-3 mr-1" /> On track
-                        </>
-                      ) : (
-                        <>
-                          <TrendingDown className="h-3 w-3 mr-1" /> Needs
-                          attention
-                        </>
-                      )}
-                    </Badge>
-                  </div>
-                  <Separator />
-                  <div className="grid grid-cols-2 gap-3">
-                    <StatPill
-                      label="Retire at"
-                      value={`Age ${mockRetirementConfig.retirementAge}`}
-                    />
-                    <StatPill
-                      label="Monthly savings"
-                      value={formatCurrency(
-                        mockRetirementConfig.monthlySavings,
-                      )}
-                    />
-                    <StatPill
-                      label="Projected balance"
-                      value={formatCurrency(
-                        snapshot.projectedRetirementBalance,
-                      )}
-                    />
-                    <StatPill
-                      label="Target income"
-                      value={
-                        formatCurrency(
-                          mockRetirementConfig.desiredMonthlyIncome,
-                        ) + "/mo"
-                      }
-                    />
-                  </div>
-                  <Progress
-                    value={Math.min(
-                      (mockRetirementConfig.currentInvested /
-                        snapshot.projectedRetirementBalance) *
-                        100,
-                      100,
-                    )}
-                    className="h-1.5"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(mockRetirementConfig.currentInvested)}{" "}
-                    invested today toward projected{" "}
-                    {formatCurrency(snapshot.projectedRetirementBalance)}
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Insurance */}
-            <motion.div variants={mi}>
-              <SectionLabel>Insurance</SectionLabel>
-              <Card
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => router.push("/dashboard/insurance")}
-              >
-                <CardContent className="pt-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-violet-500/10">
-                        <Shield className="h-4 w-4 text-violet-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Coverage</p>
-                        <p className="text-xs text-muted-foreground">
-                          {snapshot.insurancePolicies} active policies
-                        </p>
-                      </div>
-                    </div>
-                    <InsuranceStatusBadge
-                      reviewDue={snapshot.insuranceReviewDue}
-                    />
-                  </div>
-                  <Separator />
-                  {mockInsurancePolicies
-                    .filter((p) => p.is_active)
-                    .slice(0, 4)
-                    .map((p) => (
-                      <div
-                        key={p.policy_id}
-                        className="flex items-center justify-between text-xs"
-                      >
-                        <span className="text-muted-foreground capitalize">
-                          {p.category} — {p.name}
-                        </span>
-                        <span className="font-medium">
-                          {formatCurrency(p.premium_monthly)}/mo
-                        </span>
+                        <FontAwesomeIcon
+                          icon={faArrowUpRightFromSquare}
+                          className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0"
+                        />
                       </div>
                     ))}
-                  <p className="text-xs text-muted-foreground pt-1">
-                    {mockInsurancePolicies.filter((p) => p.is_active).length -
-                      4 >
-                    0
-                      ? `+${mockInsurancePolicies.filter((p) => p.is_active).length - 4} more policies`
-                      : "All policies shown"}
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Upcoming */}
-            <motion.div variants={mi}>
-              <SectionLabel>Upcoming</SectionLabel>
-              <Card>
-                <CardContent className="pt-5 space-y-3">
-                  {upcoming.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-md border px-3 py-3 flex items-start justify-between gap-3 hover:bg-muted/40 transition-colors cursor-pointer"
-                      onClick={() => router.push("/schedule")}
+                    <Button
+                      variant="secondary"
+                      className="w-full justify-between text-xs"
+                      onClick={() => router.push("/schedule/new")}
                     >
-                      <div className="space-y-0.5">
-                        <div className="text-sm font-medium">{item.title}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.time}
-                          {item.meta ? ` · ${item.meta}` : ""}
-                        </div>
-                      </div>
-                      <ArrowUpRight className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                    </div>
-                  ))}
-                  <Button
-                    variant="secondary"
-                    className="w-full justify-between text-xs"
-                    onClick={() => router.push("/schedule/new")}
-                  >
-                    Add new schedule <ArrowUpRight className="h-3 w-3" />
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
+                      Add new schedule{" "}
+                      <FontAwesomeIcon
+                        icon={faArrowUpRightFromSquare}
+                        className="h-3 w-3"
+                      />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-            {/* Advisor */}
-            <motion.div variants={mi}>
-              <LockedFeatureCard
-                title="Advisor"
-                description="Talk to an advisor for guidance and planning."
-                icon={<MessageSquareText className="h-5 w-5" />}
-                hasAccess={access.advisorChat}
-                onOpen={() => router.push("/advisor")}
-                onUpgrade={handleUpgradeIntent}
-              />
-            </motion.div>
+              {/* Advisor */}
+              <motion.div variants={mi}>
+                <LockedFeatureCard
+                  title="Advisor"
+                  description="Talk to an advisor for guidance and planning."
+                  icon={
+                    <FontAwesomeIcon icon={faCommentDots} className="h-5 w-5" />
+                  }
+                  hasAccess={access.advisorChat}
+                  onOpen={() => router.push("/advisor")}
+                  onUpgrade={handleUpgradeIntent}
+                />
+              </motion.div>
 
-            {/* Risk quiz */}
-            <motion.div variants={mi}>
-              <QuizCard />
-            </motion.div>
+              {/* Risk quiz */}
+              <motion.div variants={mi}>
+                <QuizCard />
+              </motion.div>
+            </div>
           </div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+    </TooltipProvider>
   );
 }

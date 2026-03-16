@@ -6,7 +6,12 @@ import { HelpCircle, Wand2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -37,6 +42,8 @@ function MoneyInput({
     setRaw(String(value));
   }, [value]);
 
+  const displayValue = raw.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
   return (
     <div className="space-y-2">
       <div className="flex items-end justify-between gap-2">
@@ -46,12 +53,12 @@ function MoneyInput({
         ) : null}
       </div>
       <Input
-        inputMode="decimal"
-        value={raw}
+        inputMode="numeric"
+        value={displayValue}
         onChange={(e) => {
-          const v = e.target.value;
-          setRaw(v);
-          onChange(parseMoney(v));
+          const stripped = e.target.value.replace(/[^\d]/g, "");
+          setRaw(stripped);
+          onChange(stripped === "" ? 0 : Number(stripped));
         }}
         className="bg-background/60"
       />
@@ -164,7 +171,6 @@ export function ControlsCard({
         <CardTitle className="text-base">
           {simulationMode ? "Simulation Controls" : "Your Figures"}
         </CardTitle>
-        
       </CardHeader>
 
       <CardContent className="space-y-6">

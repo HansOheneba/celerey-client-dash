@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import {
   Card,
   CardContent,
@@ -11,10 +11,7 @@ import {
 } from "@/components/ui/card";
 import {
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
 import {
@@ -26,16 +23,56 @@ import {
 } from "@/components/ui/select";
 import { type CashFlowPoint, formatCurrency } from "@/lib/client-data";
 
+// ─── Same colors as overview page ────────────────────────────────────────────
+const INCOME_COLOR = "#1e3a5f"; // deep navy blue
+const EXPENSES_COLOR = "#7eb8e8"; // light blue
+
 const chartConfig = {
-  income: {
-    label: "Income",
-    color: "var(--chart-1)",
-  },
-  expenses: {
-    label: "Expenses",
-    color: "var(--chart-2)",
-  },
+  income: { label: "Income", color: INCOME_COLOR },
+  expenses: { label: "Expenses", color: EXPENSES_COLOR },
 } satisfies ChartConfig;
+
+// ─── Custom Tooltip ───────────────────────────────────────────────────────────
+function CashFlowTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+
+  const income = payload.find((p: any) => p.dataKey === "income");
+  const expenses = payload.find((p: any) => p.dataKey === "expenses");
+
+  return (
+    <div className="rounded-lg border bg-background shadow-md px-3 py-2.5 text-xs space-y-1.5 min-w-[160px]">
+      <p className="font-semibold text-foreground mb-1">{label}</p>
+      {income && (
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: INCOME_COLOR }}
+            />
+            <span className="text-muted-foreground">Income</span>
+          </div>
+          <span className="font-medium text-foreground">
+            {formatCurrency(income.value)}
+          </span>
+        </div>
+      )}
+      {expenses && (
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: EXPENSES_COLOR }}
+            />
+            <span className="text-muted-foreground">Expenses</span>
+          </div>
+          <span className="font-medium text-foreground">
+            {formatCurrency(expenses.value)}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface CashFlowChartProps {
   data: CashFlowPoint[];
@@ -59,9 +96,15 @@ export function CashFlowChart({
     return sorted.slice(-12);
   }, [data, timeRange]);
 
+  const yMax = React.useMemo(() => {
+    const max = Math.max(
+      ...filteredData.flatMap((d) => [d.income, d.expenses]),
+    );
+    return Math.ceil(max / 10000) * 10000;
+  }, [filteredData]);
+
   const formattedData = filteredData.map((point) => ({
     ...point,
-    // XAxis needs a display-friendly label
     label: new Date(point.month + "-01").toLocaleDateString("en-US", {
       month: "short",
       year: "2-digit",
@@ -95,45 +138,43 @@ export function CashFlowChart({
           </SelectContent>
         </Select>
       </CardHeader>
+
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        {/* Inline legend — matches overview page style */}
+        <div className="flex items-center gap-4 mb-3 px-1">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span
+              className="inline-block h-2 w-6 rounded-full"
+              style={{ backgroundColor: INCOME_COLOR }}
+            />
+            Income
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span
+              className="inline-block h-2 w-6 rounded-full"
+              style={{ backgroundColor: EXPENSES_COLOR }}
+            />
+            Expenses
+          </div>
+        </div>
+
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-62.5 w-full"
+          className="aspect-auto h-[250px] w-full"
         >
-          <AreaChart data={formattedData}>
-            <defs>
-              <linearGradient id="fillIncome" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-income)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-income)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-              <linearGradient id="fillExpenses" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-expenses)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-expenses)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} />
+          <LineChart data={formattedData} margin={{ left: 12, right: 12 }}>
+            <CartesianGrid
+              vertical={false}
+              strokeDasharray="3 3"
+              className="stroke-muted"
+            />
             <XAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               minTickGap={24}
+              className="text-xs text-muted-foreground"
             />
             <YAxis
               tickLine={false}
@@ -141,33 +182,25 @@ export function CashFlowChart({
               tickMargin={8}
               tickFormatter={(value) => formatCurrency(value)}
               width={80}
+              domain={[0, yMax]}
+              className="text-xs text-muted-foreground"
             />
-            <ChartTooltip
-              cursor={false}
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(value) => value}
-                  formatter={(value) => formatCurrency(value as number)}
-                  indicator="dot"
-                />
-              }
-            />
-            <Area
+            <ChartTooltip cursor={false} content={<CashFlowTooltip />} />
+            <Line
               dataKey="income"
-              type="natural"
-              fill="url(#fillIncome)"
-              stroke="var(--color-income)"
-              stackId="none"
+              type="monotone"
+              stroke={INCOME_COLOR}
+              strokeWidth={2}
+              dot={false}
             />
-            <Area
+            <Line
               dataKey="expenses"
-              type="natural"
-              fill="url(#fillExpenses)"
-              stroke="var(--color-expenses)"
-              stackId="none"
+              type="monotone"
+              stroke={EXPENSES_COLOR}
+              strokeWidth={2}
+              dot={false}
             />
-            <ChartLegend content={<ChartLegendContent />} />
-          </AreaChart>
+          </LineChart>
         </ChartContainer>
       </CardContent>
     </Card>

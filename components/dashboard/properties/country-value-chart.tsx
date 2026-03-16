@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, XAxis, YAxis, Cell } from "recharts";
+import { LabelList, Pie, PieChart } from "recharts";
 
 import {
   Card,
@@ -17,128 +17,153 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 
-import { mockProperties } from "@/lib/client-data";
+import { mockProperties, formatCurrency } from "@/lib/client-data";
 
-type CountryStats = {
-  country: string;
-  count: number;
-  totalValue: number;
+// ─── Brand palette — navy shades for slices ───────────────────────────────────
+
+const SLICE_COLORS = [
+  "#151339",
+  "#1e3a5f",
+  "#2d5282",
+  "#3b6cb5",
+  "#7eb8e8",
+  "#a8d4f5",
+  "#c3e2fa",
+  "#daeffe",
+  "#1a2a4a",
+  "#243d6b",
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+type PropertySlice = {
+  key: string;
+  name: string;
+  marketValue: number;
+  fill: string;
 };
 
-const BLUE = "#151339";
-
-/* ---------------------------------- */
-/* Build country stats                */
-/* ---------------------------------- */
-
-function getCountryStats(properties: typeof mockProperties): CountryStats[] {
-  const stats: Record<string, CountryStats> = {};
-
-  for (const p of properties) {
-    if (!p.is_active) continue;
-
-    if (!stats[p.country]) {
-      stats[p.country] = {
-        country: p.country,
-        count: 0,
-        totalValue: 0,
-      };
-    }
-
-    stats[p.country].count += 1;
-    stats[p.country].totalValue += p.market_value;
-  }
-
-  return Object.values(stats)
-    .sort((a, b) => b.totalValue - a.totalValue)
-    .slice(0, 5);
+function getTopProperties(
+  properties: typeof mockProperties,
+  limit = 10,
+): PropertySlice[] {
+  return [...properties]
+    .filter((p) => p.is_active && p.market_value > 0)
+    .sort((a, b) => b.market_value - a.market_value)
+    .slice(0, limit)
+    .map((p, i) => ({
+      key: p.property_id,
+      name: p.name,
+      marketValue: p.market_value,
+      fill: SLICE_COLORS[i % SLICE_COLORS.length],
+    }));
 }
 
-function buildConfig(data: CountryStats[]): ChartConfig {
+function buildChartConfig(slices: PropertySlice[]): ChartConfig {
   const config: ChartConfig = {
-    totalValue: { label: "Property Value" },
+    marketValue: { label: "Market Value" },
   };
-
-  data.forEach(({ country }) => {
-    config[country] = {
-      label: country,
-      color: BLUE,
-    };
+  slices.forEach((s) => {
+    config[s.key] = { label: s.name, color: s.fill };
   });
-
   return config;
 }
 
-/* ---------------------------------- */
-/* Component                          */
-/* ---------------------------------- */
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function CountryDonutChart() {
-  const data = getCountryStats(mockProperties);
+  const activeProps = mockProperties.filter((p) => p.is_active);
+  // Show top 5 if 7 or fewer properties, otherwise top 10
+  const limit = Math.min(activeProps.length, 10);
+  const slices = getTopProperties(activeProps, limit);
+  const chartConfig = buildChartConfig(slices);
+  const totalValue = slices.reduce((s, p) => s + p.marketValue, 0);
+  const hiddenCount = activeProps.length - slices.length;
 
-  const chartConfig = buildConfig(data);
-
-  const chartData = data.map((d) => ({
-    country: d.country,
-    totalValue: d.totalValue,
-    count: d.count,
-    fill: BLUE,
+  // recharts needs the dataKey to match a field on the object
+  const chartData = slices.map((s) => ({
+    ...s,
+    // LabelList formatter uses this key to look up chartConfig
+    configKey: s.key,
   }));
 
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-0">
-        <CardTitle>Top Countries by Property Value</CardTitle>
+        <CardTitle>Property Value Distribution</CardTitle>
         <CardDescription>
-          Active holdings ranked by total property value
+          Top {slices.length} properties by market value
+          {hiddenCount > 0 && ` · ${hiddenCount} more not shown`}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-1 items-center justify-center pb-0">
-        <ChartContainer config={chartConfig} className="w-full h-[180px]">
-          <BarChart
-            accessibilityLayer
-            data={chartData}
-            layout="vertical"
-            barSize={28}
-            margin={{ left: 0, right: 16, top: 4, bottom: 4 }}
-          >
-            <XAxis type="number" dataKey="totalValue" hide />
-
-            <YAxis
-              dataKey="country"
-              type="category"
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-              width={110}
-            />
-
+      <CardContent className="flex-1 pb-0">
+        <ChartContainer
+          config={chartConfig}
+          className="mx-auto aspect-square max-h-[280px] [&_.recharts-text]:fill-background"
+        >
+          <PieChart>
             <ChartTooltip
-              cursor={false}
               content={
                 <ChartTooltipContent
-                  formatter={(value, name) => {
-                    if (name === "totalValue") {
-                      return [
-                        `$${Number(value).toLocaleString()}`,
-                        "Total Value",
-                      ];
-                    }
-                    return value;
-                  }}
+                  nameKey="name"
+                  hideLabel
+                  formatter={(value, name, item) => [
+                    formatCurrency(Number(value)),
+                    item.payload.name,
+                  ]}
                 />
               }
             />
-
-            <Bar dataKey="totalValue" radius={6}>
-              {chartData.map((entry) => (
-                <Cell key={entry.country} fill={entry.fill} />
-              ))}
-            </Bar>
-          </BarChart>
+            <Pie data={chartData} dataKey="marketValue" nameKey="name">
+              <LabelList
+                dataKey="configKey"
+                className="fill-background"
+                stroke="none"
+                fontSize={11}
+                formatter={(value: string) =>
+                  chartConfig[value]?.label ?? value
+                }
+              />
+            </Pie>
+          </PieChart>
         </ChartContainer>
       </CardContent>
+
+      {/* Legend */}
+      <div className="px-6 pb-5 pt-2 space-y-1.5">
+        {slices.map((s) => {
+          const pct = totalValue > 0 ? (s.marketValue / totalValue) * 100 : 0;
+          return (
+            <div
+              key={s.key}
+              className="flex items-center justify-between text-xs"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block h-2 w-2 rounded-full shrink-0"
+                  style={{ backgroundColor: s.fill }}
+                />
+                <span className="text-muted-foreground truncate max-w-[160px]">
+                  {s.name}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-muted-foreground">{pct.toFixed(1)}%</span>
+                <span className="font-medium tabular-nums">
+                  {formatCurrency(s.marketValue)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+        <div className="flex items-center justify-between text-xs pt-1 border-t mt-1">
+          <span className="text-muted-foreground font-medium">Total</span>
+          <span className="font-bold tabular-nums">
+            {formatCurrency(totalValue)}
+          </span>
+        </div>
+      </div>
     </Card>
   );
 }
