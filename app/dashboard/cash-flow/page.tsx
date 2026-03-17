@@ -964,7 +964,7 @@ export default function CashFlowPage() {
           <div className="space-y-1.5">
             <h1 className="text-2xl font-semibold tracking-tight">Cash Flow</h1>
             <p className="text-sm text-muted-foreground">
-              Your financial pulse — income, spending, and savings patterns.
+              Your financial pulse; income, spending, and savings patterns.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

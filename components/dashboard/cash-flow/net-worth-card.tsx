@@ -142,7 +142,7 @@ export function NetWorthCard({ breakdown }: { breakdown: NetWorthBreakdown }) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Net Worth</CardTitle>
           {breakdown.netWorth >= 0 ? (
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <TrendingUp className="h-4 w-4 text-blue-900" />
           ) : (
             <TrendingDown className="h-4 w-4 text-rose-500" />
           )}
@@ -156,7 +156,7 @@ export function NetWorthCard({ breakdown }: { breakdown: NetWorthBreakdown }) {
             className={cn(
               "text-3xl font-bold tracking-tight tabular-nums",
               breakdown.netWorth >= 0
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-blue-950"
                 : "text-rose-600 dark:text-rose-400",
             )}
           >

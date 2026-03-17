@@ -11,24 +11,27 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import type {
-  InsuranceReviewStatus,
-  InsurancePolicyType,
+  InsuranceSummaryMetrics,
+  InsuranceCategory,
   SectionFreshness,
 } from "@/lib/client-data";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
 interface ProtectionSectionProps {
-  insurance: InsuranceReviewStatus[];
+  insurance: InsuranceSummaryMetrics;
   freshness: SectionFreshness[];
 }
 
-const TYPE_LABEL: Record<InsurancePolicyType, string> = {
+const TYPE_LABEL: Record<InsuranceCategory, string> = {
   home: "Home",
   health: "Health",
   life: "Life",
   disability: "Disability",
   auto: "Auto",
   umbrella: "Umbrella",
+  liability: "Liability",
+  travel: "Travel",
+  pet: "Pet",
   other: "Other",
 };
 
@@ -61,8 +64,8 @@ export function ProtectionSection({
   insurance,
   freshness,
 }: ProtectionSectionProps) {
-  const reviewDueCount = insurance.filter((p) => p.reviewDue).length;
-  const monthlyTotal = insurance.reduce((s, p) => s + p.premiumMonthly, 0);
+  const reviewDueCount = insurance.expiredCount + insurance.expiringSoonCount;
+  const monthlyTotal = insurance.totalMonthlyPremium;
 
   return (
     <DashCard>
@@ -76,7 +79,7 @@ export function ProtectionSection({
         </div>
         <div className="flex items-center gap-2 mt-1">
           <Badge variant="secondary" className="text-xs">
-            {insurance.length} Policies
+            {insurance.totalPolicies} Policies
           </Badge>
           {reviewDueCount > 0 && (
             <Badge className="bg-amber-100 text-amber-700 border-0 text-xs">
@@ -96,21 +99,24 @@ export function ProtectionSection({
         <Separator />
 
         <div className="space-y-3">
-          {insurance.map((policy) => (
-            <div key={policy.id} className="rounded-lg border p-3 space-y-2">
+          {insurance.renewals.map((policy) => (
+            <div
+              key={policy.policy_id}
+              className="rounded-lg border p-3 space-y-2"
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium">{policy.name}</p>
                     <Badge variant="secondary" className="text-xs">
-                      {TYPE_LABEL[policy.type]}
+                      {TYPE_LABEL[policy.category]}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Coverage: {fmtCoverage(policy.coverageAmount)}
                   </p>
                 </div>
-                {policy.reviewDue ? (
+                {policy.renewalStatus !== "ok" ? (
                   <Badge className="bg-amber-100 text-amber-700 border-0 text-xs shrink-0">
                     <AlertTriangle className="h-3 w-3 mr-1" />
                     Review Due

@@ -19,8 +19,8 @@ interface KpiStripProps {
 }
 
 const toneClass: Record<NonNullable<KpiItem["tone"]>, string> = {
-  good: "text-emerald-600",
-  warning: "text-amber-500",
+  good: "blue-950",
+  warning: "text-amber-700",
   danger: "text-red-500",
   neutral: "text-foreground",
 };

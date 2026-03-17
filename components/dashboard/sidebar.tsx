@@ -23,16 +23,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  LifeBuoy,
-  LogOut,
-  MoreVertical,
-  Settings,
-  UserIcon,
-} from "lucide-react";
-import { mockUser, getUserFullName } from "@/lib/client-data";
+
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -58,7 +51,6 @@ const nav = [
   { label: "Retirement", href: "/dashboard/retirement", icon: faUmbrellaBeach },
   { label: "Celerey Insights", href: "/dashboard/ai", icon: faBrain },
   { label: "Concierge", href: "/dashboard/concierge", icon: faBellConcierge },
-  // { label: "Documents", href: "/dashboard/documents", icon: faFileLines },
 ];
 
 export default function DashboardSidebar() {
@@ -67,8 +59,12 @@ export default function DashboardSidebar() {
   const collapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon" variant="sidebar">
-      <SidebarHeader className="pt-2">
+    <Sidebar
+      collapsible="icon"
+      variant="sidebar"
+      className="bg-white border-r border-gray-200 text-gray-700"
+    >
+      <SidebarHeader className="pt-4 px-3">
         <Link href="/dashboard" className="flex items-center gap-3 rounded-md">
           <div className="flex w-full justify-left">
             <div className="relative h-14 w-30">
@@ -144,7 +140,7 @@ export default function DashboardSidebar() {
             </div>
           </div>
         </Link>
-        <SidebarSeparator className="my-2 bg-white/20" />
+        <SidebarSeparator className="my-3 bg-gray-200" />
       </SidebarHeader>
 
       <SidebarContent className="px-2">
@@ -162,12 +158,10 @@ export default function DashboardSidebar() {
                   isActive={active}
                   tooltip={item.label}
                   className={[
-                    // remove the hard active bg so the animated pill is the “bg”
-                    "relative overflow-hidden",
-                    "hover:bg-sidebar-accent/60",
+                    "relative overflow-hidden rounded-md",
+                    "hover:bg-gray-100",
                     "transition-colors",
-                    // make spacing consistent to avoid tiny reflows
-                    "h-10",
+                    "h-10 px-2",
                   ].join(" ")}
                 >
                   <Link
@@ -225,7 +219,7 @@ export default function DashboardSidebar() {
           })}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarSeparator className="my-2 bg-white/20" />
+      <SidebarSeparator className="my-3 bg-gray-200" />
 
       <SidebarFooter>
         <SidebarMenu>
