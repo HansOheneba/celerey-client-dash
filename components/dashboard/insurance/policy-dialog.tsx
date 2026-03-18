@@ -23,13 +23,13 @@ import {
 } from "@/components/ui/select";
 import {
   type InsurancePolicy,
-  type GeneralInsuranceCategory,
-  GENERAL_INSURANCE_CATEGORIES,
+  type InsuranceCategory,
+  INSURANCE_CATEGORIES,
 } from "@/lib/client-data";
 
 // ── Form values ─────────────────────────────────────────────────
 export type PolicyFormValues = {
-  category: GeneralInsuranceCategory;
+  category: InsuranceCategory;
   provider: string;
   policyName: string;
   policyNumber: string;
@@ -82,16 +82,16 @@ function formFromPolicy(p: InsurancePolicy): PolicyFormValues {
   return {
     category: p.category,
     provider: p.provider,
-    policyName: p.policy_name,
+    policyName: p.name,
     policyNumber: p.policy_number,
     coverageAmount: formatNumberWithCommas(p.coverage_amount.toString()),
-    annualPremium: formatNumberWithCommas(p.annual_premium.toString()),
+    annualPremium: formatNumberWithCommas((p.premium_monthly * 12).toString()),
     deductible: formatNumberWithCommas(p.deductible.toString()),
     startDate: p.start_date,
-    expiryDate: p.expiry_date,
+    expiryDate: p.renewal_date,
     autoRenew: p.auto_renew,
-    beneficiary: p.beneficiary,
-    notes: p.notes,
+    beneficiary: p.beneficiary ?? "",
+    notes: p.notes ?? "",
   };
 }
 
@@ -146,13 +146,13 @@ export function PolicyDialog({
       user_id: editingPolicy?.user_id ?? "u-1",
       category: form.category,
       provider: form.provider.trim(),
-      policy_name: form.policyName.trim(),
+      name: form.policyName.trim(),
       policy_number: form.policyNumber.trim(),
       coverage_amount: toNumber(form.coverageAmount),
-      annual_premium: toNumber(form.annualPremium),
+      premium_monthly: Math.round(toNumber(form.annualPremium) / 12),
       deductible: toNumber(form.deductible),
       start_date: form.startDate,
-      expiry_date: form.expiryDate,
+      renewal_date: form.expiryDate,
       auto_renew: form.autoRenew,
       beneficiary: form.beneficiary.trim(),
       notes: form.notes.trim(),
@@ -182,14 +182,14 @@ export function PolicyDialog({
               <Select
                 value={form.category}
                 onValueChange={(v) =>
-                  update("category", v as GeneralInsuranceCategory)
+                  update("category", v as InsuranceCategory)
                 }
               >
                 <SelectTrigger id="policy-category" className="w-full">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {GENERAL_INSURANCE_CATEGORIES.map((c) => (
+                  {INSURANCE_CATEGORIES.map((c) => (
                     <SelectItem key={c.value} value={c.value}>
                       {c.label}
                     </SelectItem>

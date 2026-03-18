@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { type InsurancePolicy, categoryLabel } from "@/lib/client-data";
+import { type InsurancePolicy, insuranceCategoryLabel as categoryLabel } from "@/lib/client-data";
 
 export function DeletePolicyDialog({
   open,
@@ -32,7 +32,7 @@ export function DeletePolicyDialog({
           <AlertDialogTitle>Delete policy?</AlertDialogTitle>
           <AlertDialogDescription>
             This will remove{" "}
-            <span className="font-semibold">{policy.policy_name}</span> (
+            <span className="font-semibold">{policy.name}</span> (
             {categoryLabel(policy.category)}) from {policy.provider}. This
             action cannot be undone.
           </AlertDialogDescription>

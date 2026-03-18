@@ -4,15 +4,15 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 
 import {
-  type GeneralInsuranceCategory,
-  GENERAL_INSURANCE_CATEGORIES,
+  type InsuranceCategory,
+  INSURANCE_CATEGORIES,
 } from "@/lib/client-data";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-export type FilterValue = "all" | GeneralInsuranceCategory;
+export type FilterValue = "all" | InsuranceCategory;
 
 export function CategoryFilter({
   value,
@@ -25,7 +25,7 @@ export function CategoryFilter({
 }) {
   const items: { key: FilterValue; label: string }[] = [
     { key: "all", label: "All" },
-    ...GENERAL_INSURANCE_CATEGORIES.filter(
+    ...INSURANCE_CATEGORIES.filter(
       (c) => (counts[c.value] ?? 0) > 0,
     ).map((c) => ({
       key: c.value as FilterValue,

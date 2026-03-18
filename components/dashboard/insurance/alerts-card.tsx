@@ -9,11 +9,19 @@ import {
 } from "@/components/dashboard/dash-card";
 import {
   type InsurancePolicy,
-  policyStatus,
-  categoryLabel,
+  insuranceCategoryLabel,
   type Property,
   totalInsurancePremium,
 } from "@/lib/client-data";
+
+function policyStatus(p: InsurancePolicy): "expired" | "expiring_soon" | "ok" {
+  const days = Math.ceil(
+    (new Date(p.renewal_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+  );
+  if (days < 0) return "expired";
+  if (days <= 60) return "expiring_soon";
+  return "ok";
+}
 
 function formatCurrency(n: number): string {
   return new Intl.NumberFormat(undefined, {
@@ -39,7 +47,7 @@ export function InsuranceAlerts({
   const totalPremiums =
     policies
       .filter((p) => p.is_active)
-      .reduce((s, p) => s + p.annual_premium, 0) +
+      .reduce((s, p) => s + p.premium_monthly * 12, 0) +
     properties.reduce((s, p) => s + totalInsurancePremium(p), 0);
 
   const allGood =
@@ -70,9 +78,9 @@ export function InsuranceAlerts({
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span className="text-rose-700 dark:text-rose-400">
               <span className="font-medium text-rose-800 dark:text-rose-300">
-                {p.policy_name}
+                {p.name}
               </span>{" "}
-              ({categoryLabel(p.category)}) from {p.provider} has expired. Renew
+              ({insuranceCategoryLabel(p.category)}) from {p.provider} has expired. Renew
               immediately.
             </span>
           </div>
@@ -86,9 +94,9 @@ export function InsuranceAlerts({
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <span className="text-amber-700 dark:text-amber-400">
               <span className="font-medium text-amber-800 dark:text-amber-300">
-                {p.policy_name}
+                {p.name}
               </span>{" "}
-              ({categoryLabel(p.category)}) expires soon. Check renewal options.
+              ({insuranceCategoryLabel(p.category)}) expires soon. Check renewal options.
             </span>
           </div>
         ))}

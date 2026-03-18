@@ -6,10 +6,29 @@ import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import {
   type InsurancePolicy,
-  categoryLabel,
-  policyStatus,
-  statusLabel,
+  insuranceCategoryLabel,
 } from "@/lib/client-data";
+
+type PolicyStatus = "active" | "expiring_soon" | "expired" | "cancelled";
+
+function policyStatus(p: InsurancePolicy): PolicyStatus {
+  if (!p.is_active) return "cancelled";
+  const days = Math.ceil(
+    (new Date(p.renewal_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+  );
+  if (days < 0) return "expired";
+  if (days <= 60) return "expiring_soon";
+  return "active";
+}
+
+function statusLabel(s: PolicyStatus): string {
+  switch (s) {
+    case "active": return "Active";
+    case "expiring_soon": return "Expiring Soon";
+    case "expired": return "Expired";
+    case "cancelled": return "Cancelled";
+  }
+}
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -84,13 +103,13 @@ export function PolicyRow({
           <div className="space-y-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-base font-semibold truncate">
-                {policy.policy_name}
+                {policy.name}
               </span>
               <Badge
                 variant="outline"
                 className="text-xs font-normal capitalize shrink-0"
               >
-                {categoryLabel(policy.category)}
+                {insuranceCategoryLabel(policy.category)}
               </Badge>
               {statusBadge}
               {policy.auto_renew && (
@@ -126,7 +145,7 @@ export function PolicyRow({
               <div>
                 <div className="text-xs text-muted-foreground">Premium/yr</div>
                 <div className="text-sm font-semibold tabular-nums">
-                  {formatCurrency(policy.annual_premium)}
+                  {formatCurrency(policy.premium_monthly * 12)}
                 </div>
               </div>
               <div>
@@ -147,7 +166,7 @@ export function PolicyRow({
                       "text-amber-600 dark:text-amber-400",
                   )}
                 >
-                  {formatDate(policy.expiry_date)}
+                  {formatDate(policy.renewal_date)}
                 </div>
               </div>
             </div>
