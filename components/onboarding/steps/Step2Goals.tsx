@@ -275,7 +275,8 @@ export function Step2Goals({
               <div>
                 <p className="text-sm font-medium text-slate-800">{g.title}</p>
                 <p className="text-xs text-slate-500">
-                  {formatCurrencyAmount(g.target_amount, preferredCurrency)} · by{" "}
+                  {formatCurrencyAmount(g.target_amount, preferredCurrency)} ·
+                  by{" "}
                   {new Date(g.target_date).toLocaleDateString("en-GB", {
                     month: "short",
                     year: "numeric",

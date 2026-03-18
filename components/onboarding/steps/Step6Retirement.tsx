@@ -73,7 +73,6 @@ export function Step6Retirement({
 
       {/* Icon */}
       <div className="flex items-center gap-3">
-        
         <div>
           <p className="text-sm font-semibold text-slate-800">
             Retirement planning

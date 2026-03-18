@@ -110,7 +110,8 @@ export function Step7Review({ onComplete, onEditStep }: Step7ReviewProps) {
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
-          Almost there... <br /> <span className="text-sm font-normal">let&apos;s review</span>
+          Almost there... <br />{" "}
+          <span className="text-sm font-normal">let&apos;s review</span>
         </h1>
         <p className="mt-2 text-slate-500 text-sm sm:text-base">
           Here&apos;s everything you&apos;ve shared. Click any section to edit
@@ -173,7 +174,10 @@ export function Step7Review({ onComplete, onEditStep }: Step7ReviewProps) {
           title="Emergency Fund"
           summary={
             emergencyFund != null
-              ? formatCurrencyAmount(emergencyFund.cash_balance, preferredCurrency) + " saved"
+              ? formatCurrencyAmount(
+                  emergencyFund.cash_balance,
+                  preferredCurrency,
+                ) + " saved"
               : "Not completed"
           }
           step={5}

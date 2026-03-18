@@ -67,7 +67,7 @@ export function OnboardingShell({
           </div>
 
           {/* Progress bar */}
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/20">
             <motion.div
               className="h-full rounded-full bg-primary"
               initial={{ width: 0 }}

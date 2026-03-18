@@ -80,7 +80,6 @@ export function Step5EmergencyFund({
       {/* Input card */}
       <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm space-y-4">
         <div className="flex items-center gap-3">
-         
           <div>
             <p className="text-sm font-semibold text-slate-800">
               Emergency fund balance
@@ -132,8 +131,9 @@ export function Step5EmergencyFund({
             Great start; you already have a cushion!
           </p>
           <p className="text-xs text-green-700 mt-1">
-            {formatCurrencyAmount(balanceNum, preferredCurrency)} saved. A Celerey Advisor will help you
-            determine if this covers your target months of expenses.
+            {formatCurrencyAmount(balanceNum, preferredCurrency)} saved. A
+            Celerey Advisor will help you determine if this covers your target
+            months of expenses.
           </p>
         </div>
       )}

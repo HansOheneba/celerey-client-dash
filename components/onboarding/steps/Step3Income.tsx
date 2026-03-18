@@ -199,8 +199,7 @@ export function Step3Income({
               className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-4 shadow-sm"
             >
               <div className="flex items-center gap-3">
-              
-                  <div>
+                <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-slate-800">
                       {inc.name}
@@ -213,8 +212,11 @@ export function Step3Income({
                     )}
                   </div>
                   <p className="text-xs text-slate-500">
-                    {formatCurrencyAmount(inc.amount_monthly, preferredCurrency)}/mo ·{" "}
-                    {inc.category}
+                    {formatCurrencyAmount(
+                      inc.amount_monthly,
+                      preferredCurrency,
+                    )}
+                    /mo · {inc.category}
                   </p>
                 </div>
               </div>
