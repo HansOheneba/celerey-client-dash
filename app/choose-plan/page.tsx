@@ -6,7 +6,12 @@ import { useRouter } from "next/navigation";
 import { Info, ArrowRight } from "lucide-react";
 
 import { useClientGate } from "../../lib/useClientGate";
-import { setSubscription, setTrialStartedAt } from "../../lib/client-data";
+import {
+  setSubscription,
+  setTrialStartedAt,
+  isOnboarded,
+} from "../../lib/client-data";
+import { CelereyLoader } from "../../components/login/celerey-loader";
 
 type FeatureRow = {
   label: string;
@@ -67,6 +72,12 @@ export default function ChoosePlanPage() {
 
     if (!auth.loggedIn) {
       router.replace("/");
+      return;
+    }
+
+    // Must complete onboarding before choosing a plan
+    if (!isOnboarded()) {
+      router.replace("/onboarding");
       return;
     }
 
@@ -162,7 +173,7 @@ export default function ChoosePlanPage() {
     [],
   );
 
-  if (!ready) return <div className="p-6">Loading...</div>;
+  if (!ready) return <CelereyLoader message="Loading your plan…" />;
 
   const trialVariant = (r: FeatureRow): "full" | "limited" | "not-included" => {
     if (r.trial) return "limited";
@@ -183,7 +194,7 @@ export default function ChoosePlanPage() {
         <div
           className={cn(
             "absolute left-1/2 top-10 -translate-x-1/2 rounded-full blur-3xl opacity-25",
-            "h-[26rem] w-[26rem] sm:h-[32rem] sm:w-[32rem] md:h-[36rem] md:w-[36rem]",
+            "h-104 w-104 sm:h-128 sm:w-lg md:h-144 md:w-xl",
           )}
           style={{
             background: `radial-gradient(circle at 30% 30%, ${BRAND.cyan}, transparent 55%),

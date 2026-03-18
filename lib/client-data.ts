@@ -467,6 +467,22 @@ export function clearSubscription(): void {
   safeRemoveItem(TRIAL_STARTED_AT_KEY);
 }
 
+const ONBOARDED_KEY = "onboarded_v1";
+
+/** Returns true if the user has completed the onboarding flow. */
+export function isOnboarded(): boolean {
+  return safeGetItem(ONBOARDED_KEY) === "true";
+}
+
+/** Marks the user as having completed onboarding. */
+export function setOnboarded(): void {
+  safeSetItem(ONBOARDED_KEY, "true");
+}
+
+export function clearOnboarded(): void {
+  safeRemoveItem(ONBOARDED_KEY);
+}
+
 const NETWORTH_HISTORY_KEY = "networth_history_v1";
 
 export type NetWorthHistoryItem = {

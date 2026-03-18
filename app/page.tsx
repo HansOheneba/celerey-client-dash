@@ -9,8 +9,13 @@ import { useRouter } from "next/navigation";
 import { LoginCarousel } from "@/components/login/login-carousel";
 import { EmailForm } from "@/components/login/email-form";
 import { OtpForm } from "@/components/login/otp-form";
+import { CelereyLoader } from "@/components/login/celerey-loader";
 import type { AuthStep } from "@/components/login/types";
-import { setAuth } from "../lib/client-data";
+import { setAuth, getSubscription, isOnboarded } from "../lib/client-data";
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export default function Home() {
   const router = useRouter();
@@ -18,30 +23,48 @@ export default function Home() {
   const [step, setStep] = React.useState<AuthStep>("email");
   const [email, setEmail] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isNavigating, setIsNavigating] = React.useState(false);
 
-  /** Email entered - move to OTP step */
-  function handleEmailSubmit(submittedEmail: string) {
+  /** Email entered - spin the button, then move to OTP step */
+  async function handleEmailSubmit(submittedEmail: string) {
     setEmail(submittedEmail);
-    // In the future: fire off an API call to send the OTP here
+    setIsSubmitting(true);
+    await sleep(800);
+    setIsSubmitting(false);
     setStep("otp");
   }
 
-  /** OTP entered - set auth and navigate to choose plan */
+  /** OTP entered - spin the button briefly, then full-screen loader while routing */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function handleOtpVerify(_otp: string) {
     setIsSubmitting(true);
-    try {
-      // No backend yet - set local auth and go to plan selection
-      setAuth(email);
+    await sleep(700);
+    setIsSubmitting(false);
+    setIsNavigating(true);
+
+    setAuth(email);
+
+    const sub = getSubscription();
+    const completedOnboarding = isOnboarded();
+
+    // New flow: onboarding → choose-plan → dashboard
+    if (!completedOnboarding) {
+      router.push("/onboarding");
+    } else if (sub.status === "none") {
       router.push("/choose-plan");
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      router.push("/dashboard");
     }
+    // keep loader visible during navigation
   }
 
   /** Go back from OTP to email */
   function handleBack() {
     setStep("email");
+  }
+
+  if (isNavigating) {
+    return <CelereyLoader message="Signing you in…" />;
   }
 
   return (
