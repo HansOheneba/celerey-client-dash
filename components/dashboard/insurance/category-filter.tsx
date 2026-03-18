@@ -25,12 +25,12 @@ export function CategoryFilter({
 }) {
   const items: { key: FilterValue; label: string }[] = [
     { key: "all", label: "All" },
-    ...INSURANCE_CATEGORIES.filter(
-      (c) => (counts[c.value] ?? 0) > 0,
-    ).map((c) => ({
-      key: c.value as FilterValue,
-      label: c.label.replace(" Insurance", ""),
-    })),
+    ...INSURANCE_CATEGORIES.filter((c) => (counts[c.value] ?? 0) > 0).map(
+      (c) => ({
+        key: c.value as FilterValue,
+        label: c.label.replace(" Insurance", ""),
+      }),
+    ),
   ];
 
   return (

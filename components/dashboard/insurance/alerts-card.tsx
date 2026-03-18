@@ -80,8 +80,8 @@ export function InsuranceAlerts({
               <span className="font-medium text-rose-800 dark:text-rose-300">
                 {p.name}
               </span>{" "}
-              ({insuranceCategoryLabel(p.category)}) from {p.provider} has expired. Renew
-              immediately.
+              ({insuranceCategoryLabel(p.category)}) from {p.provider} has
+              expired. Renew immediately.
             </span>
           </div>
         ))}
@@ -96,7 +96,8 @@ export function InsuranceAlerts({
               <span className="font-medium text-amber-800 dark:text-amber-300">
                 {p.name}
               </span>{" "}
-              ({insuranceCategoryLabel(p.category)}) expires soon. Check renewal options.
+              ({insuranceCategoryLabel(p.category)}) expires soon. Check renewal
+              options.
             </span>
           </div>
         ))}

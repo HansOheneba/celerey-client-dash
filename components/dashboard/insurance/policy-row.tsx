@@ -23,10 +23,14 @@ function policyStatus(p: InsurancePolicy): PolicyStatus {
 
 function statusLabel(s: PolicyStatus): string {
   switch (s) {
-    case "active": return "Active";
-    case "expiring_soon": return "Expiring Soon";
-    case "expired": return "Expired";
-    case "cancelled": return "Cancelled";
+    case "active":
+      return "Active";
+    case "expiring_soon":
+      return "Expiring Soon";
+    case "expired":
+      return "Expired";
+    case "cancelled":
+      return "Cancelled";
   }
 }
 
