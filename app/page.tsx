@@ -39,7 +39,6 @@ export default function Home() {
   async function handleOtpVerify(_otp: string) {
     setIsSubmitting(true);
     await sleep(700);
-    setIsSubmitting(false);
     setIsNavigating(true);
 
     setAuth(email);
