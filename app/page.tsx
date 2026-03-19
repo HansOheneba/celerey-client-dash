@@ -63,9 +63,7 @@ export default function Home() {
     setStep("email");
   }
 
-  if (isNavigating) {
-    return <CelereyLoader message="Signing you in…" />;
-  }
+
 
   return (
     <div className="min-h-screen flex justify-center items-center bg-muted/40 px-4 py-5 md:px-7 md:py-8">
