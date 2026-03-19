@@ -67,6 +67,9 @@ export function CurrencyNumberInputField({
               field.onChange(Number(sanitized));
             }}
             onBlur={field.onBlur}
+            onFocus={(e) => {
+              e.target.select();
+            }}
           />
         );
       }}
