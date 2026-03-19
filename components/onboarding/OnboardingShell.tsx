@@ -110,7 +110,7 @@ function OnboardingSplash({ onDone }: { onDone: () => void }) {
           }}
         >
           <Image
-            src="/Celerey_Logo_dark.png"
+            src="https://i.ibb.co/PGVKSsV1/image.png"
             alt="Celerey"
             width={110}
             height={110}
@@ -166,7 +166,7 @@ export function OnboardingShell({
         <header className="pt-6 pb-4">
           <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-4 sm:px-6">
             <Image
-              src="/Celerey_Logo_dark.png"
+              src="https://i.ibb.co/PGVKSsV1/image.png"
               alt="Celerey"
               width={100}
               height={100}

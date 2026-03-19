@@ -86,7 +86,7 @@ export default function DashboardSidebar() {
                   className="absolute left-0 top-1/2 -translate-y-1/2"
                 >
                   <Image
-                    src="/Celerey_Logo_dark.png"
+                    src="https://i.ibb.co/PGVKSsV1/image.png"
                     alt="Celerey"
                     width={110}
                     height={40}

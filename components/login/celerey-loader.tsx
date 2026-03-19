@@ -103,7 +103,7 @@ export function CelereyLoader({ onDone, duration = 1500 }: BrandLoaderProps) {
           }}
         >
           <Image
-            src="/Celerey_Logo_dark.png"
+            src="https://i.ibb.co/PGVKSsV1/image.png"
             alt="Celerey"
             width={110}
             height={110}
