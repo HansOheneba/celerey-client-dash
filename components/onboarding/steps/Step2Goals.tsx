@@ -32,6 +32,19 @@ const SUGGESTED_GOALS = [
   "Start a Business",
 ];
 
+function getGoalsHeading(mode?: "solo" | "partner" | "family") {
+  if (mode === "partner")
+    return "What are your household financial goals with your partner?";
+  if (mode === "family") return "What are your family financial goals?";
+  return "What are your financial goals?";
+}
+
+function getGoalsSubheading(mode?: "solo" | "partner" | "family") {
+  if (mode === "partner") return "Add 1–3 goals that matter to your household.";
+  if (mode === "family") return "Add 1–3 goals that matter to your family.";
+  return "Add 1–3 financial goals. These guide your personalised plan.";
+}
+
 function naturalCountdown(date: Date): string {
   if (!isFuture(date)) return "That date has passed";
   return "In " + formatDistanceToNow(date);
@@ -50,6 +63,7 @@ export function Step2Goals({
   const [listError, setListError] = useState("");
   const store = useOnboardingStore();
   const preferredCurrency = store.identity?.preferred_currency || "USD";
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const {
     register,
@@ -58,6 +72,7 @@ export function Step2Goals({
     reset,
     watch,
     control,
+    trigger,
     formState: { errors },
   } = useForm<GoalFormValues>({
     resolver: zodResolver(goalSchema) as never,
@@ -65,6 +80,7 @@ export function Step2Goals({
   });
 
   const titleValue = watch("title");
+  const watchedValues = watch();
 
   function addGoal(data: GoalFormValues) {
     setGoals((prev) => [
@@ -88,12 +104,37 @@ export function Step2Goals({
     setValue("title", label, { shouldValidate: true });
   }
 
-  function handleNext() {
-    if (goals.length === 0) {
+  // 🔥 KEY FIX: Auto-add on Continue
+  async function handleNext() {
+    const hasPartialInput =
+      watchedValues.title ||
+      watchedValues.target_amount ||
+      watchedValues.target_date;
+
+    if (hasPartialInput) {
+      const isValid = await trigger();
+
+      if (!isValid) return;
+
+      addGoal(watchedValues as GoalFormValues);
+    }
+
+    if (goals.length === 0 && !hasPartialInput) {
       setListError("Please add at least one goal to continue.");
       return;
     }
-    onComplete(goals);
+
+    onComplete(
+      hasPartialInput
+        ? [
+            ...goals,
+            {
+              ...watchedValues,
+              status: "active",
+            } as GoalData,
+          ]
+        : goals,
+    );
   }
 
   return (
@@ -101,14 +142,14 @@ export function Step2Goals({
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
-          What are you working towards?
+          {getGoalsHeading(store.identity?.account_mode)}
         </h1>
         <p className="mt-2 text-slate-500 text-sm sm:text-base">
-          Add 1–3 financial goals. These guide your personalised plan.
+          {getGoalsSubheading(store.identity?.account_mode)}
         </p>
       </div>
 
-      {/* Quick-select suggestions */}
+      {/* Suggestions */}
       <div className="flex flex-wrap gap-2">
         {SUGGESTED_GOALS.map((g) => (
           <button
@@ -126,19 +167,25 @@ export function Step2Goals({
         ))}
       </div>
 
-      {/* Goal entry form */}
+      {/* Form */}
       <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm space-y-4">
         <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
           Add a goal
         </p>
 
-        {/* Goal name */}
+        {/* Title */}
         <div className="space-y-1.5">
           <Label htmlFor="goal-title">Goal name</Label>
           <Input
             id="goal-title"
             placeholder="e.g. Buy a Home"
             {...register("title")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSubmit(addGoal)();
+              }
+            }}
           />
           {errors.title && (
             <p className="text-xs text-red-500">{errors.title.message}</p>
@@ -146,29 +193,22 @@ export function Step2Goals({
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Target amount */}
+          {/* Amount */}
           <div className="space-y-1.5">
-            <Label htmlFor="goal-amount">Target amount</Label>
+            <Label>Target amount</Label>
             <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
                 {getCurrencyPrefix(preferredCurrency)}
               </span>
               <CurrencyNumberInputField
                 control={control}
                 name="target_amount"
-                id="goal-amount"
-                placeholder="50,000"
                 className="pl-12"
               />
             </div>
-            {errors.target_amount && (
-              <p className="text-xs text-red-500">
-                {errors.target_amount.message}
-              </p>
-            )}
           </div>
 
-          {/* Target date — dropdown navigation + natural language */}
+          {/* Date */}
           <div className="space-y-1.5">
             <Label>Target date</Label>
             <Controller
@@ -181,132 +221,88 @@ export function Step2Goals({
 
                 return (
                   <div className="space-y-1.5">
-                    <Popover>
+                    <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                       <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal h-10",
-                            !field.value && "text-slate-400",
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4 text-slate-400 shrink-0" />
+                        <Button variant="outline" className="w-full">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
                           {dateValue ? format(dateValue, "PPP") : "Pick a date"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent
-                        className="w-auto overflow-hidden p-0"
-                        align="start"
-                      >
+                      <PopoverContent className="p-0">
                         <Calendar
                           mode="single"
                           selected={dateValue}
-                          defaultMonth={dateValue ?? new Date()}
                           captionLayout="dropdown"
+                          startMonth={new Date(new Date().getFullYear(), 0)}
+                          endMonth={new Date(new Date().getFullYear() + 50, 11)}
+                          disabled={{ before: new Date() }}
                           onSelect={(date) => {
                             field.onChange(
                               date ? format(date, "yyyy-MM-dd") : "",
                             );
+                            setCalendarOpen(false); // closes on select
                           }}
-                          disabled={(date) => {
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            return date < today;
-                          }}
-                          startMonth={new Date()}
-                          endMonth={
-                            new Date(
-                              new Date().setFullYear(
-                                new Date().getFullYear() + 50,
-                              ),
-                            )
-                          }
-                          initialFocus
                         />
                       </PopoverContent>
                     </Popover>
 
-                    {/* Natural language countdown */}
-                    {dateValue && isFuture(dateValue) && (
-                      <p className="text-xs font-medium text-[#151339]">
+                    {dateValue && (
+                      <p className="text-xs text-[#151339]">
                         {naturalCountdown(dateValue)}
-                      </p>
-                    )}
-                    {dateValue && !isFuture(dateValue) && (
-                      <p className="text-xs text-red-400">
-                        That date has already passed
                       </p>
                     )}
                   </div>
                 );
               }}
             />
-            {errors.target_date && (
-              <p className="text-xs text-red-500">
-                {errors.target_date.message}
-              </p>
-            )}
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="gap-2 border-dashed border-slate-300 text-slate-600 hover:border-[#151339] hover:text-[#151339]"
-          onClick={handleSubmit(addGoal)}
-        >
-          <Plus className="h-4 w-4" />
-          Add goal
-        </Button>
+        <div className="flex items-end justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSubmit(addGoal)}
+            className="gap-2 border-dashed"
+          >
+            <Plus className="h-4 w-4" />
+            Save goal
+          </Button>
+        </div>
       </div>
 
-      {/* Goals list */}
+      {/* List */}
       {goals.length > 0 && (
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+          <p className="text-xs uppercase text-slate-400">
             Your goals ({goals.length})
           </p>
+
           {goals.map((g, i) => (
             <div
               key={i}
-              className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-4 shadow-sm"
+              className="flex justify-between items-center border p-4 rounded-xl"
             >
               <div>
-                <p className="text-sm font-medium text-slate-800">{g.title}</p>
+                <p className="text-sm font-medium">{g.title}</p>
                 <p className="text-xs text-slate-500">
-                  {formatCurrencyAmount(g.target_amount, preferredCurrency)} ·
-                  by{" "}
-                  {new Date(g.target_date).toLocaleDateString("en-GB", {
-                    month: "short",
-                    year: "numeric",
-                  })}{" "}
-                  <span className="text-[#151339]">
-                    · {naturalCountdown(new Date(g.target_date))}
-                  </span>
+                  {formatCurrencyAmount(g.target_amount, preferredCurrency)} ·{" "}
+                  {naturalCountdown(new Date(g.target_date))}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => removeGoal(i)}
-                className="text-slate-300 hover:text-red-500 transition-colors p-1"
-              >
-                <Trash2 className="h-4 w-4" />
+
+              <button onClick={() => removeGoal(i)}>
+                <Trash2 className="h-4 w-4 text-red-400" />
               </button>
             </div>
           ))}
         </div>
       )}
 
-      {listError && (
-        <p className="text-sm text-red-500 font-medium">{listError}</p>
-      )}
+      {listError && <p className="text-red-500">{listError}</p>}
 
-      <Button
-        type="button"
-        onClick={handleNext}
-        className="w-full gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl"
-      >
+      {/* Continue */}
+      <Button onClick={handleNext} className="w-full gap-2 h-12">
         Continue
         <ArrowRight className="h-4 w-4" />
       </Button>

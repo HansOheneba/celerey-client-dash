@@ -8,10 +8,10 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const STEP_LABELS: Record<number, string> = {
-  1: "Welcome",
-  2: "Your Goals",
-  3: "Income",
-  4: "Debts & Liabilities",
+  1: "Account Setup",
+  2: "Welcome",
+  3: "Your Goals",
+  4: "Income",
   5: "Emergency Fund",
   6: "Retirement",
   7: "Review",
@@ -145,8 +145,8 @@ export function OnboardingShell({
     100,
   );
 
-  // Step 8 still bypasses shell
-  if (currentStep === 8) {
+  // Step 9 (Complete) bypasses shell
+  if (currentStep === 9) {
     return <>{children}</>;
   }
 
@@ -159,6 +159,11 @@ export function OnboardingShell({
       <div
         style={{
           visibility: splashDone ? "visible" : "hidden",
+          background: `
+      radial-gradient(circle at 20% 10%, rgba(47,107,255,0.06), transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(168,85,247,0.06), transparent 50%),
+      #ffffff
+    `,
         }}
         className="flex min-h-screen flex-col"
       >
@@ -192,7 +197,7 @@ export function OnboardingShell({
         </header>
 
         {/* ── Content ───────────────── */}
-        <main className="flex flex-1 items-center justify-center px-4 py-8 sm:px-6">
+        <main className="flex flex-1 justify-center px-4 pt-6 pb-10 sm:px-6">
           <div className="w-full max-w-2xl">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div

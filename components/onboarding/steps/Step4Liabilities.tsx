@@ -35,6 +35,22 @@ const LIABILITY_TYPES = [
   "Other",
 ];
 
+function getExpenseHeading(mode?: "solo" | "partner" | "family") {
+  if (mode === "partner")
+    return "Combined, what are your monthly household expenses?";
+  if (mode === "family")
+    return "What are your total monthly household expenses across everyone?";
+  return "What are your monthly expenses?";
+}
+
+function getExpenseSubheading(mode?: "solo" | "partner" | "family") {
+  if (mode === "partner")
+    return "List household debts and recurring payments your partner contributes to.";
+  if (mode === "family")
+    return "List family debts and recurring payments that affect your household budget.";
+  return "No judgment here; knowing your debts is the first step to clearing them.";
+}
+
 interface Step4LiabilitiesProps {
   defaultValues?: LiabilityData[];
   onComplete: (liabilities: LiabilityData[]) => void;
@@ -106,11 +122,10 @@ export function Step4Liabilities({
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
-          What do you owe?
+          {getExpenseHeading(store.identity?.account_mode)}
         </h1>
         <p className="mt-2 text-slate-500 text-sm sm:text-base">
-          No judgment here; knowing your debts is the first step to clearing
-          them.
+          {getExpenseSubheading(store.identity?.account_mode)}
           <br />
           You can always skip this and add debts later.
         </p>
@@ -233,15 +248,17 @@ export function Step4Liabilities({
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="gap-2 border-dashed border-slate-300 text-slate-600 hover:border-[#151339] hover:text-[#151339]"
-          onClick={handleSubmit(addLiability)}
-        >
-          <Plus className="h-4 w-4" />
-          Add debt
-        </Button>
+        <div className="flex items-end justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2 border-dashed border-slate-300 text-slate-600 hover:border-[#151339] hover:text-[#151339]"
+            onClick={handleSubmit(addLiability)}
+          >
+            <Plus className="h-4 w-4" />
+            Add debt
+          </Button>
+        </div>
       </div>
 
       {/* Liabilities list */}

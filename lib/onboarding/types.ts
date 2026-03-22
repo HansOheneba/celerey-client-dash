@@ -1,13 +1,23 @@
 // lib/onboarding/types.ts
 
 export interface IdentityData {
-  first_name: string;
-  last_name: string;
-  date_of_birth: string;
+  /** Nullable — only collected for solo accounts */
+  first_name?: string;
+  /** Nullable — only collected for solo accounts */
+  last_name?: string;
+  /**
+   * Single display name used everywhere in the UI.
+   * For solo accounts: derived as `first_name + last_name`.
+   * For partner/family accounts: entered directly as the household name.
+   */
+  display_name?: string;
+  /** Nullable — only collected for solo accounts */
+  date_of_birth?: string;
   phone_number: string;
   country: string;
   resident_city: string;
   preferred_currency: string;
+  account_mode: "solo" | "partner" | "family";
   marital_status?: string;
   occupation?: string;
 }
@@ -40,7 +50,17 @@ export interface EmergencyFundData {
 }
 
 export interface RetirementData {
-  retirement_age: number;
+  /**
+   * Collected for solo accounts.
+   * retirement_target_year is derived from DOB + retirement_age for solo.
+   */
+  retirement_age?: number;
+  /**
+   * Single source of truth for retirement timeline across all account types.
+   * For solo: derived as birth_year + retirement_age.
+   * For partner/family: entered directly.
+   */
+  retirement_target_year?: number;
   current_invested: number;
   monthly_savings: number;
   existing_pension_balance: number;

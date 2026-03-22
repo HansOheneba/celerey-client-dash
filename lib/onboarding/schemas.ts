@@ -14,17 +14,55 @@ const optNum = (min = 0) =>
         : (v as number),
     );
 
-export const identitySchema = z.object({
-  first_name: z.string().min(1, "First name is required").max(25),
-  last_name: z.string().min(1, "Last name is required").max(25),
-  date_of_birth: z.string().min(1, "Date of birth is required"),
-  phone_number: z.string().min(1, "Phone number is required").max(255),
-  country: z.string().min(1, "Country is required"),
-  resident_city: z.string().min(1, "City is required"),
-  preferred_currency: z.string().min(1, "Currency is required").max(3),
-  marital_status: z.string().optional(),
-  occupation: z.string().max(50).optional(),
-});
+export const identitySchema = z
+  .object({
+    first_name: z.string().max(25).optional(),
+    last_name: z.string().max(25).optional(),
+    /** Set to first_name + last_name for solo; entered directly for partner/family */
+    display_name: z.string().max(100).optional(),
+    /** Only collected for solo accounts */
+    date_of_birth: z.string().optional(),
+    phone_number: z.string().min(1, "Phone number is required").max(255),
+    country: z.string().min(1, "Country is required"),
+    resident_city: z.string().min(1, "City is required"),
+    preferred_currency: z.string().min(1, "Currency is required").max(3),
+    account_mode: z.enum(["solo", "partner", "family"]),
+    marital_status: z.string().optional(),
+    occupation: z.string().max(50).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.account_mode === "solo") {
+      if (!data.first_name?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "First name is required",
+          path: ["first_name"],
+        });
+      }
+      if (!data.last_name?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Last name is required",
+          path: ["last_name"],
+        });
+      }
+      if (!data.date_of_birth) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Date of birth is required",
+          path: ["date_of_birth"],
+        });
+      }
+    } else {
+      if (!data.display_name?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Household name is required",
+          path: ["display_name"],
+        });
+      }
+    }
+  });
 
 export const goalSchema = z.object({
   title: z.string().min(1, "Goal title is required"),
@@ -53,7 +91,17 @@ export const emergencyFundSchema = z.object({
 });
 
 export const retirementSchema = z.object({
-  retirement_age: num(18),
+  /**
+   * Only used for solo accounts. Omit for partner/family.
+   * retirement_target_year is derived from DOB + retirement_age for solo.
+   */
+  retirement_age: optNum(18),
+  /**
+   * Source of truth for all account types.
+   * For solo: derived on submit (DOB year + retirement_age).
+   * For partner/family: entered directly.
+   */
+  retirement_target_year: optNum(new Date().getFullYear()),
   current_invested: num(0),
   monthly_savings: num(0),
   existing_pension_balance: num(0),

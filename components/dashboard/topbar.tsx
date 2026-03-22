@@ -51,8 +51,11 @@ export default function DashboardTopbar() {
             <button className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted transition-colors">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-[#1B1856] text-white text-xs">
-                  {mockUser.first_name[0]}
-                  {mockUser.last_name[0]}
+                  {getUserFullName(mockUser)
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((n) => n[0])
+                    .join("")}
                 </AvatarFallback>
               </Avatar>
 

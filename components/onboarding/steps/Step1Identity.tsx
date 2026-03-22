@@ -36,6 +36,8 @@ import {
   type IdentityFormValues,
 } from "@/lib/onboarding/schemas";
 import type { IdentityData } from "@/lib/onboarding/types";
+import { ONBOARDING_COPY } from "@/lib/onboarding/copy";
+import { useOnboardingStore } from "@/store/onboardingStore";
 import { ArrowRight, ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +90,24 @@ export function Step1Identity({
   const [dialCode, setDialCode] = React.useState("+233");
   const [countryOpen, setCountryOpen] = React.useState(false);
 
+  const { accountMode } = useOnboardingStore();
+  const isSolo = accountMode === "solo";
+
+  const initialValues: IdentityFormValues = {
+    first_name: defaultValues?.first_name ?? "",
+    last_name: defaultValues?.last_name ?? "",
+    display_name: defaultValues?.display_name ?? "",
+    date_of_birth: defaultValues?.date_of_birth ?? "",
+    phone_number: defaultValues?.phone_number ?? "",
+    country: defaultValues?.country ?? "",
+    resident_city: defaultValues?.resident_city ?? "",
+    preferred_currency: defaultValues?.preferred_currency ?? "",
+    // account_mode is driven by the store, not re-selected here
+    account_mode: accountMode,
+    marital_status: defaultValues?.marital_status ?? "",
+    occupation: defaultValues?.occupation ?? "",
+  };
+
   const {
     register,
     handleSubmit,
@@ -97,22 +117,17 @@ export function Step1Identity({
     formState: { errors },
   } = useForm<IdentityFormValues>({
     resolver: zodResolver(identitySchema),
-    defaultValues: defaultValues ?? {
-      first_name: "",
-      last_name: "",
-      date_of_birth: "",
-      phone_number: "",
-      country: "",
-      resident_city: "",
-      preferred_currency: "",
-      marital_status: "",
-      occupation: "",
-    },
+    defaultValues: initialValues,
   });
 
   const selectedCountry = watch("country");
 
-  // ─── Auto-detect country via IP ────────────────────────────────────────────
+  // Keep account_mode in sync with store value (in case user went back and changed it)
+  React.useEffect(() => {
+    setValue("account_mode", accountMode);
+  }, [accountMode, setValue]);
+
+  // ─── Auto-detect country via IP ────────
   React.useEffect(() => {
     fetch("https://ipapi.co/json/")
       .then((res) => res.json())
@@ -131,22 +146,35 @@ export function Step1Identity({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function onSubmit(data: IdentityFormValues) {
+    // For solo accounts: derive display_name from first + last name
+    const display_name = isSolo
+      ? `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim()
+      : data.display_name;
+
     onComplete({
       ...data,
+      display_name,
+      // Clear fields that don't apply to the account mode
+      first_name: isSolo ? data.first_name : undefined,
+      last_name: isSolo ? data.last_name : undefined,
+      date_of_birth: isSolo ? data.date_of_birth : undefined,
       marital_status: data.marital_status || undefined,
       occupation: data.occupation || undefined,
     });
   }
+
+  const heading = ONBOARDING_COPY.identity.sectionHeading[accountMode];
+  const subheading = ONBOARDING_COPY.identity.sectionSubheading[accountMode];
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
-          Let&apos;s get to know you
+          {heading}
         </h1>
         <p className="mt-2 text-slate-500 text-sm sm:text-base">
-          This helps us personalise your experience. All fields marked{" "}
+          {subheading} All fields marked{" "}
           <span className="text-slate-800 font-medium">(optional)</span> can be
           filled later.
         </p>
@@ -159,45 +187,65 @@ export function Step1Identity({
             Personal Info
           </p>
 
-          {/* Names */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>First name</Label>
-              <Input {...register("first_name")} />
-              {errors.first_name && (
-                <p className="text-xs text-red-500">
-                  {errors.first_name.message}
-                </p>
-              )}
+          {isSolo ? (
+            /* ── SOLO: collect first name + last name ── */
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>First name</Label>
+                <Input {...register("first_name")} />
+                {errors.first_name && (
+                  <p className="text-xs text-red-500">
+                    {errors.first_name.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Last name</Label>
+                <Input {...register("last_name")} />
+                {errors.last_name && (
+                  <p className="text-xs text-red-500">
+                    {errors.last_name.message}
+                  </p>
+                )}
+              </div>
             </div>
+          ) : (
+            /* ── PARTNER / FAMILY: collect household display name ── */
             <div className="space-y-1.5">
-              <Label>Last name</Label>
-              <Input {...register("last_name")} />
-              {errors.last_name && (
-                <p className="text-xs text-red-500">
-                  {errors.last_name.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* DOB + Phone */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Date of birth</Label>
-              <DatePickerField
-                control={control}
-                name="date_of_birth"
-                placeholder="Select date of birth"
-                fromYear={1950}
-                toYear={new Date().getFullYear()}
+              <Label>{ONBOARDING_COPY.identity.nameLabel[accountMode]}</Label>
+              <Input
+                {...register("display_name")}
+                placeholder={
+                  ONBOARDING_COPY.identity.namePlaceholder[accountMode] ?? ""
+                }
               />
-              {errors.date_of_birth && (
+              {errors.display_name && (
                 <p className="text-xs text-red-500">
-                  {errors.date_of_birth.message}
+                  {errors.display_name.message}
                 </p>
               )}
             </div>
+          )}
+
+          {/* DOB + Phone — DOB only for solo */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {isSolo && (
+              <div className="space-y-1.5">
+                <Label>Date of birth</Label>
+                <DatePickerField
+                  control={control}
+                  name="date_of_birth"
+                  placeholder="Select date of birth"
+                  fromYear={1950}
+                  toYear={new Date().getFullYear()}
+                />
+                {errors.date_of_birth && (
+                  <p className="text-xs text-red-500">
+                    {errors.date_of_birth.message}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Phone — dial code + number */}
             <div className="space-y-1.5">

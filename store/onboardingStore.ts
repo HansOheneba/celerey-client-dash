@@ -10,8 +10,12 @@ import type {
   RetirementData,
 } from "@/lib/onboarding/types";
 
+type AccountMode = "solo" | "partner" | "family";
+
 interface OnboardingState {
   currentStep: number;
+  /** Account mode selected at step 1. Drives all subsequent copy and field logic. */
+  accountMode: AccountMode;
   identity: IdentityData | null;
   goals: GoalData[];
   incomes: IncomeData[];
@@ -21,6 +25,7 @@ interface OnboardingState {
 
   // Actions
   setStep: (step: number) => void;
+  setAccountMode: (mode: AccountMode) => void;
   setIdentity: (data: IdentityData) => void;
   addGoal: (goal: GoalData) => void;
   removeGoal: (index: number) => void;
@@ -37,7 +42,9 @@ interface OnboardingState {
 }
 
 const initialState = {
+  // Step 1 is the new Account Mode selection step
   currentStep: 1,
+  accountMode: "solo" as AccountMode,
   identity: null,
   goals: [],
   incomes: [],
@@ -52,6 +59,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       ...initialState,
 
       setStep: (step) => set({ currentStep: step }),
+
+      setAccountMode: (mode) => set({ accountMode: mode }),
 
       setIdentity: (data) => set({ identity: data }),
 

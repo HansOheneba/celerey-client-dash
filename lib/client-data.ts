@@ -546,14 +546,23 @@ export function canAccessFeature(
 
 export type User = {
   user_id: string;
-  first_name: string;
-  last_name: string;
+  /** Nullable — only set for solo accounts */
+  first_name?: string;
+  /** Nullable — only set for solo accounts */
+  last_name?: string;
+  /**
+   * Single display name used throughout the UI.
+   * For solo accounts: derived as first_name + last_name.
+   * For partner/family accounts: the household name entered directly.
+   */
+  display_name?: string;
   email: string;
   phone_number?: string;
   resident_country: string;
   city?: string;
   citizenships?: string[];
-  date_of_birth: string;
+  /** Nullable — only collected for solo accounts */
+  date_of_birth?: string;
   user_type: "regular" | "enterprise";
   currency: string;
   preferred_contact?: string;
@@ -562,6 +571,7 @@ export type User = {
   updated_at: string;
   occupation?: string;
   marital_status?: "single" | "married" | "divorced" | "widowed";
+  account_mode?: "solo" | "partner" | "family";
   risk_profile?: "conservative" | "moderate" | "aggressive";
   dependents?: number;
   bio?: string;
@@ -571,6 +581,7 @@ export const mockUser: User = {
   user_id: "u-1",
   first_name: "John",
   last_name: "Doe",
+  display_name: "John Doe",
   email: "john@celerey.co",
   phone_number: "+1 (555) 012-9090",
   resident_country: "United States",
@@ -585,6 +596,7 @@ export const mockUser: User = {
   updated_at: new Date().toISOString(),
   occupation: "Software Engineer",
   marital_status: "married",
+  account_mode: "solo",
   risk_profile: "moderate",
   dependents: 2,
   bio: "A tech enthusiast and family man focused on building wealth for the future.",
@@ -600,11 +612,18 @@ export function calculateAge(dateOfBirth: string): number {
   return age;
 }
 
+/**
+ * Returns the user's display name.
+ * Prefers display_name (works for all account modes);
+ * falls back to first_name + last_name for legacy solo records.
+ */
 export function getUserFullName(user: User = mockUser): string {
-  return `${user.first_name} ${user.last_name}`;
+  if (user.display_name) return user.display_name;
+  return [user.first_name, user.last_name].filter(Boolean).join(" ") || "User";
 }
 
 export function getUserAge(user: User = mockUser): number {
+  if (!user.date_of_birth) return 0;
   return calculateAge(user.date_of_birth);
 }
 

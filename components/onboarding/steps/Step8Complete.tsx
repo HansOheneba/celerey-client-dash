@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/button";
 import { getSubscription } from "@/lib/client-data";
 
 interface Step8CompleteProps {
-  firstName: string;
+  /** display_name — works for solo (full name) and partner/family (household name) */
+  displayName: string;
   goalCount: number;
   totalIncome: number;
 }
 
 export function Step8Complete({
-  firstName,
+  displayName,
   goalCount,
   totalIncome,
 }: Step8CompleteProps) {
@@ -57,7 +58,7 @@ export function Step8Complete({
         className="space-y-3 max-w-md"
       >
         <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 leading-tight">
-          You’re all set, {firstName}
+          You're all set, {displayName}
         </h1>
 
         <p className="text-slate-500 text-base sm:text-lg leading-relaxed">

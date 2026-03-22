@@ -100,8 +100,11 @@ export default function AccountPage() {
         <CardContent className="flex items-center gap-4 p-6">
           <Avatar className="h-14 w-14">
             <AvatarFallback className="bg-[#1B1856] text-white">
-              {form.first_name[0]}
-              {form.last_name[0]}
+              {getUserFullName(form)
+                .split(" ")
+                .slice(0, 2)
+                .map((n) => n[0])
+                .join("")}
             </AvatarFallback>
           </Avatar>
 
@@ -123,23 +126,37 @@ export default function AccountPage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>First Name</Label>
-              <Input
-                value={form.first_name}
-                onChange={(e) => handleChange("first_name", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Last Name</Label>
-              <Input
-                value={form.last_name}
-                onChange={(e) => handleChange("last_name", e.target.value)}
-              />
-            </div>
+          {/* Display name — always shown, works for all account modes */}
+          <div className="space-y-2">
+            <Label>
+              {form.account_mode === "solo" ? "Full Name" : "Household Name"}
+            </Label>
+            <Input
+              value={form.display_name ?? ""}
+              onChange={(e) => handleChange("display_name", e.target.value)}
+            />
           </div>
+
+          {/* First / last name — only shown for solo accounts */}
+          {(!form.account_mode || form.account_mode === "solo") && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>First Name</Label>
+                <Input
+                  value={form.first_name ?? ""}
+                  onChange={(e) => handleChange("first_name", e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Last Name</Label>
+                <Input
+                  value={form.last_name ?? ""}
+                  onChange={(e) => handleChange("last_name", e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2 w-fit">
             <Label>Email</Label>

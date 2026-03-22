@@ -16,6 +16,20 @@ import { ArrowRight, Lightbulb } from "lucide-react";
 import { formatCurrencyAmount, getCurrencyPrefix } from "@/lib/utils";
 import { useOnboardingStore } from "@/store/onboardingStore";
 
+function getSavingsHeading(mode?: "solo" | "partner" | "family") {
+  if (mode === "partner") return "Your household safety net";
+  if (mode === "family") return "Your family’s safety net";
+  return "Your safety net";
+}
+
+function getSavingsSubheading(mode?: "solo" | "partner" | "family") {
+  if (mode === "partner")
+    return "How much does your household currently have set aside as an emergency fund?";
+  if (mode === "family")
+    return "How much does your family currently have set aside as an emergency fund?";
+  return "How much do you currently have set aside as an emergency fund?";
+}
+
 interface Step5EmergencyFundProps {
   defaultValues?: EmergencyFundData | null;
   onComplete: (data: EmergencyFundData) => void;
@@ -54,10 +68,10 @@ export function Step5EmergencyFund({
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
-          Your safety net
+          {getSavingsHeading(store.identity?.account_mode)}
         </h1>
         <p className="mt-2 text-slate-500 text-sm sm:text-base">
-          How much do you currently have set aside as an emergency fund?
+          {getSavingsSubheading(store.identity?.account_mode)}
         </p>
       </div>
 

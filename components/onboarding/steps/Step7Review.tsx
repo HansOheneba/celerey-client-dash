@@ -126,10 +126,11 @@ export function Step7Review({ onComplete, onEditStep }: Step7ReviewProps) {
           title="Identity"
           summary={
             identity
-              ? `${identity.first_name} ${identity.last_name} · ${identity.country} · ${identity.preferred_currency}`
+              ? `${identity.display_name ?? [identity.first_name, identity.last_name].filter(Boolean).join(" ")} · ${identity.country} · ${identity.preferred_currency}`
               : "Not completed"
           }
-          step={1}
+          // step 2 = Identity in the new 1-indexed flow (1 = AccountMode)
+          step={2}
           onEdit={onEditStep}
         />
 
@@ -141,7 +142,7 @@ export function Step7Review({ onComplete, onEditStep }: Step7ReviewProps) {
               ? `${goals.length} goal${goals.length > 1 ? "s" : ""} — ${goals.map((g) => g.title).join(", ")}`
               : "No goals added"
           }
-          step={2}
+          step={3}
           onEdit={onEditStep}
         />
 
@@ -153,7 +154,7 @@ export function Step7Review({ onComplete, onEditStep }: Step7ReviewProps) {
               ? `${incomes.length} source${incomes.length > 1 ? "s" : ""} · ${formatCurrencyAmount(totalIncome, preferredCurrency)}/mo total`
               : "No income added"
           }
-          step={3}
+          step={4}
           onEdit={onEditStep}
         />
 
@@ -165,7 +166,7 @@ export function Step7Review({ onComplete, onEditStep }: Step7ReviewProps) {
               ? `${liabilities.length} debt${liabilities.length > 1 ? "s" : ""} · ${formatCurrencyAmount(totalDebt, preferredCurrency)} total`
               : "No debts — great going!"
           }
-          step={4}
+          step={5}
           onEdit={onEditStep}
         />
 
@@ -180,7 +181,7 @@ export function Step7Review({ onComplete, onEditStep }: Step7ReviewProps) {
                 ) + " saved"
               : "Not completed"
           }
-          step={5}
+          step={6}
           onEdit={onEditStep}
         />
 
@@ -189,10 +190,12 @@ export function Step7Review({ onComplete, onEditStep }: Step7ReviewProps) {
           title="Retirement"
           summary={
             retirement
-              ? `Target age ${retirement.retirement_age} · ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)}/mo desired`
+              ? retirement.retirement_target_year
+                ? `Target year ${retirement.retirement_target_year} · ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)}/mo desired`
+                : `Target age ${retirement.retirement_age} · ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)}/mo desired`
               : "Not completed"
           }
-          step={6}
+          step={7}
           onEdit={onEditStep}
         />
       </div>

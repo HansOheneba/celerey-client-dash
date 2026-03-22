@@ -13,8 +13,9 @@ import {
   type RetirementFormValues,
 } from "@/lib/onboarding/schemas";
 import type { RetirementData } from "@/lib/onboarding/types";
+import { ONBOARDING_COPY } from "@/lib/onboarding/copy";
 import { ArrowRight } from "lucide-react";
-import { formatCurrencyAmount, getCurrencyPrefix } from "@/lib/utils";
+import { getCurrencyPrefix } from "@/lib/utils";
 import { useOnboardingStore } from "@/store/onboardingStore";
 
 interface Step6RetirementProps {
@@ -28,6 +29,13 @@ export function Step6Retirement({
 }: Step6RetirementProps) {
   const store = useOnboardingStore();
   const preferredCurrency = store.identity?.preferred_currency || "USD";
+  const accountMode = store.accountMode;
+  const isSolo = accountMode === "solo";
+
+  const retirementFieldLabel =
+    ONBOARDING_COPY.retirement.fieldLabel[accountMode];
+  const retirementFieldPlaceholder =
+    ONBOARDING_COPY.retirement.fieldPlaceholder[accountMode];
 
   const {
     register,
@@ -37,7 +45,8 @@ export function Step6Retirement({
   } = useForm<RetirementFormValues>({
     resolver: zodResolver(retirementSchema) as never,
     defaultValues: {
-      retirement_age: defaultValues?.retirement_age ?? 65,
+      retirement_age: defaultValues?.retirement_age,
+      retirement_target_year: defaultValues?.retirement_target_year,
       current_invested: defaultValues?.current_invested ?? 0,
       monthly_savings: defaultValues?.monthly_savings ?? 0,
       existing_pension_balance: defaultValues?.existing_pension_balance ?? 0,
@@ -47,8 +56,22 @@ export function Step6Retirement({
   });
 
   function onSubmit(data: RetirementFormValues) {
+    let retirement_target_year = data.retirement_target_year as
+      | number
+      | undefined;
+
+    // For solo: derive retirement_target_year from DOB + retirement_age
+    if (isSolo && data.retirement_age) {
+      const dob = store.identity?.date_of_birth;
+      if (dob) {
+        const birthYear = new Date(dob).getFullYear();
+        retirement_target_year = birthYear + (data.retirement_age as number);
+      }
+    }
+
     onComplete({
-      retirement_age: data.retirement_age as number,
+      retirement_age: isSolo ? (data.retirement_age as number) : undefined,
+      retirement_target_year,
       current_invested: data.current_invested as number,
       monthly_savings: data.monthly_savings as number,
       existing_pension_balance: data.existing_pension_balance as number,
@@ -66,8 +89,8 @@ export function Step6Retirement({
           Let&apos;s think about your future
         </h1>
         <p className="mt-2 text-slate-500 text-sm sm:text-base">
-          Answer what you can; you can give estimates. Your advisor will help
-          you refine this picture.
+          Just three quick numbers — you can fill in the rest from your
+          dashboard later.
         </p>
       </div>
 
@@ -84,20 +107,37 @@ export function Step6Retirement({
       </div>
 
       <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm space-y-5">
-        {/* Target retirement age + desired income */}
+        {/* Retirement timeline field + desired income */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="retirement-age">Target retirement age</Label>
-            <Input
-              id="retirement-age"
-              type="number"
-              min={18}
-              max={100}
-              {...register("retirement_age", { valueAsNumber: true })}
-            />
-            {errors.retirement_age && (
+            <Label htmlFor="retirement-target">{retirementFieldLabel}</Label>
+            {isSolo ? (
+              <Input
+                id="retirement-target"
+                type="number"
+                min={18}
+                max={100}
+                placeholder={"eg: 60"}
+                {...register("retirement_age", { valueAsNumber: true })}
+              />
+            ) : (
+              <Input
+                id="retirement-target"
+                type="number"
+                min={new Date().getFullYear()}
+                max={2100}
+                placeholder={retirementFieldPlaceholder}
+                {...register("retirement_target_year", { valueAsNumber: true })}
+              />
+            )}
+            {isSolo && errors.retirement_age && (
               <p className="text-xs text-red-500">
                 {errors.retirement_age.message}
+              </p>
+            )}
+            {!isSolo && errors.retirement_target_year && (
+              <p className="text-xs text-red-500">
+                {errors.retirement_target_year.message}
               </p>
             )}
           </div>
@@ -128,97 +168,26 @@ export function Step6Retirement({
 
         <div className="h-px bg-slate-100" />
 
-        {/* Current investments */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="current-invested">Current amount invested</Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                {getCurrencyPrefix(preferredCurrency)}
-              </span>
-              <CurrencyNumberInputField
-                control={control}
-                name="current_invested"
-                id="current-invested"
-                placeholder="0"
-                className="pl-12"
-              />
-            </div>
-            {errors.current_invested && (
-              <p className="text-xs text-red-500">
-                {errors.current_invested.message}
-              </p>
-            )}
+        {/* Monthly savings */}
+        <div className="space-y-1.5">
+          <Label htmlFor="monthly-savings">Monthly retirement savings</Label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+              {getCurrencyPrefix(preferredCurrency)}
+            </span>
+            <CurrencyNumberInputField
+              control={control}
+              name="monthly_savings"
+              id="monthly-savings"
+              placeholder="500"
+              className="pl-12"
+            />
           </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="monthly-savings">Monthly retirement savings</Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                {getCurrencyPrefix(preferredCurrency)}
-              </span>
-              <CurrencyNumberInputField
-                control={control}
-                name="monthly_savings"
-                id="monthly-savings"
-                placeholder="500"
-                className="pl-12"
-              />
-            </div>
-            {errors.monthly_savings && (
-              <p className="text-xs text-red-500">
-                {errors.monthly_savings.message}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="h-px bg-slate-100" />
-
-        {/* Pension section */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="pension-balance">
-              Existing pension balance{" "}
-              <span className="text-slate-400 font-normal">(0 if none)</span>
-            </Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                {getCurrencyPrefix(preferredCurrency)}
-              </span>
-              <CurrencyNumberInputField
-                control={control}
-                name="existing_pension_balance"
-                id="pension-balance"
-                placeholder="0"
-                className="pl-12"
-              />
-            </div>
-            {errors.existing_pension_balance && (
-              <p className="text-xs text-red-500">
-                {errors.existing_pension_balance.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="employer-contribution">
-              Employer contribution{" "}
-              <span className="text-slate-400 font-normal">(optional)</span>
-            </Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                {getCurrencyPrefix(preferredCurrency)}
-              </span>
-              <CurrencyNumberInputField
-                control={control}
-                name="employer_contribution"
-                id="employer-contribution"
-                placeholder="0"
-                className="pl-12"
-              />
-            </div>
-          </div>
+          {errors.monthly_savings && (
+            <p className="text-xs text-red-500">
+              {errors.monthly_savings.message}
+            </p>
+          )}
         </div>
       </div>
 
