@@ -517,7 +517,7 @@ function AddHoldingDialog({
                   icon={faBroadcastTower}
                   className="h-2.5 w-2.5"
                 />
-                Crypto prices update live from CoinGecko (cached 2 hrs). Stocks
+                Crypto prices update live from 3rd party sources. Stocks
                 require manual update for now.
               </p>
             </div>
