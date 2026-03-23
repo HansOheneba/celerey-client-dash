@@ -142,9 +142,20 @@ function futureValue(
 }
 
 function buildProjectionCurve(config: RetirementConfig) {
-  const points = [];
   const currentAge = getUserAge(useFinancialStore.getState().user ?? mockUser);
   const yearsToRetirement = config.retirementAge - currentAge;
+
+  if (yearsToRetirement <= 0) {
+    return [
+      {
+        age: currentAge,
+        balance: config.currentInvested + config.existingPensionBalance,
+        year: new Date().getFullYear(),
+      },
+    ];
+  }
+
+  const points = [];
   const step = Math.max(1, Math.ceil(yearsToRetirement / 20));
 
   for (let y = 0; y <= yearsToRetirement; y += step) {
