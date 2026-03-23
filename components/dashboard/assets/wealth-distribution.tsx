@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { formatCurrency } from "@/lib/client-data";
+
 // LocationKey is a plain string derived at runtime from country + city.
 export type LocationKey = string;
 
@@ -48,14 +50,6 @@ export type LocationDistributionItem = {
 /** Stable key derived from country + city — used only for filtering. */
 export function toLocationKey(country: string, city: string): LocationKey {
   return `${country}_${city}`.toLowerCase().replace(/\s+/g, "_");
-}
-
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
 }
 
 function sum(nums: number[]): number {

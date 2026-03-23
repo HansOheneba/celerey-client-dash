@@ -38,7 +38,7 @@ import {
 import type { IdentityData } from "@/lib/onboarding/types";
 import { ONBOARDING_COPY } from "@/lib/onboarding/copy";
 import { useOnboardingStore } from "@/store/onboardingStore";
-import { ArrowRight, ChevronsUpDown, Check } from "lucide-react";
+import { ArrowRight, ChevronsUpDown, Check, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Build sorted country list from countries-list ───────────────────────────
@@ -81,11 +81,13 @@ const MARITAL_STATUSES = [
 interface Step1IdentityProps {
   defaultValues?: IdentityData | null;
   onComplete: (data: IdentityData) => void;
+  onBack?: () => void;
 }
 
 export function Step1Identity({
   defaultValues,
   onComplete,
+  onBack,
 }: Step1IdentityProps) {
   const [dialCode, setDialCode] = React.useState("+233");
   const [countryOpen, setCountryOpen] = React.useState(false);
@@ -230,21 +232,20 @@ export function Step1Identity({
           {/* DOB + Phone — DOB only for solo */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {isSolo && (
-              <div className="space-y-1.5">
-                <Label>Date of birth</Label>
-                <DatePickerField
-                  control={control}
-                  name="date_of_birth"
-                  placeholder="Select date of birth"
-                  fromYear={1950}
-                  toYear={new Date().getFullYear()}
-                />
-                {errors.date_of_birth && (
-                  <p className="text-xs text-red-500">
-                    {errors.date_of_birth.message}
-                  </p>
-                )}
-              </div>
+              <DatePickerField
+                control={control}
+                name="date_of_birth"
+                placeholder="Select date of birth"
+                fromYear={1930}
+                toYear={new Date().getFullYear() - 16}
+                disabled={{
+                  after: new Date(
+                    new Date().getFullYear() - 16,
+                    new Date().getMonth(),
+                    new Date().getDate(),
+                  ),
+                }}
+              />
             )}
 
             {/* Phone — dial code + number */}
@@ -432,7 +433,7 @@ export function Step1Identity({
             {/* City */}
             <div className="space-y-1.5">
               <Label>City</Label>
-              <Input {...register("resident_city")} />
+              <Input {...register("resident_city")} placeholder="eg. Cairo" />
               {errors.resident_city && (
                 <p className="text-xs text-red-500">
                   {errors.resident_city.message}
@@ -475,14 +476,27 @@ export function Step1Identity({
       </div>
 
       {/* CTA */}
-      <Button
-        type="button"
-        onClick={handleSubmit(onSubmit)}
-        className="w-full gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl"
-      >
-        Continue
-        <ArrowRight className="h-4 w-4" />
-      </Button>
+      <div className="flex gap-3">
+        {onBack && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            className="flex-1 gap-1 h-12 text-base rounded-xl"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </Button>
+        )}
+        <Button
+          type="button"
+          onClick={handleSubmit(onSubmit)}
+          className="flex-1 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl"
+        >
+          Continue
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }

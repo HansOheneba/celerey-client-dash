@@ -12,18 +12,20 @@ import {
   type RetirementFormValues,
 } from "@/lib/onboarding/schemas";
 import type { RetirementData } from "@/lib/onboarding/types";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronLeft } from "lucide-react";
 import { getCurrencyPrefix } from "@/lib/utils";
 import { useOnboardingStore } from "@/store/onboardingStore";
 
 interface Step6RetirementProps {
   defaultValues?: RetirementData | null;
   onComplete: (data: RetirementData) => void;
+  onBack?: () => void;
 }
 
 export function Step6Retirement({
   defaultValues,
   onComplete,
+  onBack,
 }: Step6RetirementProps) {
   const store = useOnboardingStore();
   const preferredCurrency = store.identity?.preferred_currency || "USD";
@@ -190,14 +192,27 @@ export function Step6Retirement({
       </div>
 
       {/* CTA */}
-      <Button
-        type="button"
-        onClick={handleSubmit(onSubmit)}
-        className="w-full gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl"
-      >
-        Continue
-        <ArrowRight className="h-4 w-4" />
-      </Button>
+      <div className="flex gap-3">
+        {onBack && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            className="flex-1 gap-1 h-12 text-base rounded-xl"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </Button>
+        )}
+        <Button
+          type="button"
+          onClick={handleSubmit(onSubmit)}
+          className="flex-1 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl"
+        >
+          Continue
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }

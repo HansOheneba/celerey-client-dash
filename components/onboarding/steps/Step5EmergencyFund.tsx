@@ -11,18 +11,20 @@ import {
   type EmergencyFundFormValues,
 } from "@/lib/onboarding/schemas";
 import type { EmergencyFundData } from "@/lib/onboarding/types";
-import { ArrowRight, Lightbulb } from "lucide-react";
+import { ArrowRight, Lightbulb, ChevronLeft } from "lucide-react";
 import { formatCurrencyAmount, getCurrencyPrefix } from "@/lib/utils";
 import { useOnboardingStore } from "@/store/onboardingStore";
 
 interface Step5EmergencyFundProps {
   defaultValues?: EmergencyFundData | null;
   onComplete: (data: EmergencyFundData) => void;
+  onBack?: () => void;
 }
 
 export function Step5EmergencyFund({
   defaultValues,
   onComplete,
+  onBack,
 }: Step5EmergencyFundProps) {
   const store = useOnboardingStore();
   const preferredCurrency = store.identity?.preferred_currency || "USD";
@@ -168,14 +170,27 @@ export function Step5EmergencyFund({
       )}
 
       {/* CTA */}
-      <Button
-        type="button"
-        onClick={handleSubmit(onSubmit)}
-        className="w-full h-12 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white text-base rounded-xl"
-      >
-        Continue
-        <ArrowRight className="h-4 w-4" />
-      </Button>
+      <div className="flex gap-3">
+        {onBack && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            className="flex-1 gap-1 h-12 text-base rounded-xl"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </Button>
+        )}
+        <Button
+          type="button"
+          onClick={handleSubmit(onSubmit)}
+          className="flex-1 h-12 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white text-base rounded-xl"
+        >
+          Continue
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }

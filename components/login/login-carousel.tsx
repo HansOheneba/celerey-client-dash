@@ -73,7 +73,7 @@ export function LoginCarousel() {
   }, [api]);
 
   return (
-    <section className="relative m-4 overflow-hidden rounded-[22px] bg-black md:m-5 hidden md:block">
+    <section className="relative m-4 overflow-hidden rounded-sm bg-black md:m-5 hidden md:block">
       <Carousel
         setApi={setApi}
         plugins={[Fade(), autoplayRef.current]}

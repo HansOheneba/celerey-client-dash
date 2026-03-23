@@ -20,7 +20,13 @@ import {
   type LiabilityFormValues,
 } from "@/lib/onboarding/schemas";
 import type { LiabilityData } from "@/lib/onboarding/types";
-import { ArrowRight, Trash2, Plus, CreditCard } from "lucide-react";
+import {
+  ArrowRight,
+  Trash2,
+  Plus,
+  CreditCard,
+  ChevronLeft,
+} from "lucide-react";
 import { formatCurrencyAmount, getCurrencyPrefix } from "@/lib/utils";
 import { useOnboardingStore } from "@/store/onboardingStore";
 
@@ -54,11 +60,13 @@ function getExpenseSubheading(mode?: "solo" | "partner" | "family") {
 interface Step4LiabilitiesProps {
   defaultValues?: LiabilityData[];
   onComplete: (liabilities: LiabilityData[]) => void;
+  onBack?: () => void;
 }
 
 export function Step4Liabilities({
   defaultValues = [],
   onComplete,
+  onBack,
 }: Step4LiabilitiesProps) {
   const [liabilities, setLiabilities] =
     useState<LiabilityData[]>(defaultValues);
@@ -310,14 +318,27 @@ export function Step4Liabilities({
 
       {/* Action buttons */}
       <div className="flex flex-col gap-3">
-        <Button
-          type="button"
-          onClick={handleNext}
-          className="w-full gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl"
-        >
-          Continue
-          <ArrowRight className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-3">
+          {onBack && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onBack}
+              className="flex-1 gap-1 h-12 text-base rounded-xl"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+          )}
+          <Button
+            type="button"
+            onClick={handleNext}
+            className="flex-1 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl"
+          >
+            Continue
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
         {liabilities.length === 0 && (
           <Button
             type="button"

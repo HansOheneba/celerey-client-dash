@@ -2,15 +2,13 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
-
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
+import { formatCurrency } from "@/lib/client-data";
 
 function sum(nums: number[]): number {
   return nums.reduce((a, b) => a + b, 0);

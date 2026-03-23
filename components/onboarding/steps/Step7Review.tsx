@@ -8,6 +8,7 @@ import type { OnboardingPayload } from "@/lib/onboarding/types";
 import {
   CheckCircle2,
   ChevronRight,
+  ChevronLeft,
   User,
   Target,
   Banknote,
@@ -20,6 +21,7 @@ import { formatCurrencyAmount } from "@/lib/utils";
 interface Step7ReviewProps {
   onComplete: () => void;
   onEditStep: (step: number) => void;
+  onBack?: () => void;
 }
 
 function SectionCard({
@@ -59,7 +61,11 @@ function SectionCard({
   );
 }
 
-export function Step7Review({ onComplete, onEditStep }: Step7ReviewProps) {
+export function Step7Review({
+  onComplete,
+  onEditStep,
+  onBack,
+}: Step7ReviewProps) {
   const store = useOnboardingStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -201,24 +207,37 @@ export function Step7Review({ onComplete, onEditStep }: Step7ReviewProps) {
       )}
 
       {/* CTA */}
-      <Button
-        type="button"
-        onClick={handleSubmit}
-        disabled={isSubmitting}
-        className="w-full gap-2 bg-primary hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl disabled:opacity-70"
-      >
-        {isSubmitting ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Setting up your dashboard
-          </>
-        ) : (
-          <>
-            <CheckCircle2 className="h-4 w-4" />
-            Complete setup
-          </>
+      <div className="flex gap-3">
+        {onBack && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            className="flex-1 gap-1 h-12 text-base rounded-xl"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </Button>
         )}
-      </Button>
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="flex-1 gap-2 bg-primary hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl disabled:opacity-70"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Setting up your dashboard
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="h-4 w-4" />
+              Complete setup
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

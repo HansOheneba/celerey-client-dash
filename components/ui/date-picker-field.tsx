@@ -18,6 +18,7 @@ interface DatePickerFieldProps {
   fromYear?: number;
   toYear?: number;
   showRelativeCountdown?: boolean;
+  disabled?: { before?: Date; after?: Date };
 }
 
 function startOfDay(date: Date) {

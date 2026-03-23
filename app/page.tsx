@@ -64,7 +64,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex justify-center items-center bg-muted/40 px-4 py-5 md:px-7 md:py-8">
-      <div className="mx-auto w-full max-w-6xl rounded-[28px] bg-background shadow-sm ring-1 ring-border">
+      <div className="mx-auto w-full max-w-6xl rounded-sm bg-background shadow-sm ring-1 ring-border">
         <div className="grid h-190 grid-cols-1 gap-0 md:grid-cols-2">
           {/* LEFT: carousel */}
           <LoginCarousel />

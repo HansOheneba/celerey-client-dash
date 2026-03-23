@@ -4,7 +4,13 @@ import React, { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, formatDistanceToNow, isFuture } from "date-fns";
-import { CalendarIcon, ArrowRight, Trash2, Plus } from "lucide-react";
+import {
+  CalendarIcon,
+  ArrowRight,
+  Trash2,
+  Plus,
+  ChevronLeft,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,11 +59,13 @@ function naturalCountdown(date: Date): string {
 interface Step2GoalsProps {
   defaultValues?: GoalData[];
   onComplete: (goals: GoalData[]) => void;
+  onBack?: () => void;
 }
 
 export function Step2Goals({
   defaultValues = [],
   onComplete,
+  onBack,
 }: Step2GoalsProps) {
   const [goals, setGoals] = useState<GoalData[]>(defaultValues);
   const [listError, setListError] = useState("");
@@ -302,10 +310,32 @@ export function Step2Goals({
       {listError && <p className="text-red-500">{listError}</p>}
 
       {/* Continue */}
-      <Button onClick={handleNext} className="w-full gap-2 h-12">
-        Continue
-        <ArrowRight className="h-4 w-4" />
-      </Button>
+      <div className="flex gap-3">
+        {onBack && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            className="flex-1 gap-1 h-12 rounded-xl"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </Button>
+        )}
+        <Button
+          onClick={handleNext}
+          disabled={
+            goals.length === 0 &&
+            !watchedValues.title &&
+            !watchedValues.target_date &&
+            !Number(watchedValues.target_amount)
+          }
+          className="flex-1 gap-2 h-12"
+        >
+          Continue
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }

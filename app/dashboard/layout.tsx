@@ -8,12 +8,22 @@ import DashboardTopbar from "@/components/dashboard/topbar";
 import { DashboardGuard } from "@/components/dashboard/DashboardGuard";
 import { CelereyLoader } from "@/components/login/celerey-loader";
 import { useFinancialStore } from "@/store/financialStore";
+import { setDefaultCurrency } from "@/lib/client-data";
 
 /** Triggers zustand-persist rehydration from localStorage after mount. */
 function StoreHydrator() {
   useEffect(() => {
     useFinancialStore.persist.rehydrate();
   }, []);
+  return null;
+}
+
+/** Keeps the formatCurrency default in sync with the user's chosen currency. */
+function CurrencySync() {
+  const currency = useFinancialStore((s) => s.user?.currency);
+  useEffect(() => {
+    setDefaultCurrency(currency ?? "USD");
+  }, [currency]);
   return null;
 }
 
@@ -38,6 +48,7 @@ export default function RootLayout({
         }}
       >
         <StoreHydrator />
+        <CurrencySync />
         <DashboardGuard>
           <SidebarProvider defaultOpen>
             <div className="flex min-h-svh w-full overflow-x-hidden">

@@ -4,12 +4,10 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 const STEP_LABELS: Record<number, string> = {
   1: "Account Setup",
-  2: "Welcome",
+  2: "Personal Info",
   3: "Your Goals",
   4: "Income",
   5: "Emergency Fund",
@@ -17,6 +15,15 @@ const STEP_LABELS: Record<number, string> = {
   7: "Review",
   8: "All Done",
 };
+
+// Map each step to one of the named stages shown in the indicator
+// We group the 8 steps into 4 visible stages
+const STAGES = [
+  { label: "Account", steps: [1] },
+  { label: "Profile", steps: [2] },
+  { label: "Finances", steps: [3, 4, 5, 6] },
+  { label: "Review", steps: [7, 8] },
+];
 
 /* ─── Premium Splash Loader ───────────────────────────────────── */
 function OnboardingSplash({ onDone }: { onDone: () => void }) {
@@ -58,13 +65,11 @@ function OnboardingSplash({ onDone }: { onDone: () => void }) {
           0% { transform: scale(0.85); opacity: 0; filter: blur(6px); }
           100% { transform: scale(1); opacity: 1; filter: blur(0); }
         }
-
         @keyframes logoPulse {
           0%   { transform: scale(1); }
           50%  { transform: scale(1.04); }
           100% { transform: scale(1); }
         }
-
         @keyframes glowPulse {
           0%   { opacity: 0.4; transform: scale(0.9); }
           50%  { opacity: 0.7; transform: scale(1.1); }
@@ -73,7 +78,6 @@ function OnboardingSplash({ onDone }: { onDone: () => void }) {
       `}</style>
 
       <div className="relative flex items-center justify-center">
-        {/* Glow layers */}
         <div
           style={{
             position: "absolute",
@@ -86,7 +90,6 @@ function OnboardingSplash({ onDone }: { onDone: () => void }) {
             filter: "blur(12px)",
           }}
         />
-
         <div
           style={{
             position: "absolute",
@@ -99,8 +102,6 @@ function OnboardingSplash({ onDone }: { onDone: () => void }) {
             filter: "blur(10px)",
           }}
         />
-
-        {/* Logo */}
         <div
           style={{
             animation: `
@@ -122,54 +123,131 @@ function OnboardingSplash({ onDone }: { onDone: () => void }) {
   );
 }
 
+/* ─── Step Indicator ─────────────────────────────────────────── */
+function StepIndicator({ currentStep }: { currentStep: number }) {
+  // Find which stage the current step belongs to
+  const currentStageIndex = STAGES.findIndex((s) =>
+    s.steps.includes(currentStep),
+  );
+
+  return (
+    <div className="flex items-center justify-center gap-0">
+      {STAGES.map((stage, i) => {
+        const isCompleted = i < currentStageIndex;
+        const isActive = i === currentStageIndex;
+
+        return (
+          <React.Fragment key={stage.label}>
+            {/* Node */}
+            <div className="flex flex-col items-center gap-2">
+              <motion.div
+                initial={false}
+                animate={{
+                  backgroundColor: isCompleted
+                    ? "#151339"
+                    : isActive
+                      ? "#151339"
+                      : "transparent",
+                  borderColor: isCompleted || isActive ? "#151339" : "#d1d5db",
+                  scale: isActive ? 1.08 : 1,
+                }}
+                transition={{ duration: 0.25 }}
+                className="flex h-9 w-9 items-center justify-center rounded-full border-2"
+              >
+                {isCompleted ? (
+                  <motion.svg
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                    width="14"
+                    height="14"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                  >
+                    <path
+                      d="M2.5 7L5.5 10L11.5 4"
+                      stroke="white"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </motion.svg>
+                ) : (
+                  <span
+                    className={`text-sm font-semibold ${
+                      isActive ? "text-white" : "text-gray-400"
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                )}
+              </motion.div>
+
+              {/* Label */}
+              <span
+                className={`text-xs font-medium transition-colors duration-200 ${
+                  isCompleted || isActive ? "text-slate-800" : "text-gray-400"
+                }`}
+              >
+                {stage.label}
+              </span>
+            </div>
+
+            {/* Connector line between nodes */}
+            {i < STAGES.length - 1 && (
+              <div className="relative mx-2 mb-5 h-0.5 w-16 sm:w-24 bg-gray-200 overflow-hidden">
+                <motion.div
+                  initial={false}
+                  animate={{ width: isCompleted ? "100%" : "0%" }}
+                  transition={{ duration: 0.4, ease: "easeInOut" }}
+                  className="absolute inset-y-0 left-0 bg-slate-800"
+                />
+              </div>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ─── Main Shell ─────────────────────────────────────────────── */
 interface OnboardingShellProps {
   currentStep: number;
   totalSteps: number;
-  onBack: () => void;
-  showBack: boolean;
   children: React.ReactNode;
 }
 
 export function OnboardingShell({
   currentStep,
   totalSteps,
-  onBack,
-  showBack,
   children,
 }: OnboardingShellProps) {
   const [splashDone, setSplashDone] = useState(false);
 
-  const progressPct = Math.min(
-    ((currentStep - 1) / (totalSteps - 1)) * 100,
-    100,
-  );
-
-  // Step 9 (Complete) bypasses shell
-  if (currentStep === 9) {
+  // Step 8 (Complete) bypasses shell
+  if (currentStep === 8) {
     return <>{children}</>;
   }
 
   return (
     <>
-      {/* Splash (only on first mount) */}
       {!splashDone && <OnboardingSplash onDone={() => setSplashDone(true)} />}
 
-      {/* Main UI */}
       <div
         style={{
           visibility: splashDone ? "visible" : "hidden",
           background: `
-      radial-gradient(circle at 20% 10%, rgba(47,107,255,0.06), transparent 40%),
-      radial-gradient(circle at 80% 90%, rgba(168,85,247,0.06), transparent 50%),
-      #ffffff
-    `,
+            radial-gradient(circle at 20% 10%, rgba(47,107,255,0.06), transparent 40%),
+            radial-gradient(circle at 80% 90%, rgba(168,85,247,0.06), transparent 50%),
+            #ffffff
+          `,
         }}
         className="flex min-h-screen flex-col"
       >
         {/* ── Top Bar ───────────────── */}
-        <header className="pt-6 pb-4">
-          <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-4 sm:px-6">
+        <header className="pt-8 pb-6">
+          <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 px-4 sm:px-6">
             <Image
               src="https://i.ibb.co/PGVKSsV1/image.png"
               alt="Celerey"
@@ -178,26 +256,12 @@ export function OnboardingShell({
               priority
             />
 
-            <div className="flex w-full items-center justify-between text-xs font-medium text-slate-500">
-              <span>{STEP_LABELS[currentStep]}</span>
-              <span className="tabular-nums">
-                {currentStep} / {totalSteps - 1}
-              </span>
-            </div>
-
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/20">
-              <motion.div
-                className="h-full rounded-full bg-primary"
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPct}%` }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-              />
-            </div>
+            <StepIndicator currentStep={currentStep} />
           </div>
         </header>
 
         {/* ── Content ───────────────── */}
-        <main className="flex flex-1 justify-center px-4 pt-6 pb-10 sm:px-6">
+        <main className="flex flex-1 justify-center items-center px-4 pt-4 pb-10 sm:px-6">
           <div className="w-full max-w-2xl">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
@@ -212,24 +276,6 @@ export function OnboardingShell({
             </AnimatePresence>
           </div>
         </main>
-
-        {/* ── Footer ───────────────── */}
-        {showBack && (
-          <footer className="sticky bottom-0 border-t border-slate-100 bg-white/80 backdrop-blur-md">
-            <div className="mx-auto flex max-w-2xl items-center px-4 py-3 sm:px-6">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="gap-1 text-slate-500 hover:text-slate-900"
-                onClick={onBack}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </Button>
-            </div>
-          </footer>
-        )}
       </div>
     </>
   );

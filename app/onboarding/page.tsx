@@ -143,37 +143,50 @@ export default function OnboardingPage() {
   const displayName = identity?.display_name ?? "there";
 
   return (
-    <OnboardingShell
-      currentStep={currentStep}
-      totalSteps={TOTAL_STEPS}
-      onBack={handleBack}
-      showBack={currentStep > 1 && currentStep < 8}
-    >
+    <OnboardingShell currentStep={currentStep} totalSteps={TOTAL_STEPS}>
       {currentStep === 1 && (
         <Step0AccountMode defaultValue={accountMode} onComplete={handleStep1} />
       )}
       {currentStep === 2 && (
-        <Step1Identity defaultValues={identity} onComplete={handleStep2} />
+        <Step1Identity
+          defaultValues={identity}
+          onComplete={handleStep2}
+          onBack={handleBack}
+        />
       )}
       {currentStep === 3 && (
-        <Step2Goals defaultValues={goals} onComplete={handleStep3} />
+        <Step2Goals
+          defaultValues={goals}
+          onComplete={handleStep3}
+          onBack={handleBack}
+        />
       )}
       {currentStep === 4 && (
-        <Step3Income defaultValues={incomes} onComplete={handleStep4} />
+        <Step3Income
+          defaultValues={incomes}
+          onComplete={handleStep4}
+          onBack={handleBack}
+        />
       )}
       {currentStep === 5 && (
         <Step5EmergencyFund
           defaultValues={emergencyFund}
           onComplete={handleStep5}
+          onBack={handleBack}
         />
       )}
       {currentStep === 6 && (
-        <Step6Retirement defaultValues={retirement} onComplete={handleStep6} />
+        <Step6Retirement
+          defaultValues={retirement}
+          onComplete={handleStep6}
+          onBack={handleBack}
+        />
       )}
       {currentStep === 7 && (
         <Step7Review
           onComplete={handleStep7Complete}
           onEditStep={(step) => setStep(step)}
+          onBack={handleBack}
         />
       )}
       {currentStep === 8 && (

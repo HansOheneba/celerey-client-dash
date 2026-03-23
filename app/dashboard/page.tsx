@@ -38,12 +38,12 @@ import {
   type FeatureKey,
   advisorData,
   currentValue,
-  createNetWorthSnapshot,
   recordNetWorthSnapshot,
   getLatestNetWorthChange,
   formatCurrency,
   selectRetirementOutputs,
   selectEmergencyFundMetrics,
+  selectNetWorthBreakdown,
   type FinancialDomainData,
   type CashFlowPoint,
 } from "@/lib/client-data";
@@ -365,7 +365,7 @@ export default function DashboardPage() {
     const income = store.incomeRows.reduce((s, i) => s + i.amount, 0);
     const expenses = store.expenseCategories.reduce((s, e) => s + e.amount, 0);
     const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
-    const nw = createNetWorthSnapshot();
+    const netWorth = selectNetWorthBreakdown(financialData).totalNetWorth;
     const portfolioValue = store.holdings
       .filter((h) => h.is_active)
       .reduce((s, h) => s + currentValue(h, []), 0);
@@ -387,7 +387,7 @@ export default function DashboardPage() {
     const retirementOutputs = selectRetirementOutputs(store.retirement);
 
     return {
-      netWorth: nw.netWorth ?? 0,
+      netWorth,
       portfolioValue,
       monthlyCashFlow: Math.round(income - expenses),
       monthlyIncome: income,
@@ -414,14 +414,14 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!ready || !auth.loggedIn) return;
     try {
-      recordNetWorthSnapshot({ dedupeDays: 1 });
+      recordNetWorthSnapshot({ dedupeDays: 1, netWorth: snapshot.netWorth });
       const change = getLatestNetWorthChange();
       if (change?.percent !== null && change?.since)
         setNetWorthPercent(change.percent);
     } catch {
       /* noop */
     }
-  }, [ready, auth.loggedIn]);
+  }, [ready, auth.loggedIn, snapshot.netWorth]);
 
   // ── Cash flow chart data ──────────────────────────────────────────────────
 
@@ -562,23 +562,23 @@ export default function DashboardPage() {
 
   // ── Greeting ──────────────────────────────────────────────────────────────
 
-const greetingName = useMemo(() => {
-  const accountMode = store.user?.account_mode ?? "solo";
-  const full = store.user?.display_name ?? "";
+  const greetingName = useMemo(() => {
+    const accountMode = store.user?.account_mode ?? "solo";
+    const full = store.user?.display_name ?? "";
 
-  if (!full) {
-    const prefix = (auth.email ?? "").split("@")[0] ?? "";
-    return prefix.replace(/[._-]+/g, " ").trim();
-  }
+    if (!full) {
+      const prefix = (auth.email ?? "").split("@")[0] ?? "";
+      return prefix.replace(/[._-]+/g, " ").trim();
+    }
 
-  // For solo accounts take first name only
-  // For household accounts use the full display name
-  if (accountMode === "solo") {
-    return full.split(" ")[0] ?? full;
-  }
+    // For solo accounts take first name only
+    // For household accounts use the full display name
+    if (accountMode === "solo") {
+      return full.split(" ")[0] ?? full;
+    }
 
-  return full; // "The Johnsons", "John & Ama" etc
-}, [store.user?.display_name, store.user?.account_mode, auth.email]);
+    return full; // "The Johnsons", "John & Ama" etc
+  }, [store.user?.display_name, store.user?.account_mode, auth.email]);
 
   const timeGreeting = useMemo(() => {
     const h = new Date().getHours();

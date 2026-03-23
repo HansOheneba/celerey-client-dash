@@ -2227,10 +2227,19 @@ export const locationDistributionData: LocationEntry[] = [
 
 export const userCurrency: string = mockUser.currency;
 
+/** Runtime default used by formatCurrency when no currency arg is passed.
+ *  Call setDefaultCurrency() from the dashboard layout after store hydration
+ *  so every formatCurrency() call across the app honours the user's currency. */
+let _defaultCurrency = "USD";
+
+export function setDefaultCurrency(c: string): void {
+  if (c && c.length >= 3) _defaultCurrency = c.toUpperCase();
+}
+
 export function formatCurrency(n: number, currency?: string): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
-    currency: currency ?? mockUser.currency,
+    currency: currency ?? _defaultCurrency,
     maximumFractionDigits: 0,
   }).format(n);
 }
@@ -2407,29 +2416,31 @@ export function computePercentChange(
 export function recordNetWorthSnapshot(opts?: {
   dedupeDays?: number;
   maxEntries?: number;
-}): NetWorthSnapshot {
-  const snap = createNetWorthSnapshot();
+  /** Provide the real net worth computed from store data; avoids using mock defaults. */
+  netWorth?: number;
+}): void {
+  const ts = new Date().toISOString();
+  const recordedNetWorth = opts?.netWorth ?? createNetWorthSnapshot().netWorth;
   try {
     const history = getNetWorthHistory();
     if (opts?.dedupeDays && history.length > 0) {
       const last = history[history.length - 1];
       const days =
-        (new Date(snap.ts).getTime() - new Date(last.ts).getTime()) /
+        (new Date(ts).getTime() - new Date(last.ts).getTime()) /
         (1000 * 60 * 60 * 24);
-      if (days < opts.dedupeDays) return snap;
+      if (days < opts.dedupeDays) return;
     }
     const prev = history.length > 0 ? history[history.length - 1] : null;
     const rawPct = prev
-      ? computePercentChange(prev.netWorth, snap.netWorth)
+      ? computePercentChange(prev.netWorth, recordedNetWorth)
       : null;
     const pct = rawPct === null ? null : Math.round(rawPct * 10) / 10;
     const trend: "up" | "down" | "flat" | undefined =
       pct === null ? undefined : pct > 0 ? "up" : pct < 0 ? "down" : "flat";
     pushNetWorthSnapshot(
       {
-        ts: snap.ts,
-        netWorth: snap.netWorth,
-        breakdown: snap.breakdown,
+        ts,
+        netWorth: recordedNetWorth,
         percentChange: pct,
         trend,
         previousNetWorth: prev?.netWorth ?? null,
@@ -2439,7 +2450,6 @@ export function recordNetWorthSnapshot(opts?: {
   } catch {
     /* noop */
   }
-  return snap;
 }
 
 export function getLatestNetWorthChange(): {

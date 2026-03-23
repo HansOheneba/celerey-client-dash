@@ -1,5 +1,8 @@
 import { useFinancialStore } from "@/store/financialStore";
+import { formatCurrency } from "@/lib/client-data";
 import { Goal, EnrichedGoal } from "./types";
+
+export { formatCurrency };
 
 // ============================================================================
 // FORMATTING & UTILITY FUNCTIONS
@@ -7,14 +10,6 @@ import { Goal, EnrichedGoal } from "./types";
 
 export function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
-}
-
-export function formatCurrency(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
 }
 
 export function progressPercent(current: number, target: number): number {
