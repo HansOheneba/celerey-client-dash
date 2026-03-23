@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { DashCard } from "@/components/dashboard/dash-card";
-import { mockProperties, formatCurrency } from "@/lib/client-data";
+import { formatCurrency, type Property } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 // ─── Brand color axis ─────────────────────────────────────────────────────────
 const COLOR_MIN = "#a8d4f5";
@@ -42,7 +43,7 @@ type CountryStat = {
   propertyCount: number;
 };
 
-function buildCountryStats(properties: typeof mockProperties): CountryStat[] {
+function buildCountryStats(properties: Property[]): CountryStat[] {
   const map = new Map<string, CountryStat>();
 
   for (const p of properties) {
@@ -78,7 +79,8 @@ export default function AssetMap({
   const chartRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
 
-  const activeProps = mockProperties.filter((p) => p.is_active);
+  const storeProperties = useFinancialStore((s) => s.propertyAssets);
+  const activeProps = storeProperties.filter((p) => p.is_active);
   const countryStats = buildCountryStats(activeProps);
 
   // ── Load Google Charts with API key ──────────────────────────────────────

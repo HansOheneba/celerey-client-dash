@@ -17,6 +17,7 @@ import { Step6Retirement } from "@/components/onboarding/steps/Step6Retirement";
 import { Step7Review } from "@/components/onboarding/steps/Step7Review";
 import { Step8Complete } from "@/components/onboarding/steps/Step8Complete";
 import { useOnboardingStore } from "@/store/onboardingStore";
+import { useFinancialStore } from "@/store/financialStore";
 import type {
   IdentityData,
   GoalData,
@@ -42,6 +43,8 @@ export default function OnboardingPage() {
   const { ready, auth } = useClientGate();
 
   const store = useOnboardingStore();
+  const seedFromOnboarding = useFinancialStore((s) => s.seedFromOnboarding);
+  const setUser = useFinancialStore((s) => s.setUser);
   const {
     currentStep,
     accountMode,
@@ -109,6 +112,25 @@ export default function OnboardingPage() {
   }
 
   function handleStep7Complete() {
+    // Seed the financial store from onboarding data before marking complete
+    if (identity) {
+      seedFromOnboarding({
+        identity,
+        goals,
+        incomes,
+        retirement,
+        emergencyFund,
+      });
+
+      // Patch the email (set at login) into the seeded user
+      const email = auth.email ?? "";
+      if (email) {
+        const seededUser = useFinancialStore.getState().user;
+        if (seededUser) {
+          setUser({ ...seededUser, email });
+        }
+      }
+    }
     setOnboarded();
     setStep(8);
   }

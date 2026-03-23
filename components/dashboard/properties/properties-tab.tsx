@@ -17,7 +17,7 @@ import AssetMap from "@/components/dashboard/properties/country-chart";
 import { CountryDonutChart } from "./country-value-chart";
 
 import {
-  mockProperties,
+  type Property,
   propertyEquity,
   propertyLvr,
   totalInsurancePremium,
@@ -29,6 +29,7 @@ import {
   propertyInsuranceTypeLabel,
   formatCurrency,
 } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 function sum(nums: number[]): number {
   return nums.reduce((a, b) => a + b, 0);
@@ -44,11 +45,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 // ─── Insurance summary — read-only, all actions link to insurance tab ──────
 
-function PropertyInsuranceSummary({
-  properties,
-}: {
-  properties: ReturnType<typeof mockProperties.filter>;
-}) {
+function PropertyInsuranceSummary({ properties }: { properties: Property[] }) {
   const allPolicies = properties.flatMap((p) =>
     p.insurance.map((ins) => ({
       ...ins,
@@ -72,7 +69,6 @@ function PropertyInsuranceSummary({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Property Insurance</CardTitle>
-         
         </div>
         <p className="text-xs text-muted-foreground">
           Coverage across your holdings. Add or edit in the{" "}
@@ -284,7 +280,8 @@ function PropertyInsuranceSummary({
 // ─── Main tab ──────────────────────────────────────────────────────────────
 
 export function PropertiesTab() {
-  const properties = mockProperties.filter((p) => p.is_active);
+  const storeProperties = useFinancialStore((s) => s.propertyAssets);
+  const properties = storeProperties.filter((p) => p.is_active);
 
   const totalPropertyValue = React.useMemo(
     () => sum(properties.map((p) => p.market_value)),
@@ -371,14 +368,13 @@ export function PropertiesTab() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
       >
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <AssetMap
             countries={getPropertyGeoCountries(properties)}
             propertyCount={properties.length}
           />
           <CountryDonutChart />
-      <PropertyAnalysis />
+          <PropertyAnalysis />
         </div>
       </motion.div>
 
@@ -455,7 +451,6 @@ export function PropertiesTab() {
         <SectionLabel>Insurance</SectionLabel>
         <PropertyInsuranceSummary properties={properties} />
       </motion.div>
-
     </motion.div>
   );
 }

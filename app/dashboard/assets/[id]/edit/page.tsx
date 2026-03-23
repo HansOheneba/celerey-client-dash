@@ -1,13 +1,15 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { findHolding, mockHoldings } from "@/lib/client-data";
+import { findHolding } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 import { HoldingForm } from "@/components/dashboard/assets/holding-form";
 
 export default function EditHoldingPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const holding = findHolding(params.id, mockHoldings);
+  const storeHoldings = useFinancialStore((s) => s.holdings);
+  const holding = findHolding(params.id, storeHoldings);
 
   if (!holding) {
     // Holding not found - redirect back

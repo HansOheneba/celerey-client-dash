@@ -13,8 +13,12 @@
 
 import * as React from "react";
 import { Separator } from "@/components/ui/separator";
-import { getDashboardData } from "@/lib/client-data";
-import { advisorData, goalsData } from "@/lib/client-data";
+import {
+  selectDashboardMetrics,
+  type FinancialDomainData,
+} from "@/lib/client-data";
+import { advisorData } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 import { OverviewCards } from "./financial/OverviewCards";
 import { NetWorthBreakdown } from "./financial/NetWorthBreakdown";
@@ -27,7 +31,31 @@ import { AdvisorSection } from "./financial/AdvisorSection";
 import { PerformanceChart } from "./financial/PerformanceChart";
 
 export function FinancialDashboard() {
-  const { data, metrics } = getDashboardData();
+  const store = useFinancialStore();
+
+  const financialData: FinancialDomainData = {
+    accounts: store.accounts,
+    liabilities: store.liabilities,
+    propertyAssets: store.propertyAssets.map((p) => ({
+      id: p.property_id,
+      name: p.name,
+      value: p.market_value,
+      updatedAt: p.updated_at,
+    })),
+    portfolioPerformance: store.portfolioPerformance,
+    allocation: store.allocation,
+    taxProfile: store.taxProfile,
+    emergencyFund: store.emergencyFund,
+    insurancePolicies: store.insurancePolicies,
+    incomeRows: store.incomeRows,
+    expenseCategories: store.expenseCategories,
+    freshness: store.freshness,
+    retirement: store.retirement,
+    cashFlowHistory: store.cashFlowHistory,
+  };
+
+  const metrics = selectDashboardMetrics(financialData, store.goals);
+  const data = financialData;
 
   return (
     <div className="w-full space-y-6 px-6 py-8">

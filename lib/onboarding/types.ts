@@ -47,6 +47,7 @@ export interface LiabilityData {
 
 export interface EmergencyFundData {
   cash_balance: number;
+  target_months: number;
 }
 
 export interface RetirementData {
@@ -72,7 +73,7 @@ export interface OnboardingPayload {
   identity: IdentityData;
   goals: GoalData[];
   incomes: IncomeData[];
-  liabilities: LiabilityData[];
+  liabilities?: LiabilityData[];
   emergencyFund: EmergencyFundData;
   retirement: RetirementData;
 }

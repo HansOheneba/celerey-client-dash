@@ -63,9 +63,6 @@ import {
 } from "@/components/ui/tooltip";
 
 import {
-  mockInsurancePolicies,
-  mockProperties,
-  cashFlowData,
   INSURANCE_CATEGORIES,
   insuranceCategoryLabel,
   selectInsuranceSummary,
@@ -74,11 +71,16 @@ import {
   totalInsuranceCoverage,
   type InsurancePolicy,
   type InsuranceCategory,
+  type Property,
 } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
-function isPropertyPolicy(policy: InsurancePolicy): boolean {
+function isPropertyPolicy(
+  policy: InsurancePolicy,
+  properties: Property[],
+): boolean {
   // Catch by policy number match in properties data
-  const matchesByNumber = mockProperties.some((prop) =>
+  const matchesByNumber = properties.some((prop) =>
     prop.insurance.some((ins) => ins.policy_number === policy.policy_number),
   );
   // Also catch any home category policy
@@ -86,7 +88,6 @@ function isPropertyPolicy(policy: InsurancePolicy): boolean {
 
   return matchesByNumber || isHomeCategory;
 }
-
 
 // ─── Brand color ──────────────────────────────────────────────────────────────
 const PRIMARY = "#151339";
@@ -512,6 +513,7 @@ function PolicyCard({
 }) {
   const [expanded, setExpanded] = React.useState(false);
   const renewal = getRenewalStatus(policy.renewal_date);
+  const storeProperties = useFinancialStore((s) => s.propertyAssets);
 
   return (
     <motion.div
@@ -669,7 +671,7 @@ function PolicyCard({
               )}
 
               <div className="flex items-center gap-2 justify-end pt-1">
-                {isPropertyPolicy(policy) ? (
+                {isPropertyPolicy(policy, storeProperties) ? (
                   <div className="flex items-center gap-3 w-full">
                     <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-1">
                       <FontAwesomeIcon
@@ -737,9 +739,11 @@ function PolicyCard({
 
 export default function InsurancePage() {
   const router = useRouter();
+  const storeProperties = useFinancialStore((s) => s.propertyAssets);
+  const storeInsurancePolicies = useFinancialStore((s) => s.insurancePolicies);
 
   const [policies, setPolicies] = React.useState<InsurancePolicy[]>(() =>
-    mockInsurancePolicies.filter((p) => p.is_active),
+    storeInsurancePolicies.filter((p) => p.is_active),
   );
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editPolicy, setEditPolicy] = React.useState<InsurancePolicy | null>(
@@ -749,10 +753,11 @@ export default function InsurancePage() {
     "all",
   );
 
-  // Monthly income from cashFlowData for premium-to-income ratio
+  // Monthly income from store for premium-to-income ratio
+  const storeIncomeRows = useFinancialStore((s) => s.incomeRows);
   const monthlyIncome = React.useMemo(
-    () => cashFlowData.income.reduce((s, i) => s + i.amount, 0),
-    [],
+    () => storeIncomeRows.reduce((s, i) => s + i.amount, 0),
+    [storeIncomeRows],
   );
 
   // Summary metrics from selector
@@ -805,9 +810,9 @@ export default function InsurancePage() {
     [policies],
   );
 
-  // Property insurance totals from mockProperties
+  // Property insurance totals from store properties
   const propertyInsuranceSummary = React.useMemo(() => {
-    const activeProps = mockProperties.filter((p) => p.is_active);
+    const activeProps = storeProperties.filter((p) => p.is_active);
     const totalAnnual = activeProps.reduce(
       (s, p) => s + totalInsurancePremium(p),
       0,
@@ -824,7 +829,7 @@ export default function InsurancePage() {
       totalCoverage,
       uninsured,
     };
-  }, []);
+  }, [storeProperties]);
 
   // Filtered policy list
   const filteredPolicies = React.useMemo(() => {
@@ -1080,7 +1085,7 @@ export default function InsurancePage() {
                         size="sm"
                         className="text-xs gap-1 shrink-0"
                         onClick={() => {
-                          if (isPropertyPolicy(policy)) {
+                          if (isPropertyPolicy(policy, storeProperties)) {
                             router.push("/dashboard/properties");
                           } else {
                             setEditPolicy(policy);
@@ -1092,7 +1097,7 @@ export default function InsurancePage() {
                           icon={faRotateRight}
                           className="h-3 w-3"
                         />
-                        {isPropertyPolicy(policy)
+                        {isPropertyPolicy(policy, storeProperties)
                           ? "Go to Properties"
                           : "Review"}
                       </Button>

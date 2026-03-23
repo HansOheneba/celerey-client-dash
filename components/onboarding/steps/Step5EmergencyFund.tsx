@@ -1,7 +1,6 @@
 "use client";
 
-// components/onboarding/steps/Step5EmergencyFund.tsx
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -16,20 +15,6 @@ import { ArrowRight, Lightbulb } from "lucide-react";
 import { formatCurrencyAmount, getCurrencyPrefix } from "@/lib/utils";
 import { useOnboardingStore } from "@/store/onboardingStore";
 
-function getSavingsHeading(mode?: "solo" | "partner" | "family") {
-  if (mode === "partner") return "Your household safety net";
-  if (mode === "family") return "Your family’s safety net";
-  return "Your safety net";
-}
-
-function getSavingsSubheading(mode?: "solo" | "partner" | "family") {
-  if (mode === "partner")
-    return "How much does your household currently have set aside as an emergency fund?";
-  if (mode === "family")
-    return "How much does your family currently have set aside as an emergency fund?";
-  return "How much do you currently have set aside as an emergency fund?";
-}
-
 interface Step5EmergencyFundProps {
   defaultValues?: EmergencyFundData | null;
   onComplete: (data: EmergencyFundData) => void;
@@ -41,6 +26,10 @@ export function Step5EmergencyFund({
 }: Step5EmergencyFundProps) {
   const store = useOnboardingStore();
   const preferredCurrency = store.identity?.preferred_currency || "USD";
+
+  const [targetMonths, setTargetMonths] = useState<number>(
+    defaultValues?.target_months ?? 6,
+  );
 
   const {
     control,
@@ -58,64 +47,93 @@ export function Step5EmergencyFund({
   const balanceNum = Number(balance) || 0;
 
   function onSubmit(data: EmergencyFundFormValues) {
-    onComplete({ cash_balance: data.cash_balance as number });
+    onComplete({
+      cash_balance: data.cash_balance as number,
+      target_months: targetMonths,
+    });
   }
 
   const isZero = balanceNum === 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
-          {getSavingsHeading(store.identity?.account_mode)}
+      <div className="max-w-xl">
+        <h1 className="text-3xl font-semibold text-slate-900">
+          Your emergency fund
         </h1>
-        <p className="mt-2 text-slate-500 text-sm sm:text-base">
-          {getSavingsSubheading(store.identity?.account_mode)}
+        <p className="mt-3 text-slate-500">
+          This is the money you can access quickly if something unexpected
+          happens. Think job loss, medical bills, or urgent expenses.
         </p>
       </div>
 
-      {/* Tip card */}
-      <div className="flex items-start gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100">
+      {/* Tip */}
+      <div className="flex gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100">
           <Lightbulb className="h-4 w-4 text-primary" />
         </div>
         <div>
-          <p className="text-sm font-medium text-primary">Advisor tip</p>
-          <p className="mt-0.5 text-sm text-primary">
-            Most advisors recommend holding{" "}
-            <strong>3–6 months of living expenses</strong> as an emergency fund.
-            This protects you from unexpected events without derailing your
-            goals.
+          <p className="text-sm font-medium text-primary">Quick guide</p>
+          <p className="text-sm text-primary mt-1">
+            A good target is 3 to 6 months of your living expenses. This gives
+            you breathing room without relying on debt.
           </p>
         </div>
       </div>
 
-      {/* Input card */}
-      <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm space-y-4">
-        <div className="flex items-center gap-3">
-          <div>
-            <p className="text-sm font-semibold text-slate-800">
-              Emergency fund balance
-            </p>
-            <p className="text-xs text-slate-500">
-              Include savings accounts, cash, and liquid assets only
-            </p>
-          </div>
+      {/* Coverage */}
+      <div className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+            Coverage goal
+          </p>
+          <p className="text-sm text-slate-500 mt-1">
+            How many months of your basic expenses should this fund cover?
+          </p>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="cash-balance">Current balance</Label>
+        <div className="flex gap-3">
+          {[3, 6, 9, 12].map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setTargetMonths(m)}
+              className={`flex-1 rounded-xl border py-2.5 text-sm font-medium ${
+                targetMonths === m
+                  ? "border-primary bg-primary text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-primary/50"
+              }`}
+            >
+              {m} months
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Input */}
+      <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">
+            How much do you currently have saved?
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            Include cash, savings accounts, and money you can access
+            immediately. Do not include investments or locked funds.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Current emergency fund</Label>
           <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
               {getCurrencyPrefix(preferredCurrency)}
             </span>
             <CurrencyNumberInputField
               control={control}
               name="cash_balance"
-              id="cash-balance"
               placeholder="0"
-              className="pl-12 text-lg h-12"
+              className="pl-12 h-12 text-lg"
             />
           </div>
           {errors.cash_balance && (
@@ -126,36 +144,34 @@ export function Step5EmergencyFund({
         </div>
       </div>
 
-      {/* Contextual message */}
-      {isZero && (
+      {/* Feedback */}
+      {isZero ? (
         <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
           <p className="text-sm text-amber-800 font-medium">
-            No emergency fund yet? That&apos;s completely fine.
+            No emergency fund yet? That is okay.
           </p>
           <p className="text-xs text-amber-700 mt-1">
-            Building one is often the first goal we&apos;ll work on together.
-            You&apos;re already taking the right step by tracking it.
+            This is usually the first thing to build. We will guide you step by
+            step.
           </p>
         </div>
-      )}
-
-      {!isZero && balanceNum > 0 && (
+      ) : (
         <div className="rounded-xl bg-green-50 border border-green-100 px-4 py-3">
           <p className="text-sm text-green-800 font-medium">
-            Great start; you already have a cushion!
+            Good start, you already have a buffer.
           </p>
           <p className="text-xs text-green-700 mt-1">
-            {formatCurrencyAmount(balanceNum, preferredCurrency)} saved. A
-            Celerey Advisor will help you determine if this covers your target
-            months of expenses.
+            {formatCurrencyAmount(balanceNum, preferredCurrency)} saved so far.
+            We will help you align this with your target.
           </p>
         </div>
       )}
 
+      {/* CTA */}
       <Button
         type="button"
         onClick={handleSubmit(onSubmit)}
-        className="w-full gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl"
+        className="w-full h-12 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white text-base rounded-xl"
       >
         Continue
         <ArrowRight className="h-4 w-4" />

@@ -29,8 +29,8 @@ import {
   supportsMarket,
   symbolsForType,
   isSymbolHeld,
-  mockHoldings,
 } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 // ── Form state ──────────────────────────────────────────────────
 export type HoldingFormValues = {
@@ -85,6 +85,7 @@ export function HoldingForm({
 }: HoldingFormProps) {
   const router = useRouter();
   const isEditing = !!editingHolding;
+  const storeHoldings = useFinancialStore((s) => s.holdings);
 
   // ── Initialise form ─────────────────────────────────────────
   const [form, setForm] = React.useState<HoldingFormValues>(() => {
@@ -137,8 +138,8 @@ export function HoldingForm({
   // Duplicate detection
   const isDuplicate = React.useMemo(() => {
     if (!form.symbol) return false;
-    return isSymbolHeld(form.symbol, mockHoldings, editingHolding?.holding_id);
-  }, [form.symbol, editingHolding?.holding_id]);
+    return isSymbolHeld(form.symbol, storeHoldings, editingHolding?.holding_id);
+  }, [form.symbol, editingHolding?.holding_id, storeHoldings]);
 
   // ── Updater ─────────────────────────────────────────────────
   function update<K extends keyof HoldingFormValues>(
@@ -395,7 +396,7 @@ export function HoldingForm({
                             const selected = form.symbol === s.symbol;
                             const alreadyOwned = isSymbolHeld(
                               s.symbol,
-                              mockHoldings,
+                              storeHoldings,
                               editingHolding?.holding_id,
                             );
                             return (

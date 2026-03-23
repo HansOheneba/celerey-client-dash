@@ -1,7 +1,7 @@
-import { goalsData } from "@/lib/client-data";
+import type { Goal, Scenario } from "@/lib/client-data";
 
-export type Goal = (typeof goalsData.goals)[number];
-export type Scenario = (typeof goalsData.scenarios)[number];
+export type { Goal };
+export type { Scenario };
 export type ScenarioKey = Scenario["key"];
 export type FilterType = "all" | "active" | "completed";
 

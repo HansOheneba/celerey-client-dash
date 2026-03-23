@@ -10,13 +10,8 @@ import {
 } from "@/components/dashboard/dash-card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import {
-  mockProperties,
-  mockLiabilities,
-  mockEmergencyFund,
-  mockPortfolioPerformance,
-  propertyEquity,
-} from "@/lib/client-data";
+import { propertyEquity } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 export type TabKey = "buy_vs_rent" | "refinancing" | "portfolio_impact";
 
@@ -37,10 +32,12 @@ const MARKET_RATE_PCT = 5.75;
 // ── Buy vs Rent ───────────────────────────────────────────────────────────────
 
 function BuyVsRent() {
-  const primary = mockProperties.find(
+  const properties = useFinancialStore((s) => s.propertyAssets);
+  const storeLiabilities = useFinancialStore((s) => s.liabilities);
+  const primary = properties.find(
     (p) => p.is_primary && p.is_active && p.country !== "",
   );
-  const mortgage = mockLiabilities.find((l) => l.id === "liab-mort-1");
+  const mortgage = storeLiabilities.find((l) => l.type === "mortgage");
 
   if (!primary || !mortgage) return null;
 
@@ -103,7 +100,8 @@ function BuyVsRent() {
 // ── Refinancing ───────────────────────────────────────────────────────────────
 
 function RefinancingOptions() {
-  const mortgages = mockLiabilities.filter((l) => l.type === "mortgage");
+  const storeLiabilities = useFinancialStore((s) => s.liabilities);
+  const mortgages = storeLiabilities.filter((l) => l.type === "mortgage");
 
   return (
     <div className="space-y-3">
@@ -150,12 +148,18 @@ function RefinancingOptions() {
 // ── Portfolio Impact ──────────────────────────────────────────────────────────
 
 function PortfolioImpact() {
-  const active = mockProperties.filter((p) => p.is_active && p.country !== "");
+  const properties = useFinancialStore((s) => s.propertyAssets);
+  const storeLiabilities = useFinancialStore((s) => s.liabilities);
+  const storePortfolioPerformance = useFinancialStore(
+    (s) => s.portfolioPerformance,
+  );
+  const storeEmergencyFund = useFinancialStore((s) => s.emergencyFund);
+  const active = properties.filter((p) => p.is_active && p.country !== "");
   const totalMarketValue = active.reduce((s, p) => s + p.market_value, 0);
   const totalEquity = active.reduce((s, p) => s + propertyEquity(p), 0);
-  const investmentValue = mockPortfolioPerformance.at(-1)?.value ?? 0;
-  const cash = mockEmergencyFund.currentCashBalance;
-  const otherLiabilities = mockLiabilities
+  const investmentValue = storePortfolioPerformance.at(-1)?.value ?? 0;
+  const cash = storeEmergencyFund.currentCashBalance;
+  const otherLiabilities = storeLiabilities
     .filter((l) => l.type !== "mortgage")
     .reduce((s, l) => s + l.balance, 0);
   const totalNetWorth = totalEquity + investmentValue + cash - otherLiabilities;

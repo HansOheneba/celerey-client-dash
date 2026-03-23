@@ -66,13 +66,13 @@ import {
 } from "@/components/ui/tooltip";
 
 import {
-  mockRetirementConfig,
   selectRetirementOutputs,
   formatCurrency,
   getUserAge,
   mockUser,
   type RetirementConfig,
 } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 const NAVY = "#1e3a5f";
@@ -80,6 +80,52 @@ const BLUE = "#7eb8e8";
 const GREEN = "#10b981";
 const AMBER = "#f59e0b";
 const RED = "#ef4444";
+
+// ─── Account mode helpers ─────────────────────────────────────────────────────
+
+type AccountMode = "solo" | "partner" | "family";
+
+function getRetirementCopy(mode: AccountMode) {
+  return {
+    timelineLabel:
+      mode === "solo" ? "Retirement Age" : "Target Retirement Year",
+    timelineTip:
+      mode === "solo"
+        ? "The age at which you plan to stop working."
+        : "The year you and your household are aiming to retire by.",
+    timelineValue: (config: RetirementConfig, currentAge: number) =>
+      mode === "solo"
+        ? `${config.retirementAge}`
+        : `${new Date().getFullYear() + (config.retirementAge - currentAge)}`,
+    planningSubline: (config: RetirementConfig, currentAge: number) =>
+      mode === "solo"
+        ? `Planning for age ${config.retirementAge} · ${config.retirementAge - currentAge} years away`
+        : `Planning for ${new Date().getFullYear() + (config.retirementAge - currentAge)} · ${config.retirementAge - currentAge} years away`,
+    currentAgeLabel: mode === "solo" ? "Current Age" : "Years to Retirement",
+    currentAgeValue: (currentAge: number, yearsToRetirement: number) =>
+      mode === "solo" ? `${currentAge}` : `${yearsToRetirement} years`,
+    projectedAtLabel: (config: RetirementConfig, currentAge: number) =>
+      mode === "solo"
+        ? `At age ${config.retirementAge}`
+        : `By ${new Date().getFullYear() + (config.retirementAge - currentAge)}`,
+    desiredIncomeLabel:
+      mode === "partner"
+        ? "Combined desired monthly income in retirement"
+        : mode === "family"
+          ? "Total desired monthly household income in retirement"
+          : "Desired monthly income in retirement",
+    monthlySavingsLabel:
+      mode === "solo"
+        ? "Monthly retirement savings"
+        : "Combined monthly retirement savings",
+    simulatorRetirementLabel:
+      mode === "solo" ? "Retirement Age" : "Target Retirement Year",
+    simulatorRetirementTip:
+      mode === "solo"
+        ? "Slide to see how retiring earlier or later changes your projected balance."
+        : "Slide to see how your target retirement year affects your projected balance.",
+  };
+}
 
 // ─── Projection helper ────────────────────────────────────────────────────────
 function futureValue(
@@ -97,7 +143,7 @@ function futureValue(
 
 function buildProjectionCurve(config: RetirementConfig) {
   const points = [];
-  const currentAge = getUserAge(mockUser);
+  const currentAge = getUserAge(useFinancialStore.getState().user ?? mockUser);
   const yearsToRetirement = config.retirementAge - currentAge;
   const step = Math.max(1, Math.ceil(yearsToRetirement / 20));
 
@@ -115,7 +161,6 @@ function buildProjectionCurve(config: RetirementConfig) {
     });
   }
 
-  // Always include the final retirement age point
   const finalBalance = futureValue(
     config.currentInvested + config.existingPensionBalance,
     config.monthlySavings + config.monthlyPensionContribution,
@@ -219,16 +264,33 @@ function EditRetirementDialog({
   onClose,
   config,
   onSave,
+  accountMode,
+  currentAge,
 }: {
   open: boolean;
   onClose: () => void;
   config: RetirementConfig;
   onSave: (c: RetirementConfig) => void;
+  accountMode: AccountMode;
+  currentAge: number;
 }) {
   const [draft, setDraft] = React.useState<RetirementConfig>(config);
+  // For non-solo: store target year in local state, derive retirementAge on save
+  const [targetYear, setTargetYear] = React.useState<number>(
+    new Date().getFullYear() + (config.retirementAge - currentAge),
+  );
+
   React.useEffect(() => {
-    if (open) setDraft(config);
-  }, [open, config]);
+    if (open) {
+      setDraft(config);
+      setTargetYear(
+        new Date().getFullYear() + (config.retirementAge - currentAge),
+      );
+    }
+  }, [open, config, currentAge]);
+
+  const isSolo = accountMode === "solo";
+  const copy = getRetirementCopy(accountMode);
 
   const MONEY_KEYS = new Set([
     "currentInvested",
@@ -253,6 +315,20 @@ function EditRetirementDialog({
     };
   }
 
+  function handleSave() {
+    let finalDraft = { ...draft };
+    if (!isSolo) {
+      // Convert target year back to retirementAge
+      const derivedAge = currentAge + (targetYear - new Date().getFullYear());
+      finalDraft = {
+        ...finalDraft,
+        retirementAge: Math.max(currentAge + 1, derivedAge),
+      };
+    }
+    onSave(finalDraft);
+    onClose();
+  }
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -264,31 +340,44 @@ function EditRetirementDialog({
         </DialogHeader>
 
         <div className="space-y-5 py-2">
-          {/* Age & Timeline */}
+          {/* Timeline */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
               Timeline
             </p>
             <div className="grid grid-cols-2 gap-3">
-              {[
-                {
-                  key: "retirementAge" as const,
-                  label: "Retirement Age",
-                  tip: "The age at which you plan to stop working.",
-                },
-                {
-                  key: "lifeExpectancy" as const,
-                  label: "Life Expectancy",
-                  tip: "Used to calculate how long your savings need to last.",
-                },
-              ].map(({ key, label, tip }) => (
-                <div key={key} className="space-y-1.5">
-                  <Label className="text-xs flex items-center gap-1.5">
-                    {label} <InfoTip content={tip} />
-                  </Label>
-                  <Input type="text" inputMode="numeric" {...field(key)} />
-                </div>
-              ))}
+              {/* Retirement age (solo) or target year (partner/family) */}
+              <div className="space-y-1.5">
+                <Label className="text-xs flex items-center gap-1.5">
+                  {copy.timelineLabel} <InfoTip content={copy.timelineTip} />
+                </Label>
+                {isSolo ? (
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    {...field("retirementAge")}
+                  />
+                ) : (
+                  <Input
+                    type="number"
+                    min={new Date().getFullYear() + 1}
+                    max={2100}
+                    value={targetYear}
+                    onChange={(e) => setTargetYear(Number(e.target.value))}
+                  />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs flex items-center gap-1.5">
+                  Life Expectancy{" "}
+                  <InfoTip content="Used to calculate how long your savings need to last." />
+                </Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  {...field("lifeExpectancy")}
+                />
+              </div>
             </div>
           </div>
 
@@ -343,7 +432,7 @@ function EditRetirementDialog({
               {[
                 {
                   key: "monthlySavings" as const,
-                  label: "Investment Savings",
+                  label: copy.monthlySavingsLabel,
                   tip: "Amount you invest each month from your income.",
                 },
                 {
@@ -398,7 +487,7 @@ function EditRetirementDialog({
                 },
                 {
                   key: "desiredMonthlyIncome" as const,
-                  label: "Desired Income/mo",
+                  label: copy.desiredIncomeLabel,
                   tip: "How much monthly income you want in retirement (today's dollars).",
                 },
               ].map(({ key, label, tip }) => (
@@ -430,14 +519,7 @@ function EditRetirementDialog({
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            onClick={() => {
-              onSave(draft);
-              onClose();
-            }}
-          >
-            Save changes
-          </Button>
+          <Button onClick={handleSave}>Save changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -448,10 +530,16 @@ function EditRetirementDialog({
 function SimulatorPanel({
   base,
   currentAge,
+  accountMode,
 }: {
   base: RetirementConfig;
   currentAge: number;
+  accountMode: AccountMode;
 }) {
+  const copy = getRetirementCopy(accountMode);
+  const isSolo = accountMode === "solo";
+  const currentYear = new Date().getFullYear();
+
   const [simRetirementAge, setSimRetirementAge] = React.useState(
     base.retirementAge,
   );
@@ -473,11 +561,9 @@ function SimulatorPanel({
 
   const baseOutputs = selectRetirementOutputs(base);
   const simOutputs = selectRetirementOutputs(simConfig);
-
   const baseProjection = buildProjectionCurve(base);
   const simProjection = buildProjectionCurve(simConfig);
 
-  // Merge for dual-line chart
   const maxLen = Math.max(baseProjection.length, simProjection.length);
   const merged = Array.from({ length: maxLen }, (_, i) => ({
     age: (baseProjection[i] ?? simProjection[i]).age,
@@ -497,11 +583,15 @@ function SimulatorPanel({
   const incomeDelta =
     simOutputs.sustainableMonthlyIncome - baseOutputs.sustainableMonthlyIncome;
 
+  // For display: convert retirementAge to year for non-solo
+  const simDisplayValue = isSolo
+    ? `Age ${simRetirementAge}`
+    : `${currentYear + (simRetirementAge - currentAge)}`;
+
   return (
     <div className="space-y-6">
-      {/* Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Retirement Age */}
+        {/* Retirement Age / Target Year */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-xs flex items-center gap-1.5 font-semibold">
@@ -509,11 +599,11 @@ function SimulatorPanel({
                 icon={faUserClock}
                 className="h-3.5 w-3.5 text-amber-500"
               />
-              Retirement Age
-              <InfoTip content="Slide to see how retiring earlier or later changes your projected balance." />
+              {copy.simulatorRetirementLabel}
+              <InfoTip content={copy.simulatorRetirementTip} />
             </Label>
             <span className="text-sm font-bold tabular-nums">
-              {simRetirementAge}
+              {simDisplayValue}
             </span>
           </div>
           <Slider
@@ -525,8 +615,17 @@ function SimulatorPanel({
             className="w-full"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Age {currentAge + 1}</span>
-            <span>Age 80</span>
+            {isSolo ? (
+              <>
+                <span>Age {currentAge + 1}</span>
+                <span>Age 80</span>
+              </>
+            ) : (
+              <>
+                <span>{currentYear + 1}</span>
+                <span>{currentYear + (80 - currentAge)}</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -538,7 +637,7 @@ function SimulatorPanel({
                 icon={faPiggyBank}
                 className="h-3.5 w-3.5 text-emerald-500"
               />
-              Monthly Savings
+              {copy.monthlySavingsLabel}
               <InfoTip content="Total monthly contribution to investments and pension combined." />
             </Label>
             <span className="text-sm font-bold tabular-nums">
@@ -594,7 +693,7 @@ function SimulatorPanel({
                 icon={faSackDollar}
                 className="h-3.5 w-3.5 text-violet-500"
               />
-              Desired Monthly Income
+              {copy.desiredIncomeLabel}
               <InfoTip content="How much monthly income you want in retirement in today's dollars." />
             </Label>
             <span className="text-sm font-bold tabular-nums">
@@ -639,9 +738,13 @@ function SimulatorPanel({
                 delta: incomeDelta,
               },
               {
-                label: "Years to Retire",
-                base: `${baseOutputs.yearsToRetirement}yr`,
-                sim: `${simOutputs.yearsToRetirement}yr`,
+                label: isSolo ? "Years to Retire" : "Target Year",
+                base: isSolo
+                  ? `${baseOutputs.yearsToRetirement}yr`
+                  : `${currentYear + baseOutputs.yearsToRetirement}`,
+                sim: isSolo
+                  ? `${simOutputs.yearsToRetirement}yr`
+                  : `${currentYear + simOutputs.yearsToRetirement}`,
                 delta:
                   simOutputs.yearsToRetirement - baseOutputs.yearsToRetirement,
                 invertDelta: true,
@@ -730,7 +833,9 @@ function SimulatorPanel({
               axisLine={false}
               tickMargin={8}
               tick={{ fontSize: 11 }}
-              tickFormatter={(v) => `${v}`}
+              tickFormatter={(v) =>
+                isSolo ? `${v}` : `${currentYear + (v - currentAge)}`
+              }
             />
             <YAxis
               tickLine={false}
@@ -764,7 +869,6 @@ function SimulatorPanel({
         </ResponsiveContainer>
       </div>
 
-      {/* Reset */}
       {changed && (
         <div className="flex justify-end">
           <Button
@@ -790,10 +894,17 @@ function SimulatorPanel({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function RetirementPage() {
   const router = useRouter();
-  const currentAge = getUserAge(mockUser);
+  const storeUser = useFinancialStore((s) => s.user);
+  const accountMode: AccountMode =
+    (storeUser?.account_mode as AccountMode) ?? "solo";
+  const isSolo = accountMode === "solo";
+  const currentAge = getUserAge(storeUser ?? mockUser);
+  const currentYear = new Date().getFullYear();
+  const copy = getRetirementCopy(accountMode);
 
-  const [config, setConfig] =
-    React.useState<RetirementConfig>(mockRetirementConfig);
+  const [config, setConfig] = React.useState<RetirementConfig>(
+    () => useFinancialStore.getState().retirement,
+  );
   const [editOpen, setEditOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<
     "overview" | "simulator" | "insights"
@@ -820,7 +931,9 @@ export default function RetirementPage() {
     config.monthlySavings + config.monthlyPensionContribution;
   const totalInvested = config.currentInvested + config.existingPensionBalance;
 
-  // Insights
+  // Derived target year for non-solo display
+  const targetYear = currentYear + (config.retirementAge - currentAge);
+
   const insights = React.useMemo(() => {
     const list: {
       level: "good" | "warning" | "danger" | "info";
@@ -832,15 +945,17 @@ export default function RetirementPage() {
     if (onTrack) {
       list.push({
         level: "good",
-        title: "You're on track to retire comfortably",
-        body: `At your current savings rate of ${formatCurrency(totalMonthly)}/mo, you're projected to reach ${formatCurrency(outputs.projectedBalanceAtRetirement)} by age ${config.retirementAge} — enough to sustain ${formatCurrency(outputs.sustainableMonthlyIncome)}/mo.`,
+        title: isSolo
+          ? "You're on track to retire comfortably"
+          : "Your household is on track to retire comfortably",
+        body: `At ${isSolo ? "your" : "your combined"} current savings rate of ${formatCurrency(totalMonthly)}/mo, ${isSolo ? "you're" : "you're both"} projected to reach ${formatCurrency(outputs.projectedBalanceAtRetirement)} by ${isSolo ? `age ${config.retirementAge}` : targetYear} — enough to sustain ${formatCurrency(outputs.sustainableMonthlyIncome)}/mo.`,
         icon: faCircleCheck,
       });
     } else {
       list.push({
         level: "danger",
         title: `Income shortfall of ${formatCurrency(incomeGapAbs)}/mo`,
-        body: `Your projected sustainable income of ${formatCurrency(outputs.sustainableMonthlyIncome)}/mo falls short of your desired ${formatCurrency(config.desiredMonthlyIncome)}/mo. Increasing contributions or adjusting your retirement age can close this gap.`,
+        body: `${isSolo ? "Your" : "Your household's"} projected sustainable income of ${formatCurrency(outputs.sustainableMonthlyIncome)}/mo falls short of ${isSolo ? "your" : "your combined"} desired ${formatCurrency(config.desiredMonthlyIncome)}/mo. Increasing contributions or adjusting ${isSolo ? "your retirement age" : "your target retirement year"} can close this gap.`,
         icon: faTriangleExclamation,
       });
     }
@@ -853,7 +968,7 @@ export default function RetirementPage() {
       list.push({
         level: "info",
         title: "Heavy pension reliance",
-        body: `${Math.round((config.monthlyPensionContribution / totalMonthly) * 100)}% of your contributions are going to pension. Consider diversifying into personal investments for more flexibility in retirement.`,
+        body: `${Math.round((config.monthlyPensionContribution / totalMonthly) * 100)}% of ${isSolo ? "your" : "your combined"} contributions are going to pension. Consider diversifying into personal investments for more flexibility in retirement.`,
         icon: faBuildingColumns,
       });
     }
@@ -862,7 +977,7 @@ export default function RetirementPage() {
       list.push({
         level: "warning",
         title: "Approaching retirement",
-        body: `With only ${outputs.yearsToRetirement} years to go, consider shifting to more conservative allocations to protect your portfolio from market volatility close to retirement.`,
+        body: `With only ${outputs.yearsToRetirement} years to go, consider shifting to more conservative allocations to protect ${isSolo ? "your" : "your household's"} portfolio from market volatility close to retirement.`,
         icon: faHourglassHalf,
       });
     }
@@ -880,47 +995,43 @@ export default function RetirementPage() {
       list.push({
         level: "info",
         title: "Halfway there",
-        body: `You've accumulated ${progressPct.toFixed(0)}% of your projected retirement balance. Maintaining current contributions keeps you on schedule.`,
+        body: `${isSolo ? "You've" : "Your household has"} accumulated ${progressPct.toFixed(0)}% of ${isSolo ? "your" : "the"} projected retirement balance. Maintaining current contributions keeps you on schedule.`,
         icon: faLightbulb,
       });
     }
 
     return list.slice(0, 4);
-  }, [config, outputs, onTrack, incomeGapAbs, totalMonthly, progressPct]);
+  }, [
+    config,
+    outputs,
+    onTrack,
+    incomeGapAbs,
+    totalMonthly,
+    progressPct,
+    isSolo,
+    targetYear,
+  ]);
 
   const kpiItems = [
     {
       label: "Projected Balance",
       value: formatCurrency(outputs.projectedBalanceAtRetirement),
-      subline: `At age ${config.retirementAge}`,
+      subline: copy.projectedAtLabel(config, currentAge),
       tone: onTrack ? ("good" as const) : ("warning" as const),
-      // icon: (
-      //   <FontAwesomeIcon
-      //     icon={faSackDollar}
-      //     className="h-4 w-4 text-emerald-500"
-      //   />
-      // ),
     },
     {
       label: "Sustainable Income",
       value: `${formatCurrency(outputs.sustainableMonthlyIncome)}/mo`,
       subline: `Based on ${config.safeWithdrawalRatePct}% withdrawal rate`,
       tone: onTrack ? ("good" as const) : ("danger" as const),
-      // icon: (
-      //   <FontAwesomeIcon icon={faCoins} className="h-4 w-4 text-amber-500" />
-      // ),
     },
     {
-      label: "Years to Retirement",
-      value: `${outputs.yearsToRetirement} years`,
-      subline: `Retire at age ${config.retirementAge}`,
+      label: isSolo ? "Years to Retirement" : "Target Retirement",
+      value: isSolo ? `${outputs.yearsToRetirement} years` : `${targetYear}`,
+      subline: isSolo
+        ? `Retire at age ${config.retirementAge}`
+        : `${outputs.yearsToRetirement} years away`,
       tone: "neutral" as const,
-      // icon: (
-      //   <FontAwesomeIcon
-      //     icon={faHourglassHalf}
-      //     className="h-4 w-4 text-blue-500"
-      //   />
-      // ),
     },
     {
       label: "Income Gap",
@@ -930,12 +1041,6 @@ export default function RetirementPage() {
           : `${formatCurrency(incomeGapAbs)} surplus`,
       subline: `Target: ${formatCurrency(config.desiredMonthlyIncome)}/mo`,
       tone: onTrack ? ("good" as const) : ("danger" as const),
-      // icon: (
-      //   <FontAwesomeIcon
-      //     icon={onTrack ? faArrowTrendUp : faArrowTrendDown}
-      //     className={`h-4 w-4 ${onTrack ? "text-emerald-500" : "text-red-500"}`}
-      //   />
-      // ),
     },
   ];
 
@@ -973,14 +1078,12 @@ export default function RetirementPage() {
           >
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-           
                 <div>
                   <h1 className="text-2xl font-semibold tracking-tight">
                     Retirement
                   </h1>
                   <p className="text-sm text-muted-foreground">
-                    Planning for age {config.retirementAge} ·{" "}
-                    {outputs.yearsToRetirement} years away
+                    {copy.planningSubline(config, currentAge)}
                   </p>
                 </div>
               </div>
@@ -1059,8 +1162,10 @@ export default function RetirementPage() {
                             Portfolio growth to retirement
                           </CardTitle>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Age {currentAge} → {config.retirementAge} ·{" "}
-                            {config.expectedReturnPct}% annual return assumed
+                            {isSolo
+                              ? `Age ${currentAge} → ${config.retirementAge}`
+                              : `${currentYear} → ${targetYear}`}{" "}
+                            · {config.expectedReturnPct}% annual return assumed
                           </p>
                         </div>
                         <InfoTip content="Projection compounds your current balance plus monthly contributions at the assumed annual return rate. This is a model, not a guarantee." />
@@ -1104,7 +1209,11 @@ export default function RetirementPage() {
                             axisLine={false}
                             tickMargin={8}
                             tick={{ fontSize: 11 }}
-                            tickFormatter={(v) => `Age ${v}`}
+                            tickFormatter={(v) =>
+                              isSolo
+                                ? `Age ${v}`
+                                : `${currentYear + (v - currentAge)}`
+                            }
                           />
                           <YAxis
                             tickLine={false}
@@ -1122,7 +1231,7 @@ export default function RetirementPage() {
                             stroke={AMBER}
                             strokeDasharray="4 3"
                             label={{
-                              value: "Retire",
+                              value: isSolo ? "Retire" : `${targetYear}`,
                               position: "top",
                               fontSize: 10,
                               fill: AMBER,
@@ -1144,7 +1253,6 @@ export default function RetirementPage() {
 
                 {/* Progress + Details grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Progress card */}
                   <Card className="lg:col-span-1">
                     <CardContent className="pt-5 space-y-4">
                       <div className="flex items-center gap-2">
@@ -1179,7 +1287,7 @@ export default function RetirementPage() {
                       <StatRow
                         label="Current invested"
                         value={formatCurrency(config.currentInvested)}
-                        tip="Value of your personal investment portfolio today."
+                        tip="Value of your current investment portfolio today."
                       />
                       <StatRow
                         label="Pension balance"
@@ -1187,7 +1295,7 @@ export default function RetirementPage() {
                         tip="Current balance in your pension or 401k."
                       />
                       <StatRow
-                        label="Monthly contributions"
+                        label={copy.monthlySavingsLabel}
                         value={formatCurrency(totalMonthly)}
                         tip="Combined monthly amount going into investments and pension."
                       />
@@ -1199,7 +1307,6 @@ export default function RetirementPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Income & assumptions */}
                   <Card className="lg:col-span-2">
                     <CardContent className="pt-5 space-y-4">
                       <div className="grid grid-cols-2 gap-6">
@@ -1208,9 +1315,9 @@ export default function RetirementPage() {
                             Retirement income
                           </p>
                           <StatRow
-                            label="Desired income"
+                            label={copy.desiredIncomeLabel}
                             value={`${formatCurrency(config.desiredMonthlyIncome)}/mo`}
-                            tip="Your target monthly income in retirement, in today's dollars."
+                            tip={`${isSolo ? "Your" : "Your combined household"} target monthly income in retirement, in today's dollars.`}
                           />
                           <StatRow
                             label="Sustainable income"
@@ -1223,7 +1330,7 @@ export default function RetirementPage() {
                           <StatRow
                             label="Inflation-adjusted"
                             value={`${formatCurrency(outputs.inflationAdjustedSustainableMonthlyIncome)}/mo`}
-                            tip="Your sustainable income adjusted for inflation over the years to retirement. This is the real purchasing power."
+                            tip="Your sustainable income adjusted for inflation over the years to retirement."
                           />
                           <StatRow
                             label={
@@ -1232,7 +1339,7 @@ export default function RetirementPage() {
                                 : "Income surplus"
                             }
                             value={formatCurrency(incomeGapAbs) + "/mo"}
-                            tip="Difference between your desired income and what your portfolio can sustainably provide."
+                            tip={`Difference between ${isSolo ? "your" : "your combined"} desired income and what your portfolio can sustainably provide.`}
                             valueClass={
                               onTrack ? "text-emerald-600" : "text-red-500"
                             }
@@ -1245,7 +1352,7 @@ export default function RetirementPage() {
                           <StatRow
                             label="Expected return"
                             value={`${config.expectedReturnPct}%/yr`}
-                            tip="Annual investment return assumed for the projection. Historical diversified portfolio average is ~7%."
+                            tip="Annual investment return assumed for the projection."
                           />
                           <StatRow
                             label="Inflation rate"
@@ -1255,7 +1362,7 @@ export default function RetirementPage() {
                           <StatRow
                             label="Safe withdrawal"
                             value={`${config.safeWithdrawalRatePct}%/yr`}
-                            tip="The '4% rule' — percentage of portfolio withdrawn each year. Studies show this sustains a 30-year retirement."
+                            tip="The '4% rule' — percentage of portfolio withdrawn each year."
                           />
                           <StatRow
                             label="Life expectancy"
@@ -1272,7 +1379,6 @@ export default function RetirementPage() {
 
                       <Separator />
 
-                      {/* On-track summary banner */}
                       <div
                         className={`rounded-lg px-4 py-3 flex items-start gap-3 ${
                           onTrack
@@ -1289,13 +1395,13 @@ export default function RetirementPage() {
                             className={`text-xs font-semibold ${onTrack ? "text-emerald-700 dark:text-emerald-300" : "text-red-600 dark:text-red-400"}`}
                           >
                             {onTrack
-                              ? `You're on track — projected surplus of ${formatCurrency(incomeGapAbs)}/mo`
+                              ? `${isSolo ? "You're" : "You're both"} on track — projected surplus of ${formatCurrency(incomeGapAbs)}/mo`
                               : `Shortfall of ${formatCurrency(incomeGapAbs)}/mo at current trajectory`}
                           </p>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {onTrack
-                              ? `Your ${formatCurrency(totalMonthly)}/mo in contributions should grow to ${formatCurrency(outputs.projectedBalanceAtRetirement)} by age ${config.retirementAge}.`
-                              : `Try increasing monthly contributions or adjusting your retirement age in the Simulator tab.`}
+                              ? `${isSolo ? "Your" : "Your combined"} ${formatCurrency(totalMonthly)}/mo in contributions should grow to ${formatCurrency(outputs.projectedBalanceAtRetirement)} by ${isSolo ? `age ${config.retirementAge}` : targetYear}.`
+                              : `Try increasing ${isSolo ? "your" : "your combined"} monthly contributions or adjusting ${isSolo ? "your retirement age" : "your target retirement year"} in the Simulator tab.`}
                           </p>
                         </div>
                       </div>
@@ -1326,14 +1432,19 @@ export default function RetirementPage() {
                           Adjust the levers
                         </CardTitle>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Slide to simulate changes — see the impact on your
-                          retirement balance in real time
+                          Slide to simulate changes — see the impact on{" "}
+                          {isSolo ? "your" : "your household's"} retirement
+                          balance in real time
                         </p>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-2">
-                    <SimulatorPanel base={config} currentAge={currentAge} />
+                    <SimulatorPanel
+                      base={config}
+                      currentAge={currentAge}
+                      accountMode={accountMode}
+                    />
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1408,22 +1519,24 @@ export default function RetirementPage() {
                   </div>
                 </div>
 
-                {/* Key numbers recap */}
                 <div>
                   <SectionLabel>Key numbers at a glance</SectionLabel>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
                       {
                         icon: faCalendarDays,
-                        label: "Current Age",
-                        value: `${currentAge}`,
+                        label: copy.currentAgeLabel,
+                        value: copy.currentAgeValue(
+                          currentAge,
+                          outputs.yearsToRetirement,
+                        ),
                         color: "text-blue-500",
                         bg: "bg-blue-500/10",
                       },
                       {
                         icon: faUserClock,
-                        label: "Retirement Age",
-                        value: `${config.retirementAge}`,
+                        label: copy.timelineLabel,
+                        value: copy.timelineValue(config, currentAge),
                         color: "text-amber-500",
                         bg: "bg-amber-500/10",
                       },
@@ -1440,9 +1553,7 @@ export default function RetirementPage() {
                         value: formatCurrency(
                           outputs.projectedBalanceAtRetirement,
                         ),
-                        color: NAVY.startsWith("#")
-                          ? undefined
-                          : "text-primary",
+                        color: undefined,
                         bg: "bg-primary/10",
                       },
                     ].map((item, i) => (
@@ -1459,7 +1570,7 @@ export default function RetirementPage() {
                             >
                               <FontAwesomeIcon
                                 icon={item.icon}
-                                className={`h-4 w-4 ${item.color}`}
+                                className={`h-4 w-4 ${item.color ?? "text-primary"}`}
                               />
                             </div>
                             <p className="text-xs text-muted-foreground">
@@ -1475,7 +1586,6 @@ export default function RetirementPage() {
                   </div>
                 </div>
 
-                {/* Simulator CTA */}
                 <Card className="border-dashed">
                   <CardContent className="pt-5">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -1491,8 +1601,11 @@ export default function RetirementPage() {
                             Try the simulator
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            See how changing your retirement age or
-                            contributions affects the outcome
+                            See how changing{" "}
+                            {isSolo
+                              ? "your retirement age"
+                              : "your target retirement year"}{" "}
+                            or contributions affects the outcome
                           </p>
                         </div>
                       </div>
@@ -1512,12 +1625,13 @@ export default function RetirementPage() {
           </AnimatePresence>
         </div>
 
-        {/* Edit Dialog */}
         <EditRetirementDialog
           open={editOpen}
           onClose={() => setEditOpen(false)}
           config={config}
           onSave={setConfig}
+          accountMode={accountMode}
+          currentAge={currentAge}
         />
       </motion.div>
     </TooltipProvider>

@@ -28,26 +28,18 @@ import { useClientGate } from "../../lib/useClientGate";
 import {
   canAccessFeature,
   type FeatureKey,
-  getClientData,
-  goalsData,
-  cashFlowData,
   advisorData,
-  mockHoldings,
-  mockValuations,
   currentValue,
-  mockProperties,
-  mockInsurancePolicies,
   createNetWorthSnapshot,
   recordNetWorthSnapshot,
   getLatestNetWorthChange,
   formatCurrency,
-  mockRetirementConfig,
   selectRetirementOutputs,
   selectEmergencyFundMetrics,
-  financialDomainData,
-  mockCashFlowHistory,
+  type FinancialDomainData,
   type CashFlowPoint,
 } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 import {
   ChartContainer,
@@ -271,30 +263,59 @@ export default function DashboardPage() {
     };
   }, [sub.status]);
 
+  // ── Store ─────────────────────────────────────────────────────────────────
+
+  const store = useFinancialStore();
+  const financialData: FinancialDomainData = useMemo(
+    () => ({
+      accounts: store.accounts,
+      liabilities: store.liabilities,
+      propertyAssets: store.propertyAssets.map((p) => ({
+        id: p.property_id,
+        name: p.name,
+        value: p.market_value,
+        updatedAt: p.updated_at,
+      })),
+      portfolioPerformance: store.portfolioPerformance,
+      allocation: store.allocation,
+      taxProfile: store.taxProfile,
+      emergencyFund: store.emergencyFund,
+      insurancePolicies: store.insurancePolicies,
+      incomeRows: store.incomeRows,
+      expenseCategories: store.expenseCategories,
+      freshness: store.freshness,
+      retirement: store.retirement,
+      cashFlowHistory: store.cashFlowHistory,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [store],
+  );
+
   // ── Emergency fund ────────────────────────────────────────────────────────
 
   const efMetrics = useMemo(
-    () => selectEmergencyFundMetrics(financialDomainData),
-    [],
+    () => selectEmergencyFundMetrics(financialData),
+    [financialData],
   );
 
   // ── Snapshot ──────────────────────────────────────────────────────────────
 
   const snapshot: Snapshot = useMemo(() => {
-    const income = cashFlowData.income.reduce((s, i) => s + i.amount, 0);
-    const expenses = cashFlowData.expenses.reduce((s, e) => s + e.amount, 0);
+    const income = store.incomeRows.reduce((s, i) => s + i.amount, 0);
+    const expenses = store.expenseCategories.reduce((s, e) => s + e.amount, 0);
     const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
     const nw = createNetWorthSnapshot();
-    const portfolioValue = mockHoldings
+    const portfolioValue = store.holdings
       .filter((h) => h.is_active)
-      .reduce((s, h) => s + currentValue(h, mockValuations), 0);
-    const generalActivePolicies = mockInsurancePolicies.filter(
+      .reduce((s, h) => s + currentValue(h, []), 0);
+    const storeInsurance = store.insurancePolicies;
+    const generalActivePolicies = storeInsurance.filter(
       (p) => p.is_active,
     ).length;
-    const propertyInsCount = mockProperties
+    const propertyInsCount = store.propertyAssets
       .filter((p) => p.is_active)
       .reduce((sum, p) => sum + (p.insurance?.length ?? 0), 0);
-    const insuranceReviewDue = mockInsurancePolicies.filter((p) => {
+    const insuranceReviewDue = storeInsurance.filter((p) => {
       if (!p.is_active) return false;
       const days = Math.ceil(
         (new Date(p.renewal_date).getTime() - Date.now()) /
@@ -302,7 +323,7 @@ export default function DashboardPage() {
       );
       return days >= 0 && days <= 60;
     }).length;
-    const retirementOutputs = selectRetirementOutputs(mockRetirementConfig);
+    const retirementOutputs = selectRetirementOutputs(store.retirement);
 
     return {
       netWorth: nw.netWorth ?? 0,
@@ -311,9 +332,9 @@ export default function DashboardPage() {
       monthlyIncome: income,
       monthlyExpenses: expenses,
       savingsRate,
-      goalsActive: goalsData.goals.filter((g) => !g.completed).length,
-      goalsTotal: goalsData.goals.length,
-      goalsCompleted: goalsData.goals.filter((g) => g.completed).length,
+      goalsActive: store.goals.filter((g) => !g.completed).length,
+      goalsTotal: store.goals.length,
+      goalsCompleted: store.goals.filter((g) => g.completed).length,
       insurancePolicies: generalActivePolicies + propertyInsCount,
       insuranceReviewDue,
       retirementOnTrack: retirementOutputs.onTrack,
@@ -321,7 +342,7 @@ export default function DashboardPage() {
       projectedRetirementBalance:
         retirementOutputs.projectedBalanceAtRetirement,
     };
-  }, []);
+  }, [store]);
 
   // ── Net worth change ──────────────────────────────────────────────────────
 
@@ -344,7 +365,7 @@ export default function DashboardPage() {
   // ── Cash flow chart data ──────────────────────────────────────────────────
 
   const cashFlowChartData = useMemo(() => {
-    return [...mockCashFlowHistory]
+    return [...store.cashFlowHistory]
       .sort((a, b) => a.month.localeCompare(b.month))
       .slice(-6)
       .map((p: CashFlowPoint) => ({
@@ -354,7 +375,7 @@ export default function DashboardPage() {
           year: "2-digit",
         }),
       }));
-  }, []);
+  }, [store.cashFlowHistory]);
 
   const yMax = useMemo(() => {
     const max = Math.max(
@@ -366,8 +387,8 @@ export default function DashboardPage() {
   // ── Goals ─────────────────────────────────────────────────────────────────
 
   const topGoals = useMemo(
-    () => goalsData.goals.filter((g) => !g.completed).slice(0, 3),
-    [],
+    () => store.goals.filter((g) => !g.completed).slice(0, 3),
+    [store.goals],
   );
 
   // ── Upcoming & activity ───────────────────────────────────────────────────
@@ -398,7 +419,7 @@ export default function DashboardPage() {
 
   const activity: ActivityRow[] = useMemo(() => {
     const rows: ActivityRow[] = [];
-    goalsData.goals.slice(0, 3).forEach((g) =>
+    store.goals.slice(0, 3).forEach((g) =>
       rows.push({
         id: `g-${g.id}`,
         title: g.completed ? `Completed: ${g.title}` : `${g.title} updated`,
@@ -407,7 +428,7 @@ export default function DashboardPage() {
         status: g.completed ? "Completed" : "Pending",
       }),
     );
-    cashFlowData.income.slice(0, 2).forEach((c) =>
+    store.incomeRows.slice(0, 2).forEach((c) =>
       rows.push({
         id: `c-${c.id}`,
         title: `${c.name} recorded`,
@@ -426,16 +447,16 @@ export default function DashboardPage() {
       }),
     );
     return rows;
-  }, []);
+  }, [store.goals, store.incomeRows]);
 
   // ── Greeting ──────────────────────────────────────────────────────────────
 
   const greetingName = useMemo(() => {
-    const full = getClientData().personal?.name ?? "";
+    const full = store.user?.display_name ?? "";
     if (full) return full.split(" ")[0] ?? "";
     const prefix = (auth.email ?? "").split("@")[0] ?? "";
     return prefix.replace(/[._-]+/g, " ").trim();
-  }, [auth.email]);
+  }, [store.user?.display_name, auth.email]);
 
   const timeGreeting = useMemo(() => {
     const h = new Date().getHours();
@@ -523,7 +544,7 @@ export default function DashboardPage() {
                 {
                   label: "Portfolio Value",
                   value: formatCurrency(snapshot.portfolioValue),
-                  subline: `${mockHoldings.filter((h) => h.is_active).length} active holdings`,
+                  subline: `${store.holdings.filter((h) => h.is_active).length} active holdings`,
                   tone: "neutral",
                   onClick: () => router.push("/dashboard/assets"),
                 },
@@ -865,7 +886,6 @@ export default function DashboardPage() {
                   <CardContent className="pt-5 space-y-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
-                   
                         <div>
                           <p className="text-sm font-semibold">
                             Retirement track
@@ -908,14 +928,12 @@ export default function DashboardPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <StatPill
                         label="Retire at"
-                        value={`Age ${mockRetirementConfig.retirementAge}`}
+                        value={`Age ${store.retirement.retirementAge}`}
                         tip="Your target retirement age."
                       />
                       <StatPill
                         label="Monthly savings"
-                        value={formatCurrency(
-                          mockRetirementConfig.monthlySavings,
-                        )}
+                        value={formatCurrency(store.retirement.monthlySavings)}
                         tip="Combined monthly contributions to investments and pension."
                       />
                       <StatPill
@@ -929,7 +947,7 @@ export default function DashboardPage() {
                         label="Target income"
                         value={
                           formatCurrency(
-                            mockRetirementConfig.desiredMonthlyIncome,
+                            store.retirement.desiredMonthlyIncome,
                           ) + "/mo"
                         }
                         tip="Your desired monthly income in retirement in today's dollars."
@@ -938,7 +956,7 @@ export default function DashboardPage() {
 
                     <Progress
                       value={Math.min(
-                        (mockRetirementConfig.currentInvested /
+                        (store.retirement.currentInvested /
                           snapshot.projectedRetirementBalance) *
                           100,
                         100,
@@ -946,7 +964,7 @@ export default function DashboardPage() {
                       className="h-1.5"
                     />
                     <p className="text-xs text-muted-foreground">
-                      {formatCurrency(mockRetirementConfig.currentInvested)}{" "}
+                      {formatCurrency(store.retirement.currentInvested)}{" "}
                       invested today toward projected{" "}
                       {formatCurrency(snapshot.projectedRetirementBalance)}
                     </p>
@@ -964,7 +982,6 @@ export default function DashboardPage() {
                   <CardContent className="pt-5 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-              
                         <div>
                           <p className="text-sm font-semibold">Coverage</p>
                           <p className="text-xs text-muted-foreground">
@@ -979,7 +996,7 @@ export default function DashboardPage() {
 
                     <Separator />
 
-                    {mockInsurancePolicies
+                    {store.insurancePolicies
                       .filter((p) => p.is_active)
                       .slice(0, 4)
                       .map((p) => (
@@ -996,11 +1013,11 @@ export default function DashboardPage() {
                         </div>
                       ))}
 
-                    {mockInsurancePolicies.filter((p) => p.is_active).length >
+                    {store.insurancePolicies.filter((p) => p.is_active).length >
                       4 && (
                       <p className="text-xs text-muted-foreground pt-1">
                         +
-                        {mockInsurancePolicies.filter((p) => p.is_active)
+                        {store.insurancePolicies.filter((p) => p.is_active)
                           .length - 4}{" "}
                         more policies
                       </p>

@@ -70,10 +70,6 @@ import {
 } from "@/components/ui/tooltip";
 
 import {
-  mockHoldings,
-  mockValuations,
-  mockPortfolioPerformance,
-  mockAccounts,
   formatCurrency,
   currentValue,
   assetTypeLabel,
@@ -86,6 +82,7 @@ import {
   type AssetType,
   type ValuationMethod,
 } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -306,9 +303,7 @@ function InfoTip({ content }: { content: string }) {
           />
         </span>
       </TooltipTrigger>
-      <TooltipContent className="max-w-55 text-xs">
-        {content}
-      </TooltipContent>
+      <TooltipContent className="max-w-55 text-xs">{content}</TooltipContent>
     </UITooltip>
   );
 }
@@ -634,11 +629,7 @@ function AddHoldingDialog({
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!draft.name && !draft.symbol}
-          
-          >
+          <Button onClick={handleSave} disabled={!draft.name && !draft.symbol}>
             {editHolding ? "Save changes" : "Add holding"}
           </Button>
         </DialogFooter>
@@ -1002,12 +993,7 @@ function EmptyHoldings({ onAdd }: { onAdd: () => void }) {
           investment you hold.
         </p>
       </div>
-      <Button
-        size="sm"
-        className="gap-1.5"
-       
-        onClick={onAdd}
-      >
+      <Button size="sm" className="gap-1.5" onClick={onAdd}>
         <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
         Add your first holding
       </Button>
@@ -1019,10 +1005,14 @@ function EmptyHoldings({ onAdd }: { onAdd: () => void }) {
 
 export default function AssetsPage() {
   const [holdings, setHoldings] = React.useState<AssetHolding[]>(() =>
-    mockHoldings.filter((h) => h.is_active),
+    useFinancialStore.getState().holdings.filter((h) => h.is_active),
   );
-  const [valuations, setValuations] =
-    React.useState<AssetValuation[]>(mockValuations);
+  const [valuations, setValuations] = React.useState<AssetValuation[]>([]);
+
+  const storePortfolioPerformance = useFinancialStore(
+    (s) => s.portfolioPerformance,
+  );
+  const storeAccounts = useFinancialStore((s) => s.accounts);
   const [addOpen, setAddOpen] = React.useState(false);
   const [editHolding, setEditHolding] = React.useState<AssetHolding | null>(
     null,
@@ -1063,8 +1053,8 @@ export default function AssetsPage() {
     totalCostBasis > 0 ? (totalGainLoss / totalCostBasis) * 100 : 0;
 
   const perfMetrics = React.useMemo(
-    () => selectPerformanceMetrics(mockPortfolioPerformance),
-    [],
+    () => selectPerformanceMetrics(storePortfolioPerformance),
+    [storePortfolioPerformance],
   );
 
   // Allocation breakdown by asset type — derived from holdings + live prices
@@ -1085,10 +1075,10 @@ export default function AssetsPage() {
       .sort((a, b) => b.value - a.value);
   }, [holdings, valuations, livePrices, totalPortfolioValue]);
 
-  // Performance chart — from mockPortfolioPerformance (no hardcoding)
+  // Performance chart — from store portfolioPerformance
   const perfChartData = React.useMemo(
     () =>
-      [...mockPortfolioPerformance]
+      [...storePortfolioPerformance]
         .sort((a, b) => a.month.localeCompare(b.month))
         .map((p) => ({
           label: new Date(p.month + "-01").toLocaleDateString("en-US", {
@@ -1098,7 +1088,7 @@ export default function AssetsPage() {
           value: p.value,
           contributions: p.contributions,
         })),
-    [],
+    [storePortfolioPerformance],
   );
 
   // Filtered + sorted holdings
@@ -1121,20 +1111,20 @@ export default function AssetsPage() {
     [holdings],
   );
 
-  // Account totals by type — derived from mockAccounts
+  // Account totals by type — derived from store accounts
   const accountsByType = React.useMemo(() => {
-    const map = new Map<string, typeof mockAccounts>();
-    mockAccounts.forEach((acc) => {
+    const map = new Map<string, typeof storeAccounts>();
+    storeAccounts.forEach((acc) => {
       const list = map.get(acc.type) ?? [];
       list.push(acc);
       map.set(acc.type, list);
     });
     return [...map.entries()];
-  }, []);
+  }, [storeAccounts]);
 
   const totalAccountsValue = React.useMemo(
-    () => mockAccounts.reduce((s, a) => s + a.balance, 0),
-    [],
+    () => storeAccounts.reduce((s, a) => s + a.balance, 0),
+    [storeAccounts],
   );
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -1167,14 +1157,12 @@ export default function AssetsPage() {
       value: formatCurrency(totalPortfolioValue),
       subline: `${holdings.length} holding${holdings.length !== 1 ? "s" : ""}`,
       tone: "neutral" as const,
-
     },
     {
       label: "Total Gain / Loss",
       value: `${totalGainLoss >= 0 ? "+" : ""}${formatCurrency(totalGainLoss)}`,
       subline: `${totalGainPct >= 0 ? "+" : ""}${totalGainPct.toFixed(2)}% on cost basis`,
       tone: totalGainLoss >= 0 ? ("good" as const) : ("danger" as const),
-  
     },
     {
       label: "YTD Return",
@@ -1187,14 +1175,12 @@ export default function AssetsPage() {
         (perfMetrics.ytdReturnPct ?? 0) >= 0
           ? ("good" as const)
           : ("danger" as const),
-
     },
     {
       label: "Total Contributed",
       value: formatCurrency(perfMetrics.totalContributions),
       subline: `${formatCurrency(perfMetrics.totalGrowth)} growth`,
       tone: "neutral" as const,
-
     },
   ];
 
@@ -1324,7 +1310,7 @@ export default function AssetsPage() {
                       Portfolio value over time
                     </CardTitle>
                     <p className="text-xs text-muted-foreground">
-                      {mockPortfolioPerformance.length} months of history
+                      {storePortfolioPerformance.length} months of history
                     </p>
                   </CardHeader>
                   <CardContent className="px-2 sm:px-6">
@@ -1491,7 +1477,7 @@ export default function AssetsPage() {
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {mockAccounts.map((acc, i) => (
+              {storeAccounts.map((acc, i) => (
                 <motion.div
                   key={acc.id}
                   initial={{ opacity: 0, y: 8 }}

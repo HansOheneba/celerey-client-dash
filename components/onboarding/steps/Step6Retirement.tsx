@@ -1,6 +1,5 @@
 "use client";
 
-// components/onboarding/steps/Step6Retirement.tsx
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +12,6 @@ import {
   type RetirementFormValues,
 } from "@/lib/onboarding/schemas";
 import type { RetirementData } from "@/lib/onboarding/types";
-import { ONBOARDING_COPY } from "@/lib/onboarding/copy";
 import { ArrowRight } from "lucide-react";
 import { getCurrencyPrefix } from "@/lib/utils";
 import { useOnboardingStore } from "@/store/onboardingStore";
@@ -31,11 +29,6 @@ export function Step6Retirement({
   const preferredCurrency = store.identity?.preferred_currency || "USD";
   const accountMode = store.accountMode;
   const isSolo = accountMode === "solo";
-
-  const retirementFieldLabel =
-    ONBOARDING_COPY.retirement.fieldLabel[accountMode];
-  const retirementFieldPlaceholder =
-    ONBOARDING_COPY.retirement.fieldPlaceholder[accountMode];
 
   const {
     register,
@@ -60,7 +53,6 @@ export function Step6Retirement({
       | number
       | undefined;
 
-    // For solo: derive retirement_target_year from DOB + retirement_age
     if (isSolo && data.retirement_age) {
       const dob = store.identity?.date_of_birth;
       if (dob) {
@@ -82,78 +74,75 @@ export function Step6Retirement({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
-          Let&apos;s think about your future
+      <div className="max-w-xl">
+        <h1 className="text-3xl font-semibold text-slate-900 leading-tight">
+          Plan your retirement
         </h1>
-        <p className="mt-2 text-slate-500 text-sm sm:text-base">
-          Just three quick numbers — you can fill in the rest from your
-          dashboard later.
+        <p className="mt-3 text-slate-500">
+          Share a few estimates so we can project your future and guide your
+          savings. You can always refine these later.
         </p>
       </div>
 
-      {/* Icon */}
-      <div className="flex items-center gap-3">
+      {/* Section 1 */}
+      <div className="space-y-5">
         <div>
-          <p className="text-sm font-semibold text-slate-800">
-            Retirement planning
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+            When and lifestyle
           </p>
-          <p className="text-xs text-slate-500">
-            Even rough numbers give us a powerful starting point
+          <p className="text-sm text-slate-500 mt-1">
+            Tell us when you want to retire and the income you would like to
+            have
           </p>
         </div>
-      </div>
 
-      <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm space-y-5">
-        {/* Retirement timeline field + desired income */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="retirement-target">{retirementFieldLabel}</Label>
+          {/* Retirement timing */}
+          <div className="space-y-2">
+            <Label>Retirement target</Label>
             {isSolo ? (
               <Input
-                id="retirement-target"
                 type="number"
                 min={18}
                 max={100}
-                placeholder={"eg: 60"}
+                placeholder="Age e.g. 60"
                 {...register("retirement_age", { valueAsNumber: true })}
               />
             ) : (
               <Input
-                id="retirement-target"
                 type="number"
                 min={new Date().getFullYear()}
                 max={2100}
-                placeholder={retirementFieldPlaceholder}
-                {...register("retirement_target_year", { valueAsNumber: true })}
+                placeholder="Year e.g. 2055"
+                {...register("retirement_target_year", {
+                  valueAsNumber: true,
+                })}
               />
             )}
-            {isSolo && errors.retirement_age && (
+            {errors.retirement_age && (
               <p className="text-xs text-red-500">
                 {errors.retirement_age.message}
               </p>
             )}
-            {!isSolo && errors.retirement_target_year && (
+            {errors.retirement_target_year && (
               <p className="text-xs text-red-500">
                 {errors.retirement_target_year.message}
               </p>
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="desired-income">
-              Desired monthly income in retirement
-            </Label>
+          {/* Desired income */}
+          <div className="space-y-2">
+            <Label>Desired monthly income</Label>
             <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
                 {getCurrencyPrefix(preferredCurrency)}
               </span>
               <CurrencyNumberInputField
                 control={control}
                 name="desired_monthly_income"
-                id="desired-income"
                 placeholder="3000"
                 className="pl-12"
               />
@@ -165,20 +154,29 @@ export function Step6Retirement({
             )}
           </div>
         </div>
+      </div>
 
-        <div className="h-px bg-slate-100" />
+      {/* Section 2 */}
+      <div className="space-y-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+            Your contributions
+          </p>
+          <p className="text-sm text-slate-500 mt-1">
+            Let us know how much you are currently setting aside
+          </p>
+        </div>
 
         {/* Monthly savings */}
-        <div className="space-y-1.5">
-          <Label htmlFor="monthly-savings">Monthly retirement savings</Label>
+        <div className="space-y-2">
+          <Label>Monthly retirement savings</Label>
           <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
               {getCurrencyPrefix(preferredCurrency)}
             </span>
             <CurrencyNumberInputField
               control={control}
               name="monthly_savings"
-              id="monthly-savings"
               placeholder="500"
               className="pl-12"
             />
@@ -191,6 +189,7 @@ export function Step6Retirement({
         </div>
       </div>
 
+      {/* CTA */}
       <Button
         type="button"
         onClick={handleSubmit(onSubmit)}

@@ -3,7 +3,8 @@
 
 import * as React from "react";
 
-import { mockUser, getUserFullName } from "@/lib/client-data";
+import { getUserFullName } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -141,18 +142,19 @@ export function ServiceInquiryDialog({
   const [step, setStep] = React.useState<Step>(1);
 
   const custom = isCustom(service);
+  const user = useFinancialStore((s) => s.user);
 
   const knownDefaults: Pick<
     FormState,
     "fullName" | "email" | "phone" | "country"
   > = React.useMemo(
     () => ({
-      fullName: getUserFullName(mockUser),
-      email: mockUser.email,
-      phone: mockUser.phone_number ?? "",
-      country: mockUser.resident_country,
+      fullName: getUserFullName(user ?? undefined),
+      email: user?.email ?? "",
+      phone: user?.phone_number ?? "",
+      country: user?.resident_country ?? "",
     }),
-    [],
+    [user],
   );
 
   const [form, setForm] = React.useState<FormState>({

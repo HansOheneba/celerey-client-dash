@@ -82,17 +82,15 @@ import {
 import { CashFlowChart } from "@/components/dashboard/cash-flow/cash-flow-chart";
 
 import {
-  cashFlowData,
   calculateNetWorth,
   selectEmergencyFundMetrics,
-  financialDomainData,
   formatCurrency,
-  mockCashFlowHistory,
   type CashFlowPoint,
   type CashFlowEntryDraft,
   type RecurringType,
   type CashFlowSettings,
 } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 // ─── Local-only types ──────────────────────────────────────────────────────
 
@@ -757,13 +755,16 @@ function CategoryBreakdown({
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export default function CashFlowPage() {
-  const [income, setIncome] = React.useState<MoneyRow[]>(cashFlowData.income);
+  const [income, setIncome] = React.useState<MoneyRow[]>(
+    () => useFinancialStore.getState().incomeRows,
+  );
   const [expenses, setExpenses] = React.useState<MoneyRow[]>(
-    cashFlowData.expenses,
+    () => useFinancialStore.getState().expenseCategories,
   );
-  const [settings, setSettings] = React.useState<CashFlowSettings>(
-    cashFlowData.settings,
-  );
+  const [settings, setSettings] = React.useState<CashFlowSettings>(() => ({
+    emergencyFundMonths:
+      useFinancialStore.getState().emergencyFund.targetMonths,
+  }));
 
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [rowDialogOpen, setRowDialogOpen] = React.useState(false);
@@ -803,15 +804,31 @@ export default function CashFlowPage() {
   const savingsRate = totalIncome > 0 ? (surplus / totalIncome) * 100 : 0;
   const burn = burnRate(totalExpenses, totalIncome);
 
+  const storeHoldings = useFinancialStore((s) => s.holdings);
+  const storePropertyAssets = useFinancialStore((s) => s.propertyAssets);
+  const storeInsurancePolicies = useFinancialStore((s) => s.insurancePolicies);
+
   const netWorth = React.useMemo(
-    () => calculateNetWorth(undefined, undefined, undefined, income, expenses),
-    [income, expenses],
+    () =>
+      calculateNetWorth(
+        storeHoldings,
+        [],
+        storePropertyAssets.filter((p) => p.is_active),
+        income,
+        expenses,
+        [],
+      ),
+    [storeHoldings, storePropertyAssets, income, expenses],
   );
 
-  const avgIncome = avgFromHistory(mockCashFlowHistory, "income");
-  const avgExpenses = avgFromHistory(mockCashFlowHistory, "expenses");
-  const incMom = momChange(mockCashFlowHistory, "income");
-  const expMom = momChange(mockCashFlowHistory, "expenses");
+  const storeCashFlowHistory = useFinancialStore((s) => s.cashFlowHistory);
+  const storeExpenseCategories = useFinancialStore((s) => s.expenseCategories);
+  const storeEmergencyFund = useFinancialStore((s) => s.emergencyFund);
+
+  const avgIncome = avgFromHistory(storeCashFlowHistory, "income");
+  const avgExpenses = avgFromHistory(storeCashFlowHistory, "expenses");
+  const incMom = momChange(storeCashFlowHistory, "income");
+  const expMom = momChange(storeCashFlowHistory, "expenses");
 
   const insights = React.useMemo(
     () =>
@@ -819,14 +836,59 @@ export default function CashFlowPage() {
         totalIncome,
         totalExpenses,
         savingsRate,
-        mockCashFlowHistory,
+        storeCashFlowHistory,
       ),
-    [totalIncome, totalExpenses, savingsRate],
+    [totalIncome, totalExpenses, savingsRate, storeCashFlowHistory],
   );
 
+  const storeAccounts = useFinancialStore((s) => s.accounts);
+  const storeLiabilities = useFinancialStore((s) => s.liabilities);
+  const storePortfolioPerformance = useFinancialStore(
+    (s) => s.portfolioPerformance,
+  );
+  const storeAllocation = useFinancialStore((s) => s.allocation);
+  const storeTaxProfile = useFinancialStore((s) => s.taxProfile);
+  const storeIncomeRows = useFinancialStore((s) => s.incomeRows);
+  const storeFreshness = useFinancialStore((s) => s.freshness);
+  const storeRetirement = useFinancialStore((s) => s.retirement);
+
   const efMetrics = React.useMemo(
-    () => selectEmergencyFundMetrics(financialDomainData),
-    [],
+    () =>
+      selectEmergencyFundMetrics({
+        accounts: storeAccounts,
+        liabilities: storeLiabilities,
+        propertyAssets: storePropertyAssets.map((p) => ({
+          id: p.property_id,
+          name: p.name,
+          value: p.market_value,
+          updatedAt: p.updated_at,
+        })),
+        portfolioPerformance: storePortfolioPerformance,
+        allocation: storeAllocation,
+        taxProfile: storeTaxProfile,
+        emergencyFund: storeEmergencyFund,
+        insurancePolicies: storeInsurancePolicies,
+        incomeRows: storeIncomeRows,
+        expenseCategories: storeExpenseCategories,
+        freshness: storeFreshness,
+        retirement: storeRetirement,
+        cashFlowHistory: storeCashFlowHistory,
+      }),
+    [
+      storeAccounts,
+      storeLiabilities,
+      storePropertyAssets,
+      storePortfolioPerformance,
+      storeAllocation,
+      storeTaxProfile,
+      storeEmergencyFund,
+      storeInsurancePolicies,
+      storeIncomeRows,
+      storeExpenseCategories,
+      storeFreshness,
+      storeRetirement,
+      storeCashFlowHistory,
+    ],
   );
 
   const cashFlowKpis: KpiItem[] = [
@@ -1031,7 +1093,7 @@ export default function CashFlowPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
-          <CashFlowChart data={mockCashFlowHistory} />
+          <CashFlowChart data={storeCashFlowHistory} />
         </motion.div>
 
         {/* Analytics */}
@@ -1061,7 +1123,7 @@ export default function CashFlowPage() {
                 <p className="text-xs text-muted-foreground mb-3">
                   Last 6 months
                 </p>
-                <SurplusHistoryChart history={mockCashFlowHistory} />
+                <SurplusHistoryChart history={storeCashFlowHistory} />
               </CardContent>
             </Card>
 

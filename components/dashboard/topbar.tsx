@@ -3,8 +3,8 @@
 import * as React from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import Breadcrumbs from "./breadcrumbs";
-import { personalData } from "@/lib/client-data";
-import { mockUser, getUserFullName } from "@/lib/client-data";
+import { getUserFullName } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 import {
   DropdownMenu,
@@ -30,6 +30,9 @@ function getGreeting() {
 
 export default function DashboardTopbar() {
   const [greeting, setGreeting] = React.useState("");
+  const user = useFinancialStore((s) => s.user);
+  const displayName = getUserFullName(user ?? undefined);
+  const userEmail = user?.email ?? "";
 
   React.useEffect(() => {
     setGreeting(getGreeting());
@@ -51,7 +54,7 @@ export default function DashboardTopbar() {
             <button className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted transition-colors">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-[#1B1856] text-white text-xs">
-                  {getUserFullName(mockUser)
+                  {displayName
                     .split(" ")
                     .slice(0, 2)
                     .map((n) => n[0])
@@ -60,7 +63,7 @@ export default function DashboardTopbar() {
               </Avatar>
 
               <span className="text-sm font-medium">
-                {getUserFullName(mockUser)}
+                {displayName}
               </span>
 
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -71,10 +74,10 @@ export default function DashboardTopbar() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium">
-                  {getUserFullName(mockUser)}
+                  {displayName}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {mockUser.email}
+                  {userEmail}
                 </p>
               </div>
             </DropdownMenuLabel>

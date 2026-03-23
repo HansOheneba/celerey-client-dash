@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { goalsData } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 import { GoalHeader } from "@/components/dashboard/goals/goal-header";
 import { GoalFilterTabs } from "@/components/dashboard/goals/goal-filter-tabs";
 import { GoalCard } from "@/components/dashboard/goals/goal-card";
@@ -18,13 +19,13 @@ import type {
   FilterType,
 } from "@/components/dashboard/goals/types";
 
-const DEFAULT_GOALS: Goal[] = goalsData.goals;
 const SCENARIOS: Scenario[] = goalsData.scenarios;
 
 export default function GoalsDashboard() {
   const router = useRouter();
+  const storeGoals = useFinancialStore((s) => s.goals);
 
-  const [goals, setGoals] = React.useState<Goal[]>(DEFAULT_GOALS);
+  const [goals, setGoals] = React.useState<Goal[]>(storeGoals);
   const [filter, setFilter] = React.useState<FilterType>("active");
 
   // Enrich goals with calculated values based on cash flow

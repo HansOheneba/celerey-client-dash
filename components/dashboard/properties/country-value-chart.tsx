@@ -17,7 +17,8 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 
-import { mockProperties, formatCurrency } from "@/lib/client-data";
+import { formatCurrency, type Property } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 // ─── Brand palette — navy shades for slices ───────────────────────────────────
 
@@ -43,10 +44,7 @@ type PropertySlice = {
   fill: string;
 };
 
-function getTopProperties(
-  properties: typeof mockProperties,
-  limit = 10,
-): PropertySlice[] {
+function getTopProperties(properties: Property[], limit = 10): PropertySlice[] {
   return [...properties]
     .filter((p) => p.is_active && p.market_value > 0)
     .sort((a, b) => b.market_value - a.market_value)
@@ -72,7 +70,8 @@ function buildChartConfig(slices: PropertySlice[]): ChartConfig {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function CountryDonutChart() {
-  const activeProps = mockProperties.filter((p) => p.is_active);
+  const storeProperties = useFinancialStore((s) => s.propertyAssets);
+  const activeProps = storeProperties.filter((p) => p.is_active);
   // Show top 5 if 7 or fewer properties, otherwise top 10
   const limit = Math.min(activeProps.length, 10);
   const slices = getTopProperties(activeProps, limit);

@@ -1,4 +1,4 @@
-import { cashFlowData } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 import { Goal, EnrichedGoal } from "./types";
 
 // ============================================================================
@@ -35,17 +35,19 @@ export function probabilityTone(
 // ============================================================================
 
 /**
- * Calculate total monthly income from cash flow data
+ * Calculate total monthly income from the financial store
  */
 export function getTotalMonthlyIncome(): number {
-  return cashFlowData.income.reduce((sum, item) => sum + item.amount, 0);
+  const { incomeRows } = useFinancialStore.getState();
+  return incomeRows.reduce((sum, r) => sum + r.amount, 0);
 }
 
 /**
- * Calculate total monthly expenses from cash flow data
+ * Calculate total monthly expenses from the financial store
  */
 export function getTotalMonthlyExpenses(): number {
-  return cashFlowData.expenses.reduce((sum, item) => sum + item.amount, 0);
+  const { expenseCategories } = useFinancialStore.getState();
+  return expenseCategories.reduce((sum, c) => sum + c.amount, 0);
 }
 
 /**

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { mockUser, getUserFullName, type User } from "@/lib/client-data";
+import { getUserFullName, type User } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,11 +50,23 @@ const currencyOptions = allCurrencies.all
 const contactMethods = ["Email", "Phone", "WhatsApp"];
 
 export default function AccountPage() {
+  const storeUser = useFinancialStore((s) => s.user);
+  const baseUser: User = storeUser ?? {
+    user_id: "",
+    email: "",
+    resident_country: "",
+    currency: "USD",
+    is_active: true,
+    created_at: "",
+    updated_at: "",
+    user_type: "regular",
+  };
+
   const [form, setForm] = useState({
-    ...mockUser,
-    citizenships: mockUser.citizenships ?? [],
-    city: mockUser.city ?? "",
-    preferred_contact: mockUser.preferred_contact ?? "Email",
+    ...baseUser,
+    citizenships: baseUser.citizenships ?? [],
+    city: baseUser.city ?? "",
+    preferred_contact: baseUser.preferred_contact ?? "Email",
   });
 
   const [saved, setSaved] = useState(false);
