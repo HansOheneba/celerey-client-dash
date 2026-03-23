@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Sidebar,
@@ -34,6 +33,19 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useFinancialStore } from "@/store/financialStore";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ChevronDown, Settings, LogOut, UserIcon } from "lucide-react";
+import { getUserFullName } from "@/lib/client-data";
+import { useEffect, useState } from "react";
 
 const nav = [
   { label: "Overview", href: "/dashboard", icon: faChartPie },
@@ -59,6 +71,12 @@ export default function DashboardSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
 
+  const user = useFinancialStore((s) => s.user);
+  const displayName = getUserFullName(user ?? undefined);
+  const userEmail = user?.email ?? "";
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const profileCompletionScore = useFinancialStore(
     (s) => s.profileCompletionScore,
   );
@@ -70,51 +88,108 @@ export default function DashboardSidebar() {
       className="bg-white border-r border-gray-200 text-gray-700"
     >
       {/* ── Header ── */}
-      <SidebarHeader className="pt-4 px-3">
-        <Link href="/dashboard" className="flex items-center">
-          <div className="relative h-14 w-28">
-            <AnimatePresence mode="wait" initial={false}>
-              {collapsed ? (
-                <motion.div
-                  key="symbol"
-                  initial={{ opacity: 0, scale: 0.92 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.96 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute left-0 top-1/2 -translate-y-1/2"
-                >
-                  <Image
-                    src="/celerey_symbol_dark.png"
-                    alt="Celerey"
-                    width={44}
-                    height={44}
-                    priority
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="full"
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.96 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute left-0 top-1/2 -translate-y-1/2"
-                >
-                  <Image
-                    src="https://i.ibb.co/PGVKSsV1/image.png"
-                    alt="Celerey"
-                    width={110}
-                    height={40}
-                    priority
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </Link>
+      <SidebarHeader className="px-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2 w-full rounded-md px-2 hover:bg-gray-50 transition-colors text-left">
+              <Avatar className="h-6 w-6 shrink-0">
+                <AvatarFallback className="bg-[#1B1856] text-white text-xs">
+                  {mounted
+                    ? displayName
+                        .split(" ")
+                        .slice(0, 2)
+                        .map((n) => n[0])
+                        .join("")
+                    : ""}
+                </AvatarFallback>
+              </Avatar>
 
-        <SidebarSeparator className="my-3 bg-gray-200" />
+              <AnimatePresence initial={false}>
+                {!collapsed && (
+                  <motion.div
+                    key="profile-text"
+                    initial={{ opacity: 0, x: -4 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -4 }}
+                    transition={{ duration: 0.14 }}
+                    className="flex flex-col min-w-0 flex-1"
+                  >
+                    <span className="text-sm font-medium text-gray-800 truncate">
+                      {mounted ? displayName : ""}
+                    </span>
+                    <span className="text-xs text-gray-500 truncate">
+                      {userEmail}
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence initial={false}>
+                {!collapsed && (
+                  <motion.div
+                    key="chevron"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.14 }}
+                    className="ml-auto shrink-0"
+                  >
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent side="right" align="start" className="w-56">
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">
+                  {mounted ? displayName : ""}
+                </p>
+                <p className="text-xs text-muted-foreground">{userEmail}</p>
+              </div>
+            </DropdownMenuLabel>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/dashboard/account/profile"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <UserIcon className="h-4 w-4" />
+                  Profile
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/dashboard/account/settings"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Settings className="h-4 w-4" />
+                  Account Settings
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              className="text-destructive cursor-pointer"
+              onClick={() => {
+                console.log("sign out");
+              }}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
       </SidebarHeader>
+        <SidebarSeparator className="my-2 bg-gray-200" />
 
       {/* ── Nav ── */}
       <SidebarContent className="px-2">
@@ -145,7 +220,7 @@ export default function DashboardSidebar() {
                         ${
                           active
                             ? "text-[#160b35]"
-                            : "text-gray-400 group-hover:text-gray-600"
+                            : "text-gray-400"
                         }
                       `}
                       fixedWidth

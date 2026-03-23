@@ -251,6 +251,7 @@ export interface CashFlowEntryDraft {
 
 export interface CashFlowSettings {
   emergencyFundMonths: number;
+  currentCashBalance: number;
 }
 
 export interface CashFlowPoint {
@@ -1698,7 +1699,7 @@ export const cashFlowData: {
     { id: "e_disc", name: "Discretionary", amount: 1800, essential: false },
     { id: "e_other", name: "Other", amount: 1370, essential: false },
   ],
-  settings: { emergencyFundMonths: 6 },
+  settings: { emergencyFundMonths: 6, currentCashBalance: 0 },
 };
 
 export const mockIncomeRows = cashFlowData.income;

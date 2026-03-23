@@ -38,13 +38,7 @@ function ucFirst(s?: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function Section({
-  title,
-  fields,
-}: {
-  title: string;
-  fields: ProfileField[];
-}) {
+function Section({ title, fields }: { title: string; fields: ProfileField[] }) {
   if (!fields.length) return null;
   return (
     <div className="rounded-xl border bg-white">
@@ -98,8 +92,7 @@ export default function ProfilePage() {
       ? [
           {
             label: "Dependents",
-            value:
-              user.dependents != null ? String(user.dependents) : "",
+            value: user.dependents != null ? String(user.dependents) : "",
           },
         ]
       : []),

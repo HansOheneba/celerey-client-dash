@@ -314,9 +314,7 @@ export default function AccountPage() {
 
           {/* Bio — all account types */}
           <div className="space-y-2">
-            <Label>
-              {isSolo ? "Bio" : "Household Description"}
-            </Label>
+            <Label>{isSolo ? "Bio" : "Household Description"}</Label>
             <Textarea
               value={form.bio ?? ""}
               onChange={(e) => handleChange("bio", e.target.value)}
@@ -422,10 +420,7 @@ export default function AccountPage() {
             <Select
               value={form.risk_profile ?? ""}
               onValueChange={(v) =>
-                handleChange(
-                  "risk_profile",
-                  v as User["risk_profile"],
-                )
+                handleChange("risk_profile", v as User["risk_profile"])
               }
             >
               <SelectTrigger>

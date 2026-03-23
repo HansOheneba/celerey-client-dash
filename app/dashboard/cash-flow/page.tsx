@@ -775,6 +775,8 @@ export default function CashFlowPage() {
   const [settings, setSettings] = React.useState<CashFlowSettings>(() => ({
     emergencyFundMonths:
       useFinancialStore.getState().emergencyFund.targetMonths,
+    currentCashBalance:
+      useFinancialStore.getState().emergencyFund.currentCashBalance,
   }));
 
   const [settingsOpen, setSettingsOpen] = React.useState(false);
@@ -1412,7 +1414,15 @@ export default function CashFlowPage() {
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         settings={settings}
-        setSettings={setSettings}
+        setSettings={(s) => {
+          setSettings(s);
+          useFinancialStore.getState().setEmergencyFund({
+            ...useFinancialStore.getState().emergencyFund,
+            targetMonths: s.emergencyFundMonths,
+            currentCashBalance: s.currentCashBalance,
+            updatedAt: new Date().toISOString(),
+          });
+        }}
       />
 
       <EnhancedRowDialog

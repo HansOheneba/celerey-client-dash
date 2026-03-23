@@ -312,42 +312,44 @@ export function Step1Identity({
           </div>
 
           {/* Marital + Occupation */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>
-                Marital status{" "}
-                <span className="text-slate-400">(optional)</span>
-              </Label>
-              <Controller
-                control={control}
-                name="marital_status"
-                render={({ field }) => (
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value ?? ""}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MARITAL_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
+          {isSolo && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>
+                  Marital status{" "}
+                  <span className="text-slate-400">(optional)</span>
+                </Label>
+                <Controller
+                  control={control}
+                  name="marital_status"
+                  render={({ field }) => (
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value ?? ""}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MARITAL_STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <Label>
-                Occupation <span className="text-slate-400">(optional)</span>
-              </Label>
-              <Input {...register("occupation")} />
+              <div className="space-y-1.5">
+                <Label>
+                  Occupation <span className="text-slate-400">(optional)</span>
+                </Label>
+                <Input {...register("occupation")} />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* ── LOCATION & PREFERENCES ── */}

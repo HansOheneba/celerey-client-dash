@@ -14,6 +14,7 @@ import {
 
 export type CashFlowSettings = {
   emergencyFundMonths: number;
+  currentCashBalance: number;
 };
 
 export function SettingsDialog({
@@ -27,21 +28,37 @@ export function SettingsDialog({
   settings: CashFlowSettings;
   setSettings: (s: CashFlowSettings) => void;
 }) {
-  const [draft, setDraft] = React.useState<{ emergencyFundMonths: string }>({
+  const [draft, setDraft] = React.useState<{
+    emergencyFundMonths: string;
+    currentCashBalance: string;
+  }>({
     emergencyFundMonths: String(settings.emergencyFundMonths),
+    currentCashBalance: String(settings.currentCashBalance),
   });
 
   React.useEffect(() => {
     if (!open) return;
-    setDraft({ emergencyFundMonths: String(settings.emergencyFundMonths) });
-  }, [open, settings.emergencyFundMonths]);
+    setDraft({
+      emergencyFundMonths: String(settings.emergencyFundMonths),
+      currentCashBalance: String(settings.currentCashBalance),
+    });
+  }, [open, settings.emergencyFundMonths, settings.currentCashBalance]);
 
   const monthsNum = Number(draft.emergencyFundMonths);
-  const valid = Number.isFinite(monthsNum) && monthsNum >= 0 && monthsNum <= 36;
+  const balanceNum = Number(draft.currentCashBalance.replace(/,/g, ""));
+  const valid =
+    Number.isFinite(monthsNum) &&
+    monthsNum >= 0 &&
+    monthsNum <= 36 &&
+    Number.isFinite(balanceNum) &&
+    balanceNum >= 0;
 
   function save(): void {
     if (!valid) return;
-    setSettings({ emergencyFundMonths: Math.round(monthsNum) });
+    setSettings({
+      emergencyFundMonths: Math.round(monthsNum),
+      currentCashBalance: Math.round(balanceNum),
+    });
     onOpenChange(false);
   }
 
@@ -54,6 +71,36 @@ export function SettingsDialog({
 
         <div className="space-y-5">
           <div className="space-y-2">
+            <Label htmlFor="ccb">Current cash savings</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                $
+              </span>
+              <Input
+                id="ccb"
+                type="text"
+                inputMode="numeric"
+                placeholder="0"
+                className="pl-7"
+                value={draft.currentCashBalance.replace(
+                  /\B(?=(\d{3})+(?!\d))/g,
+                  ",",
+                )}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    currentCashBalance: e.target.value.replace(/[^\d]/g, ""),
+                  }))
+                }
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              How much do you currently have in cash savings or a dedicated
+              emergency fund account?
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="efm">Emergency fund (months)</Label>
             <Input
               id="efm"
@@ -62,7 +109,10 @@ export function SettingsDialog({
               max={36}
               value={draft.emergencyFundMonths}
               onChange={(e) =>
-                setDraft({ emergencyFundMonths: e.target.value })
+                setDraft((d) => ({
+                  ...d,
+                  emergencyFundMonths: e.target.value,
+                }))
               }
             />
             <p className="text-xs text-muted-foreground">

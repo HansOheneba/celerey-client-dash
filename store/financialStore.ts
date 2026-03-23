@@ -198,6 +198,7 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
   removeInsurancePolicy: (policyId: string) => void;
   addGoal: (goal: Goal) => void;
   removeGoal: (id: string) => void;
+  addCashFlowPoint: (point: CashFlowPoint) => void;
   setWill: (will: WillInfo) => void;
   addBeneficiary: (b: Beneficiary) => void;
   updateBeneficiary: (b: Beneficiary) => void;
@@ -231,6 +232,7 @@ type FinancialData = Omit<
   | "removeInsurancePolicy"
   | "addGoal"
   | "removeGoal"
+  | "addCashFlowPoint"
   | "setWill"
   | "addBeneficiary"
   | "updateBeneficiary"
@@ -418,6 +420,16 @@ export const useFinancialStore = create<FinancialState>()(
               ...s,
               goals,
             }),
+          };
+        }),
+
+      addCashFlowPoint: (point) =>
+        set((s) => {
+          if (s.cashFlowHistory.some((p) => p.month === point.month)) return s;
+          const cashFlowHistory = [...s.cashFlowHistory, point];
+          return {
+            cashFlowHistory,
+            profileCompletionScore: computeProfileCompletionScore(s),
           };
         }),
 

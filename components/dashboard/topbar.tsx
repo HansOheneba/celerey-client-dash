@@ -1,45 +1,17 @@
 "use client";
 
-import * as React from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import Breadcrumbs from "./breadcrumbs";
-import { getUserFullName } from "@/lib/client-data";
-import { useFinancialStore } from "@/store/financialStore";
-
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-import { ChevronDown, Settings, LogOut, UserIcon } from "lucide-react";
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  if (hour < 21) return "Good evening";
-  return "Good night";
-}
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Bell } from "lucide-react";
 
 export default function DashboardTopbar() {
-  const [greeting, setGreeting] = React.useState("");
-  const user = useFinancialStore((s) => s.user);
-  const displayName = getUserFullName(user ?? undefined);
-  const userEmail = user?.email ?? "";
-
-  React.useEffect(() => {
-    setGreeting(getGreeting());
-  }, []);
-
   return (
-    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-white px-6 py-3 shadow-md">
+    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-white px-6 py-3">
       {/* LEFT SIDE */}
       <div className="flex items-center gap-3">
         <SidebarTrigger />
@@ -48,71 +20,24 @@ export default function DashboardTopbar() {
 
       {/* RIGHT SIDE */}
       <div className="flex items-center gap-6">
-        {/* Profile Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted transition-colors">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-[#1B1856] text-white text-xs">
-                  {displayName
-                    .split(" ")
-                    .slice(0, 2)
-                    .map((n) => n[0])
-                    .join("")}
-                </AvatarFallback>
-              </Avatar>
-
-              <span className="text-sm font-medium">{displayName}</span>
-
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="relative rounded-md p-2 hover:bg-muted transition-colors">
+              <Bell className="h-5 w-5 text-gray-500" />
             </button>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{displayName}</p>
-                <p className="text-xs text-muted-foreground">{userEmail}</p>
-              </div>
-            </DropdownMenuLabel>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <a
-                  href="/dashboard/account/profile"
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <UserIcon className="h-4 w-4" />
-                  Profile
-                </a>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem asChild>
-                <a
-                  href="/dashboard/account/settings"
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <Settings className="h-4 w-4" />
-                  Account Settings
-                </a>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              className="text-destructive cursor-pointer"
-              onClick={() => {
-                console.log("sign out");
-              }}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72">
+            <div className="flex flex-col items-center gap-2 py-4 text-center">
+              <Bell className="h-8 w-8 text-gray-300" />
+              <p className="text-sm font-medium text-gray-700">
+                No notifications
+              </p>
+              <p className="text-xs text-gray-400">
+                You&apos;re all caught up!
+              </p>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

@@ -4,7 +4,14 @@ import * as React from "react";
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -25,6 +32,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useClientGate } from "../../lib/useClientGate";
+import { useMonthlySnapshot } from "@/hooks/useMonthlySnapshot";
 import {
   canAccessFeature,
   type FeatureKey,
@@ -187,12 +195,30 @@ function InsuranceStatusBadge({ reviewDue }: { reviewDue: number }) {
 
 function CashFlowTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
-  const income = payload.find((p: any) => p.dataKey === "income");
-  const expenses = payload.find((p: any) => p.dataKey === "expenses");
+  const incomeValue: number | undefined =
+    payload.find((p: any) => p.dataKey === "income" && p.value != null)
+      ?.value ??
+    payload.find((p: any) => p.dataKey === "projIncome" && p.value != null)
+      ?.value;
+  const expensesValue: number | undefined =
+    payload.find((p: any) => p.dataKey === "expenses" && p.value != null)
+      ?.value ??
+    payload.find((p: any) => p.dataKey === "projExpenses" && p.value != null)
+      ?.value;
+  const isProjected: boolean =
+    payload.some((p: any) => p.dataKey === "projIncome" && p.value != null) &&
+    !payload.some((p: any) => p.dataKey === "income" && p.value != null);
   return (
     <div className="rounded-lg border bg-background px-3 py-2.5 text-xs space-y-1.5 min-w-[160px]">
-      <p className="font-semibold text-foreground mb-1">{label}</p>
-      {income && (
+      <p className="font-semibold text-foreground mb-1">
+        {label}
+        {isProjected && (
+          <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+            (projected)
+          </span>
+        )}
+      </p>
+      {incomeValue != null && (
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
             <span
@@ -202,11 +228,11 @@ function CashFlowTooltip({ active, payload, label }: any) {
             <span className="text-muted-foreground">Income</span>
           </div>
           <span className="font-medium text-foreground">
-            {formatCurrency(income.value)}
+            {formatCurrency(incomeValue)}
           </span>
         </div>
       )}
-      {expenses && (
+      {expensesValue != null && (
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
             <span
@@ -216,12 +242,46 @@ function CashFlowTooltip({ active, payload, label }: any) {
             <span className="text-muted-foreground">Expenses</span>
           </div>
           <span className="font-medium text-foreground">
-            {formatCurrency(expenses.value)}
+            {formatCurrency(expensesValue)}
           </span>
         </div>
       )}
     </div>
   );
+}
+
+// ─── Empty state nudge ────────────────────────────────────────────────────────
+
+function EmptyNudge({
+  message,
+  buttonLabel,
+  onAction,
+}: {
+  message: string;
+  buttonLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+      <p className="text-sm text-muted-foreground max-w-[260px]">{message}</p>
+      <Button size="sm" variant="outline" onClick={onAction}>
+        {buttonLabel}
+      </Button>
+    </div>
+  );
+}
+
+// ─── Cash flow chart helpers ─────────────────────────────────────────────────
+function addMonthStr(base: Date, offset: number): string {
+  const d = new Date(base.getFullYear(), base.getMonth() + offset, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function toMonthLabel(isoMonth: string): string {
+  return new Date(isoMonth + "-01").toLocaleDateString("en-US", {
+    month: "short",
+    year: "2-digit",
+  });
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -230,6 +290,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const { ready, auth, sub } = useClientGate();
+  useMonthlySnapshot();
 
   useEffect(() => {
     if (!ready) return;
@@ -365,24 +426,74 @@ export default function DashboardPage() {
   // ── Cash flow chart data ──────────────────────────────────────────────────
 
   const cashFlowChartData = useMemo(() => {
-    return [...store.cashFlowHistory]
-      .sort((a, b) => a.month.localeCompare(b.month))
+    const today = new Date();
+    const mIncome = store.incomeRows.reduce((s, i) => s + i.amount, 0);
+    const mExpenses = store.expenseCategories.reduce((s, e) => s + e.amount, 0);
+    const actualSet = new Set(
+      store.cashFlowHistory.map((d: CashFlowPoint) => d.month),
+    );
+
+    const actual = [...store.cashFlowHistory]
+      .sort((a: CashFlowPoint, b: CashFlowPoint) =>
+        a.month.localeCompare(b.month),
+      )
       .slice(-6)
       .map((p: CashFlowPoint) => ({
-        ...p,
-        label: new Date(p.month + "-01").toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        }),
+        month: p.month,
+        label: toMonthLabel(p.month),
+        income: p.income as number | null,
+        expenses: p.expenses as number | null,
+        projIncome: null as number | null,
+        projExpenses: null as number | null,
+        isProjected: false,
       }));
-  }, [store.cashFlowHistory]);
+
+    // Bridge: last actual point also anchors the projected line
+    if (actual.length > 0) {
+      const last = actual[actual.length - 1];
+      last.projIncome = last.income;
+      last.projExpenses = last.expenses;
+    }
+
+    const variance = (i: number, base: number): number =>
+      base + base * 0.03 * Math.sin(i * 0.8);
+
+    const projected = Array.from({ length: 6 }, (_, i) => {
+      const month = addMonthStr(today, i);
+      if (actualSet.has(month)) return null;
+      return {
+        month,
+        label: toMonthLabel(month),
+        income: null as number | null,
+        expenses: null as number | null,
+        projIncome: variance(i, mIncome) as number | null,
+        projExpenses: variance(i, mExpenses) as number | null,
+        isProjected: true,
+      };
+    }).filter((p): p is NonNullable<typeof p> => p !== null);
+
+    return [...actual, ...projected].sort((a, b) =>
+      a.month.localeCompare(b.month),
+    );
+  }, [store.cashFlowHistory, store.incomeRows, store.expenseCategories]);
 
   const yMax = useMemo(() => {
     const max = Math.max(
-      ...cashFlowChartData.flatMap((d) => [d.income, d.expenses]),
+      0,
+      ...cashFlowChartData.flatMap((d) => [
+        d.income ?? 0,
+        d.expenses ?? 0,
+        d.projIncome ?? 0,
+        d.projExpenses ?? 0,
+      ]),
     );
-    return Math.ceil(max / 10000) * 10000;
+    return Math.ceil((max * 1.2) / 1000) * 1000 || 10000;
   }, [cashFlowChartData]);
+
+  const todayMonthLabel = useMemo(
+    () => toMonthLabel(addMonthStr(new Date(), 0)),
+    [],
+  );
 
   // ── Goals ─────────────────────────────────────────────────────────────────
 
@@ -451,12 +562,23 @@ export default function DashboardPage() {
 
   // ── Greeting ──────────────────────────────────────────────────────────────
 
-  const greetingName = useMemo(() => {
-    const full = store.user?.display_name ?? "";
-    if (full) return full.split(" ")[0] ?? "";
+const greetingName = useMemo(() => {
+  const accountMode = store.user?.account_mode ?? "solo";
+  const full = store.user?.display_name ?? "";
+
+  if (!full) {
     const prefix = (auth.email ?? "").split("@")[0] ?? "";
     return prefix.replace(/[._-]+/g, " ").trim();
-  }, [store.user?.display_name, auth.email]);
+  }
+
+  // For solo accounts take first name only
+  // For household accounts use the full display name
+  if (accountMode === "solo") {
+    return full.split(" ")[0] ?? full;
+  }
+
+  return full; // "The Johnsons", "John & Ama" etc
+}, [store.user?.display_name, store.user?.account_mode, auth.email]);
 
   const timeGreeting = useMemo(() => {
     const h = new Date().getHours();
@@ -509,7 +631,8 @@ export default function DashboardPage() {
           >
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">
-                Hi{greetingName ? ` ${greetingName}` : ""},
+                {store.user?.account_mode !== "solo" ? "Welcome back," : "Hi"}
+                {greetingName ? ` ${greetingName}` : ""},
               </p>
               <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
                 {timeGreeting}
@@ -544,23 +667,32 @@ export default function DashboardPage() {
                 {
                   label: "Portfolio Value",
                   value: formatCurrency(snapshot.portfolioValue),
-                  subline: `${store.holdings.filter((h) => h.is_active).length} active holdings`,
+                  subline:
+                    store.holdings.length === 0
+                      ? "Add assets to track your portfolio"
+                      : `${store.holdings.filter((h) => h.is_active).length} active holdings`,
                   tone: "neutral",
                   onClick: () => router.push("/dashboard/assets"),
                 },
                 {
                   label: "Monthly Surplus",
                   value: formatCurrency(snapshot.monthlyCashFlow),
-                  subline: `${formatCurrency(snapshot.monthlyIncome)} in · ${formatCurrency(snapshot.monthlyExpenses)} out`,
+                  subline:
+                    store.expenseCategories.length === 0
+                      ? "Add expenses to see your surplus"
+                      : `${formatCurrency(snapshot.monthlyIncome)} in · ${formatCurrency(snapshot.monthlyExpenses)} out`,
                   tone: snapshot.monthlyCashFlow >= 0 ? "good" : "danger",
                   onClick: () => router.push("/dashboard/cash-flow"),
                 },
                 {
                   label: "Emergency Fund",
                   value: `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
-                  subline: efMetrics.funded
-                    ? `${formatCurrency(efMetrics.currentBalance)} · Fully funded`
-                    : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} short of ${efMetrics.targetMonths}mo target`,
+                  subline:
+                    store.emergencyFund.currentCashBalance === 0
+                      ? "Set up your emergency fund"
+                      : efMetrics.funded
+                        ? `${formatCurrency(efMetrics.currentBalance)} · Fully funded`
+                        : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} short of ${efMetrics.targetMonths}mo target`,
                   tone: efMetrics.funded
                     ? "good"
                     : efMetrics.runwayMonths >= 3
@@ -633,7 +765,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Legend */}
-                    <div className="flex items-center gap-4 pt-1">
+                    <div className="flex items-center gap-4 pt-1 flex-wrap">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <span
                           className="inline-block h-2 w-6 rounded-full"
@@ -648,59 +780,123 @@ export default function DashboardPage() {
                         />
                         Expenses
                       </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <svg width="24" height="8" className="overflow-visible">
+                          <line
+                            x1="0"
+                            y1="4"
+                            x2="24"
+                            y2="4"
+                            stroke={INCOME_COLOR}
+                            strokeWidth="2"
+                            strokeDasharray="4 3"
+                            opacity="0.55"
+                          />
+                        </svg>
+                        Projected
+                      </div>
                     </div>
                   </CardHeader>
 
                   <CardContent className="px-2 pt-2 sm:px-6">
-                    <ChartContainer
-                      config={cashFlowChartConfig}
-                      className="aspect-auto h-[220px] w-full"
-                    >
-                      <LineChart
-                        data={cashFlowChartData}
-                        margin={{ left: 12, right: 12 }}
+                    {snapshot.monthlyIncome === 0 &&
+                    snapshot.monthlyExpenses === 0 ? (
+                      <EmptyNudge
+                        message="Set up your income and expenses to see your projected cash flow."
+                        buttonLabel="Set up cash flow"
+                        onAction={() => router.push("/dashboard/cash-flow")}
+                      />
+                    ) : (
+                      <ChartContainer
+                        config={cashFlowChartConfig}
+                        className="aspect-auto h-[220px] w-full"
                       >
-                        <CartesianGrid
-                          vertical={false}
-                          strokeDasharray="3 3"
-                          className="stroke-muted"
-                        />
-                        <XAxis
-                          dataKey="label"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          className="text-xs text-muted-foreground"
-                        />
-                        <YAxis
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          width={72}
-                          domain={[0, yMax]}
-                          tickFormatter={(v) => formatCurrency(v)}
-                          className="text-xs text-muted-foreground"
-                        />
-                        <ChartTooltip
-                          cursor={false}
-                          content={<CashFlowTooltip />}
-                        />
-                        <Line
-                          dataKey="income"
-                          type="monotone"
-                          stroke={INCOME_COLOR}
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                        <Line
-                          dataKey="expenses"
-                          type="monotone"
-                          stroke={EXPENSES_COLOR}
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ChartContainer>
+                        <LineChart
+                          data={cashFlowChartData}
+                          margin={{ left: 12, right: 12 }}
+                        >
+                          <CartesianGrid
+                            vertical={false}
+                            strokeDasharray="3 3"
+                            className="stroke-muted"
+                          />
+                          <XAxis
+                            dataKey="label"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            className="text-xs text-muted-foreground"
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            width={72}
+                            domain={[0, yMax]}
+                            tickFormatter={(v) => formatCurrency(v)}
+                            className="text-xs text-muted-foreground"
+                          />
+                          <ChartTooltip
+                            cursor={false}
+                            content={<CashFlowTooltip />}
+                          />
+                          {/* Today reference line */}
+                          <ReferenceLine
+                            x={todayMonthLabel}
+                            stroke={INCOME_COLOR}
+                            strokeOpacity={0.3}
+                            strokeDasharray="4 3"
+                            label={{
+                              value: "Today",
+                              position: "top",
+                              offset: 10,
+                              fontSize: 10,
+                              fill: "var(--muted-foreground)",
+                            }}
+                          />
+                          {/* Actual data lines */}
+                          <Line
+                            dataKey="income"
+                            type="monotone"
+                            stroke={INCOME_COLOR}
+                            strokeWidth={2}
+                            dot={false}
+                            connectNulls={false}
+                          />
+                          <Line
+                            dataKey="expenses"
+                            type="monotone"
+                            stroke={EXPENSES_COLOR}
+                            strokeWidth={2}
+                            dot={false}
+                            connectNulls={false}
+                          />
+                          {/* Projected lines — dashed */}
+                          <Line
+                            dataKey="projIncome"
+                            type="monotone"
+                            stroke={INCOME_COLOR}
+                            strokeWidth={2}
+                            strokeDasharray="4 3"
+                            strokeOpacity={0.55}
+                            dot={false}
+                            connectNulls
+                            legendType="none"
+                          />
+                          <Line
+                            dataKey="projExpenses"
+                            type="monotone"
+                            stroke={EXPENSES_COLOR}
+                            strokeWidth={2}
+                            strokeDasharray="4 3"
+                            strokeOpacity={0.55}
+                            dot={false}
+                            connectNulls
+                            legendType="none"
+                          />
+                        </LineChart>
+                      </ChartContainer>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -735,56 +931,68 @@ export default function DashboardPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {topGoals.map((goal) => {
-                      const pct = Math.min(
-                        (goal.current / goal.target) * 100,
-                        100,
-                      );
-                      return (
-                        <div key={goal.id} className="space-y-1.5">
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <FontAwesomeIcon
-                                icon={faBullseye}
-                                className="h-3.5 w-3.5"
-                                style={{ color: PRIMARY }}
-                              />
-                              <span className="font-medium">{goal.title}</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              <span>
-                                {formatCurrency(goal.current)} /{" "}
-                                {formatCurrency(goal.target)}
-                              </span>
-                              <span className="font-semibold text-foreground">
-                                {pct.toFixed(0)}%
-                              </span>
-                              {goal.yearsRemaining > 0 && (
-                                <span className="flex items-center gap-1">
+                    {store.goals.length === 0 ? (
+                      <EmptyNudge
+                        message="You haven't set any financial goals yet. Goals help guide every financial decision."
+                        buttonLabel="Add your first goal"
+                        onAction={() => router.push("/dashboard/goals")}
+                      />
+                    ) : (
+                      <>
+                        {topGoals.map((goal) => {
+                          const pct = Math.min(
+                            (goal.current / goal.target) * 100,
+                            100,
+                          );
+                          return (
+                            <div key={goal.id} className="space-y-1.5">
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
                                   <FontAwesomeIcon
-                                    icon={faClock}
-                                    className="h-3 w-3"
+                                    icon={faBullseye}
+                                    className="h-3.5 w-3.5"
+                                    style={{ color: PRIMARY }}
                                   />
-                                  {goal.yearsRemaining}yr
-                                </span>
-                              )}
+                                  <span className="font-medium">
+                                    {goal.title}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <span>
+                                    {formatCurrency(goal.current)} /{" "}
+                                    {formatCurrency(goal.target)}
+                                  </span>
+                                  <span className="font-semibold text-foreground">
+                                    {pct.toFixed(0)}%
+                                  </span>
+                                  {goal.yearsRemaining > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <FontAwesomeIcon
+                                        icon={faClock}
+                                        className="h-3 w-3"
+                                      />
+                                      {goal.yearsRemaining}yr
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <Progress value={pct} className="h-1.5" />
                             </div>
-                          </div>
-                          <Progress value={pct} className="h-1.5" />
+                          );
+                        })}
+                        <Separator />
+                        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                          <span>{snapshot.goalsCompleted} goals completed</span>
+                          <span className="flex items-center gap-1 text-emerald-600">
+                            <FontAwesomeIcon
+                              icon={faCircleCheck}
+                              className="h-3 w-3"
+                            />{" "}
+                            {snapshot.goalsActive} active
+                          </span>
                         </div>
-                      );
-                    })}
-                    <Separator />
-                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                      <span>{snapshot.goalsCompleted} goals completed</span>
-                      <span className="flex items-center gap-1 text-emerald-600">
-                        <FontAwesomeIcon
-                          icon={faCircleCheck}
-                          className="h-3 w-3"
-                        />{" "}
-                        {snapshot.goalsActive} active
-                      </span>
-                    </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -813,62 +1021,71 @@ export default function DashboardPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="w-full overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-muted-foreground border-b">
-                            <th className="py-2.5 pr-4 font-medium text-xs">
-                              Item
-                            </th>
-                            <th className="py-2.5 pr-4 font-medium text-xs">
-                              Category
-                            </th>
-                            <th className="py-2.5 pr-4 font-medium text-xs">
-                              Date
-                            </th>
-                            <th className="py-2.5 font-medium text-xs text-right">
-                              Status
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {activity.map((row) => (
-                            <tr
-                              key={row.id}
-                              className="border-b last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer"
-                              onClick={() => router.push("/activity")}
-                            >
-                              <td className="py-3 pr-4 font-medium">
-                                {row.title}
-                              </td>
-                              <td className="py-3 pr-4">
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs font-normal"
-                                >
-                                  {row.category}
-                                </Badge>
-                              </td>
-                              <td className="py-3 pr-4 text-muted-foreground text-xs">
-                                {row.date}
-                              </td>
-                              <td className="py-3 text-right">
-                                <Badge
-                                  variant="outline"
-                                  className={`text-xs ${
-                                    row.status === "Completed"
-                                      ? "text-emerald-600 border-emerald-200 bg-emerald-50"
-                                      : "text-amber-600 border-amber-200 bg-amber-50"
-                                  }`}
-                                >
-                                  {row.status}
-                                </Badge>
-                              </td>
+                    {store.goals.length === 0 &&
+                    store.incomeRows.length === 0 ? (
+                      <EmptyNudge
+                        message="Your activity will appear here as you add income, expenses, and goals."
+                        buttonLabel="Get started"
+                        onAction={() => router.push("/dashboard/profile/setup")}
+                      />
+                    ) : (
+                      <div className="w-full overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-muted-foreground border-b">
+                              <th className="py-2.5 pr-4 font-medium text-xs">
+                                Item
+                              </th>
+                              <th className="py-2.5 pr-4 font-medium text-xs">
+                                Category
+                              </th>
+                              <th className="py-2.5 pr-4 font-medium text-xs">
+                                Date
+                              </th>
+                              <th className="py-2.5 font-medium text-xs text-right">
+                                Status
+                              </th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody>
+                            {activity.map((row) => (
+                              <tr
+                                key={row.id}
+                                className="border-b last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                                onClick={() => router.push("/activity")}
+                              >
+                                <td className="py-3 pr-4 font-medium">
+                                  {row.title}
+                                </td>
+                                <td className="py-3 pr-4">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs font-normal"
+                                  >
+                                    {row.category}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 pr-4 text-muted-foreground text-xs">
+                                  {row.date}
+                                </td>
+                                <td className="py-3 text-right">
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-xs ${
+                                      row.status === "Completed"
+                                        ? "text-emerald-600 border-emerald-200 bg-emerald-50"
+                                        : "text-amber-600 border-amber-200 bg-amber-50"
+                                    }`}
+                                  >
+                                    {row.status}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -884,90 +1101,103 @@ export default function DashboardPage() {
                   onClick={() => router.push("/dashboard/retirement")}
                 >
                   <CardContent className="pt-5 space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <div>
-                          <p className="text-sm font-semibold">
-                            Retirement track
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {snapshot.yearsToRetirement} years away
-                          </p>
+                    {store.retirement.retirementAge === 0 &&
+                    store.retirement.desiredMonthlyIncome === 0 ? (
+                      <EmptyNudge
+                        message="Complete your retirement plan to see your projected balance and track whether you're on track."
+                        buttonLabel="Set up retirement"
+                        onAction={() => router.push("/dashboard/retirement")}
+                      />
+                    ) : (
+                      <>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <p className="text-sm font-semibold">
+                                Retirement track
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {snapshot.yearsToRetirement} years away
+                              </p>
+                            </div>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${
+                              snapshot.retirementOnTrack
+                                ? "text-emerald-600 border-emerald-200 bg-emerald-50"
+                                : "text-amber-600 border-amber-200 bg-amber-50"
+                            }`}
+                          >
+                            {snapshot.retirementOnTrack ? (
+                              <>
+                                <FontAwesomeIcon
+                                  icon={faArrowTrendUp}
+                                  className="h-3 w-3 mr-1"
+                                />{" "}
+                                On track
+                              </>
+                            ) : (
+                              <>
+                                <FontAwesomeIcon
+                                  icon={faArrowTrendDown}
+                                  className="h-3 w-3 mr-1"
+                                />{" "}
+                                Needs attention
+                              </>
+                            )}
+                          </Badge>
                         </div>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${
-                          snapshot.retirementOnTrack
-                            ? "text-emerald-600 border-emerald-200 bg-emerald-50"
-                            : "text-amber-600 border-amber-200 bg-amber-50"
-                        }`}
-                      >
-                        {snapshot.retirementOnTrack ? (
-                          <>
-                            <FontAwesomeIcon
-                              icon={faArrowTrendUp}
-                              className="h-3 w-3 mr-1"
-                            />{" "}
-                            On track
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon
-                              icon={faArrowTrendDown}
-                              className="h-3 w-3 mr-1"
-                            />{" "}
-                            Needs attention
-                          </>
-                        )}
-                      </Badge>
-                    </div>
 
-                    <Separator />
+                        <Separator />
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <StatPill
-                        label="Retire at"
-                        value={`Age ${store.retirement.retirementAge}`}
-                        tip="Your target retirement age."
-                      />
-                      <StatPill
-                        label="Monthly savings"
-                        value={formatCurrency(store.retirement.monthlySavings)}
-                        tip="Combined monthly contributions to investments and pension."
-                      />
-                      <StatPill
-                        label="Projected balance"
-                        value={formatCurrency(
-                          snapshot.projectedRetirementBalance,
-                        )}
-                        tip="Estimated portfolio value at your target retirement age based on current contributions and expected returns."
-                      />
-                      <StatPill
-                        label="Target income"
-                        value={
-                          formatCurrency(
-                            store.retirement.desiredMonthlyIncome,
-                          ) + "/mo"
-                        }
-                        tip="Your desired monthly income in retirement in today's dollars."
-                      />
-                    </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <StatPill
+                            label="Retire at"
+                            value={`Age ${store.retirement.retirementAge}`}
+                            tip="Your target retirement age."
+                          />
+                          <StatPill
+                            label="Monthly savings"
+                            value={formatCurrency(
+                              store.retirement.monthlySavings,
+                            )}
+                            tip="Combined monthly contributions to investments and pension."
+                          />
+                          <StatPill
+                            label="Projected balance"
+                            value={formatCurrency(
+                              snapshot.projectedRetirementBalance,
+                            )}
+                            tip="Estimated portfolio value at your target retirement age based on current contributions and expected returns."
+                          />
+                          <StatPill
+                            label="Target income"
+                            value={
+                              formatCurrency(
+                                store.retirement.desiredMonthlyIncome,
+                              ) + "/mo"
+                            }
+                            tip="Your desired monthly income in retirement in today's dollars."
+                          />
+                        </div>
 
-                    <Progress
-                      value={Math.min(
-                        (store.retirement.currentInvested /
-                          snapshot.projectedRetirementBalance) *
-                          100,
-                        100,
-                      )}
-                      className="h-1.5"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {formatCurrency(store.retirement.currentInvested)}{" "}
-                      invested today toward projected{" "}
-                      {formatCurrency(snapshot.projectedRetirementBalance)}
-                    </p>
+                        <Progress
+                          value={Math.min(
+                            (store.retirement.currentInvested /
+                              snapshot.projectedRetirementBalance) *
+                              100,
+                            100,
+                          )}
+                          className="h-1.5"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(store.retirement.currentInvested)}{" "}
+                          invested today toward projected{" "}
+                          {formatCurrency(snapshot.projectedRetirementBalance)}
+                        </p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -994,33 +1224,43 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    <Separator />
+                    {store.insurancePolicies.length === 0 ? (
+                      <EmptyNudge
+                        message="No insurance policies added yet. Add your policies to track coverage and renewals."
+                        buttonLabel="Add a policy"
+                        onAction={() => router.push("/dashboard/insurance")}
+                      />
+                    ) : (
+                      <>
+                        <Separator />
 
-                    {store.insurancePolicies
-                      .filter((p) => p.is_active)
-                      .slice(0, 4)
-                      .map((p) => (
-                        <div
-                          key={p.policy_id}
-                          className="flex items-center justify-between text-xs"
-                        >
-                          <span className="text-muted-foreground capitalize">
-                            {p.category} · {p.name}
-                          </span>
-                          <span className="font-medium tabular-nums">
-                            {formatCurrency(p.premium_monthly)}/mo
-                          </span>
-                        </div>
-                      ))}
+                        {store.insurancePolicies
+                          .filter((p) => p.is_active)
+                          .slice(0, 4)
+                          .map((p) => (
+                            <div
+                              key={p.policy_id}
+                              className="flex items-center justify-between text-xs"
+                            >
+                              <span className="text-muted-foreground capitalize">
+                                {p.category} · {p.name}
+                              </span>
+                              <span className="font-medium tabular-nums">
+                                {formatCurrency(p.premium_monthly)}/mo
+                              </span>
+                            </div>
+                          ))}
 
-                    {store.insurancePolicies.filter((p) => p.is_active).length >
-                      4 && (
-                      <p className="text-xs text-muted-foreground pt-1">
-                        +
                         {store.insurancePolicies.filter((p) => p.is_active)
-                          .length - 4}{" "}
-                        more policies
-                      </p>
+                          .length > 4 && (
+                          <p className="text-xs text-muted-foreground pt-1">
+                            +
+                            {store.insurancePolicies.filter((p) => p.is_active)
+                              .length - 4}{" "}
+                            more policies
+                          </p>
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </Card>
