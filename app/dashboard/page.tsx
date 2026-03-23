@@ -631,7 +631,7 @@ const greetingName = useMemo(() => {
           >
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">
-                {store.user?.account_mode !== "solo" ? "Welcome back," : "Hi"}
+                {store.user?.account_mode !== "solo" ? "Welcome in," : "Hi"}
                 {greetingName ? ` ${greetingName}` : ""},
               </p>
               <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">

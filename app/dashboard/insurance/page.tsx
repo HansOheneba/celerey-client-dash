@@ -1005,16 +1005,7 @@ export default function InsurancePage() {
             className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
           >
             <div className="flex items-center gap-3">
-              <div
-                className="p-2 rounded-lg"
-                style={{ backgroundColor: `${PRIMARY}12` }}
-              >
-                <FontAwesomeIcon
-                  icon={faShield}
-                  className="h-5 w-5"
-                  style={{ color: PRIMARY }}
-                />
-              </div>
+             
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight">
                   Insurance

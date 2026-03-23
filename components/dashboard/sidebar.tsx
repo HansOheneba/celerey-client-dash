@@ -187,9 +187,8 @@ export default function DashboardSidebar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
       </SidebarHeader>
-        <SidebarSeparator className="my-2 bg-gray-200" />
+      <SidebarSeparator className="my-2 bg-gray-200" />
 
       {/* ── Nav ── */}
       <SidebarContent className="px-2">
@@ -217,11 +216,7 @@ export default function DashboardSidebar() {
                       icon={item.icon}
                       className={`
                         h-4 w-4
-                        ${
-                          active
-                            ? "text-[#160b35]"
-                            : "text-gray-400"
-                        }
+                        ${active ? "text-[#160b35]" : "text-gray-400"}
                       `}
                       fixedWidth
                     />
@@ -313,7 +308,7 @@ export default function DashboardSidebar() {
               className="hover:bg-gray-50"
             >
               <Link
-                href="/admin/support"
+                href="/dashboard/support"
                 className="flex items-center gap-3 px-3"
               >
                 <FontAwesomeIcon
