@@ -34,7 +34,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCurrency, userCurrency } from "@/lib/client-data";
+import { formatCurrency, userCurrency, type Goal } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 type GoalForm = {
   title: string;
@@ -372,27 +373,17 @@ export default function EditGoalPage() {
     setIsSaving(true);
 
     try {
-      const payload = {
+      const updatedGoal: Goal = {
         id: goalId,
         title: form.title.trim(),
         target: toNumber(form.target),
         current: toNumber(form.current),
         yearsRemaining,
-        timeline: {
-          value: Number(form.timelineValue),
-          unit: form.timelineUnit,
-        },
-        activityLog: log,
+        completed: toNumber(form.current) >= toNumber(form.target),
       };
 
-      console.log("Save goal:", payload);
-
-      // Example API call:
-      // await fetch(`/api/goals/${goalId}`, {
-      //   method: "PUT",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(payload),
-      // });
+      useFinancialStore.getState().removeGoal(goalId);
+      useFinancialStore.getState().addGoal(updatedGoal);
 
       router.push("/dashboard/goals");
     } finally {

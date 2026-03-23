@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 
 import type {
   User,
+  Account,
   Liability,
   Property,
   AssetHolding,
@@ -29,12 +30,98 @@ import type {
   EmergencyFundData,
 } from "@/lib/onboarding/types";
 
+// ── Legacy types ──────────────────────────────────────────────────────────────
+
+export type WillStatus = "none" | "draft" | "signed" | "needs_update";
+
+export interface WillInfo {
+  status: WillStatus;
+  lastUpdated?: string;
+  executorName?: string;
+  storageLocation?: string;
+  notes?: string;
+}
+
+export interface Beneficiary {
+  id: string;
+  name: string;
+  relationship: string;
+  allocationPct: number;
+  linkedAssets: string[];
+  contactInfo?: string;
+}
+
+export interface Dependent {
+  id: string;
+  name: string;
+  relationship: string;
+  dateOfBirth?: string;
+  financialReliance: "full" | "partial" | "minimal";
+  notes?: string;
+}
+
+export interface DigitalAsset {
+  id: string;
+  name: string;
+  type: "crypto" | "account" | "domain" | "business" | "other";
+  value?: number;
+  accessInstructions?: string;
+  custodian?: string;
+}
+
+export interface LetterOfWishes {
+  lastUpdated?: string;
+  content?: string;
+}
+
+export interface LegacyState {
+  will: WillInfo;
+  beneficiaries: Beneficiary[];
+  dependents: Dependent[];
+  digitalAssets: DigitalAsset[];
+  letterOfWishes: LetterOfWishes;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function uid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto)
     return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+interface ScoreInput {
+  user: User | null;
+  incomeRows: CashFlowRow[];
+  expenseCategories: ExpenseCategory[];
+  goals: Goal[];
+  retirement: RetirementConfig;
+  liabilities: Liability[];
+  emergencyFund: EmergencyFundConfig;
+  holdings: AssetHolding[];
+  accounts: Account[];
+  insurancePolicies: InsurancePolicy[];
+}
+
+function computeProfileCompletionScore(s: ScoreInput): number {
+  return [
+    !!s.user?.display_name && !!s.user?.email && !!s.user?.resident_country
+      ? 15
+      : 0,
+    s.incomeRows.length > 0 ? 15 : 0,
+    s.expenseCategories.length > 0 ? 15 : 0,
+    s.goals.length > 0 ? 10 : 0,
+    s.retirement.desiredMonthlyIncome > 0 && s.retirement.retirementAge > 0
+      ? 10
+      : 0,
+    s.retirement.currentInvested > 0 || s.retirement.existingPensionBalance > 0
+      ? 10
+      : 0,
+    s.liabilities.length > 0 ? 5 : 0,
+    s.emergencyFund.currentCashBalance > 0 ? 5 : 0,
+    s.holdings.length > 0 || s.accounts.length > 0 ? 10 : 0,
+    s.insurancePolicies.length > 0 ? 5 : 0,
+  ].reduce((a, b) => a + b, 0);
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
@@ -67,6 +154,14 @@ const DEFAULT_RETIREMENT: RetirementConfig = {
   desiredMonthlyIncome: 0,
 };
 
+export const DEFAULT_LEGACY: LegacyState = {
+  will: { status: "none" },
+  beneficiaries: [],
+  dependents: [],
+  digitalAssets: [],
+  letterOfWishes: {},
+};
+
 // ── Seeding helper type ───────────────────────────────────────────────────────
 
 /** Relevant slice of OnboardingState consumed by seedFromOnboarding. */
@@ -87,6 +182,7 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
   propertyAssets: Property[];
   /** Rich asset holdings — separate from the lightweight Account[] kept for selector compat. */
   holdings: AssetHolding[];
+  legacy: LegacyState;
 
   setUser: (user: User | null) => void;
   setIncome: (rows: CashFlowRow[]) => void;
@@ -102,7 +198,19 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
   removeInsurancePolicy: (policyId: string) => void;
   addGoal: (goal: Goal) => void;
   removeGoal: (id: string) => void;
+  setWill: (will: WillInfo) => void;
+  addBeneficiary: (b: Beneficiary) => void;
+  updateBeneficiary: (b: Beneficiary) => void;
+  removeBeneficiary: (id: string) => void;
+  addDependent: (d: Dependent) => void;
+  updateDependent: (d: Dependent) => void;
+  removeDependent: (id: string) => void;
+  addDigitalAsset: (a: DigitalAsset) => void;
+  updateDigitalAsset: (a: DigitalAsset) => void;
+  removeDigitalAsset: (id: string) => void;
+  setLetterOfWishes: (letter: LetterOfWishes) => void;
   seedFromOnboarding: (data: OnboardingSeedData) => void;
+  profileCompletionScore: number;
 }
 
 // ── Initial state ─────────────────────────────────────────────────────────────
@@ -123,6 +231,17 @@ type FinancialData = Omit<
   | "removeInsurancePolicy"
   | "addGoal"
   | "removeGoal"
+  | "setWill"
+  | "addBeneficiary"
+  | "updateBeneficiary"
+  | "removeBeneficiary"
+  | "addDependent"
+  | "updateDependent"
+  | "removeDependent"
+  | "addDigitalAsset"
+  | "updateDigitalAsset"
+  | "removeDigitalAsset"
+  | "setLetterOfWishes"
   | "seedFromOnboarding"
 >;
 
@@ -143,6 +262,8 @@ const INITIAL_STATE: FinancialData = {
   freshness: [],
   retirement: DEFAULT_RETIREMENT,
   cashFlowHistory: [],
+  legacy: DEFAULT_LEGACY,
+  profileCompletionScore: 0,
 };
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -152,50 +273,250 @@ export const useFinancialStore = create<FinancialState>()(
     (set) => ({
       ...INITIAL_STATE,
 
-      setUser: (user) => set({ user }),
+      setUser: (user) =>
+        set((s) => {
+          const n = { ...s, user };
+          return {
+            user,
+            profileCompletionScore: computeProfileCompletionScore(n),
+          };
+        }),
 
-      setIncome: (rows) => set({ incomeRows: rows }),
+      setIncome: (rows) =>
+        set((s) => {
+          const n = { ...s, incomeRows: rows };
+          return {
+            incomeRows: rows,
+            profileCompletionScore: computeProfileCompletionScore(n),
+          };
+        }),
 
-      setExpenses: (categories) => set({ expenseCategories: categories }),
+      setExpenses: (categories) =>
+        set((s) => {
+          const n = { ...s, expenseCategories: categories };
+          return {
+            expenseCategories: categories,
+            profileCompletionScore: computeProfileCompletionScore(n),
+          };
+        }),
 
       addLiability: (liability) =>
-        set((s) => ({ liabilities: [...s.liabilities, liability] })),
+        set((s) => {
+          const liabilities = [...s.liabilities, liability];
+          return {
+            liabilities,
+            profileCompletionScore: computeProfileCompletionScore({
+              ...s,
+              liabilities,
+            }),
+          };
+        }),
 
       removeLiability: (id) =>
-        set((s) => ({
-          liabilities: s.liabilities.filter((l) => l.id !== id),
-        })),
+        set((s) => {
+          const liabilities = s.liabilities.filter((l) => l.id !== id);
+          return {
+            liabilities,
+            profileCompletionScore: computeProfileCompletionScore({
+              ...s,
+              liabilities,
+            }),
+          };
+        }),
 
-      setRetirement: (config) => set({ retirement: config }),
+      setRetirement: (config) =>
+        set((s) => {
+          const n = { ...s, retirement: config };
+          return {
+            retirement: config,
+            profileCompletionScore: computeProfileCompletionScore(n),
+          };
+        }),
 
-      setEmergencyFund: (config) => set({ emergencyFund: config }),
+      setEmergencyFund: (config) =>
+        set((s) => {
+          const n = { ...s, emergencyFund: config };
+          return {
+            emergencyFund: config,
+            profileCompletionScore: computeProfileCompletionScore(n),
+          };
+        }),
 
-      setHoldings: (holdings) => set({ holdings }),
+      setHoldings: (holdings) =>
+        set((s) => {
+          const n = { ...s, holdings };
+          return {
+            holdings,
+            profileCompletionScore: computeProfileCompletionScore(n),
+          };
+        }),
 
       addProperty: (property) =>
-        set((s) => ({ propertyAssets: [...s.propertyAssets, property] })),
+        set((s) => {
+          const propertyAssets = [...s.propertyAssets, property];
+          return {
+            propertyAssets,
+            profileCompletionScore: computeProfileCompletionScore(s),
+          };
+        }),
 
       removeProperty: (id) =>
-        set((s) => ({
-          propertyAssets: s.propertyAssets.filter((p) => p.property_id !== id),
-        })),
+        set((s) => {
+          const propertyAssets = s.propertyAssets.filter(
+            (p) => p.property_id !== id,
+          );
+          return {
+            propertyAssets,
+            profileCompletionScore: computeProfileCompletionScore(s),
+          };
+        }),
 
       addInsurancePolicy: (policy) =>
-        set((s) => ({
-          insurancePolicies: [...s.insurancePolicies, policy],
-        })),
+        set((s) => {
+          const insurancePolicies = [...s.insurancePolicies, policy];
+          return {
+            insurancePolicies,
+            profileCompletionScore: computeProfileCompletionScore({
+              ...s,
+              insurancePolicies,
+            }),
+          };
+        }),
 
       removeInsurancePolicy: (policyId) =>
-        set((s) => ({
-          insurancePolicies: s.insurancePolicies.filter(
+        set((s) => {
+          const insurancePolicies = s.insurancePolicies.filter(
             (p) => p.policy_id !== policyId,
-          ),
-        })),
+          );
+          return {
+            insurancePolicies,
+            profileCompletionScore: computeProfileCompletionScore({
+              ...s,
+              insurancePolicies,
+            }),
+          };
+        }),
 
-      addGoal: (goal) => set((s) => ({ goals: [...s.goals, goal] })),
+      addGoal: (goal) =>
+        set((s) => {
+          const goals = [...s.goals, goal];
+          return {
+            goals,
+            profileCompletionScore: computeProfileCompletionScore({
+              ...s,
+              goals,
+            }),
+          };
+        }),
 
       removeGoal: (id) =>
-        set((s) => ({ goals: s.goals.filter((g) => g.id !== id) })),
+        set((s) => {
+          const goals = s.goals.filter((g) => g.id !== id);
+          return {
+            goals,
+            profileCompletionScore: computeProfileCompletionScore({
+              ...s,
+              goals,
+            }),
+          };
+        }),
+
+      setWill: (will) =>
+        set((s) => ({
+          legacy: { ...s.legacy, will },
+          profileCompletionScore: computeProfileCompletionScore(s),
+        })),
+
+      addBeneficiary: (b) =>
+        set((s) => ({
+          legacy: {
+            ...s.legacy,
+            beneficiaries: [...s.legacy.beneficiaries, b],
+          },
+          profileCompletionScore: computeProfileCompletionScore(s),
+        })),
+
+      updateBeneficiary: (b) =>
+        set((s) => ({
+          legacy: {
+            ...s.legacy,
+            beneficiaries: s.legacy.beneficiaries.map((x) =>
+              x.id === b.id ? b : x,
+            ),
+          },
+          profileCompletionScore: computeProfileCompletionScore(s),
+        })),
+
+      removeBeneficiary: (id) =>
+        set((s) => ({
+          legacy: {
+            ...s.legacy,
+            beneficiaries: s.legacy.beneficiaries.filter((x) => x.id !== id),
+          },
+          profileCompletionScore: computeProfileCompletionScore(s),
+        })),
+
+      addDependent: (d) =>
+        set((s) => ({
+          legacy: {
+            ...s.legacy,
+            dependents: [...s.legacy.dependents, d],
+          },
+          profileCompletionScore: computeProfileCompletionScore(s),
+        })),
+
+      updateDependent: (d) =>
+        set((s) => ({
+          legacy: {
+            ...s.legacy,
+            dependents: s.legacy.dependents.map((x) => (x.id === d.id ? d : x)),
+          },
+          profileCompletionScore: computeProfileCompletionScore(s),
+        })),
+
+      removeDependent: (id) =>
+        set((s) => ({
+          legacy: {
+            ...s.legacy,
+            dependents: s.legacy.dependents.filter((x) => x.id !== id),
+          },
+          profileCompletionScore: computeProfileCompletionScore(s),
+        })),
+
+      addDigitalAsset: (a) =>
+        set((s) => ({
+          legacy: {
+            ...s.legacy,
+            digitalAssets: [...s.legacy.digitalAssets, a],
+          },
+          profileCompletionScore: computeProfileCompletionScore(s),
+        })),
+
+      updateDigitalAsset: (a) =>
+        set((s) => ({
+          legacy: {
+            ...s.legacy,
+            digitalAssets: s.legacy.digitalAssets.map((x) =>
+              x.id === a.id ? a : x,
+            ),
+          },
+          profileCompletionScore: computeProfileCompletionScore(s),
+        })),
+
+      removeDigitalAsset: (id) =>
+        set((s) => ({
+          legacy: {
+            ...s.legacy,
+            digitalAssets: s.legacy.digitalAssets.filter((x) => x.id !== id),
+          },
+          profileCompletionScore: computeProfileCompletionScore(s),
+        })),
+
+      setLetterOfWishes: (letter) =>
+        set((s) => ({
+          legacy: { ...s.legacy, letterOfWishes: letter },
+          profileCompletionScore: computeProfileCompletionScore(s),
+        })),
 
       seedFromOnboarding: ({
         identity,
@@ -291,23 +612,38 @@ export const useFinancialStore = create<FinancialState>()(
             }
           : DEFAULT_EMERGENCY_FUND;
 
-        set({
+        const seedData = {
           user,
           incomeRows,
           goals: mappedGoals,
           retirement: retirementConfig,
-          liabilities: [],
-          expenseCategories: [],
-          accounts: [],
-          holdings: [],
-          propertyAssets: [],
-          insurancePolicies: [],
+          liabilities: [] as Liability[],
+          expenseCategories: [] as ExpenseCategory[],
+          accounts: [] as Account[],
+          holdings: [] as AssetHolding[],
+          propertyAssets: [] as Property[],
+          insurancePolicies: [] as InsurancePolicy[],
           emergencyFund: emergencyFundConfig,
+        };
+
+        set({
+          ...seedData,
+          legacy: DEFAULT_LEGACY,
+          profileCompletionScore: computeProfileCompletionScore(seedData),
         });
       },
     }),
     {
       name: "financial-store-v1",
+      /**
+       * Defer localStorage hydration until after the first render so the
+       * server-rendered HTML (which uses INITIAL_STATE) and the client's
+       * first paint both produce the same output — eliminating the React
+       * hydration mismatch.  The dashboard layout calls
+       * `useFinancialStore.persist.rehydrate()` inside a `useEffect` so
+       * real data loads immediately after mount.
+       */
+      skipHydration: true,
     },
   ),
 );

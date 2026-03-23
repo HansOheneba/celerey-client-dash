@@ -70,6 +70,7 @@ export default function GoalsDashboard() {
   const confirmDelete = (): void => {
     if (!pendingDelete) return;
     setGoals((prev) => prev.filter((g) => g.id !== pendingDelete.id));
+    useFinancialStore.getState().removeGoal(pendingDelete.id);
     setDeleteOpen(false);
     setPendingDelete(null);
   };

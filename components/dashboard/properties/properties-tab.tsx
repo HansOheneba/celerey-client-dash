@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Plus, ArrowUpRight } from "lucide-react";
+import { Plus, ArrowUpRight, Home } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -347,6 +347,25 @@ export function PropertiesTab() {
       tone: "neutral",
     },
   ];
+
+  if (properties.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
+        <div className="p-4 rounded-full bg-muted">
+          <Home className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-semibold">No properties added yet</p>
+          <p className="text-xs text-muted-foreground">
+            Add a property to track its value, equity, and insurance.
+          </p>
+        </div>
+        <Button asChild size="sm">
+          <Link href="/dashboard/properties/new">Add property</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <motion.div

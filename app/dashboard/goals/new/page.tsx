@@ -21,7 +21,9 @@ import {
   savingsData,
   formatCurrency,
   userCurrency,
+  type Goal,
 } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 type GoalForm = {
   title: string;
@@ -260,25 +262,16 @@ export default function NewGoalPage() {
     setIsSubmitting(true);
 
     try {
-      const payload = {
+      const newGoal: Goal = {
+        id: `goal-${Date.now()}`,
         title: form.title.trim(),
         target: toNumber(form.target),
         current: toNumber(form.current),
         yearsRemaining,
-        timeline: {
-          value: Number(form.timelineValue),
-          unit: form.timelineUnit,
-        },
+        completed: toNumber(form.current) >= toNumber(form.target),
       };
 
-      console.log("New goal:", payload);
-
-      // Example API call:
-      // await fetch("/api/goals", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(payload),
-      // });
+      useFinancialStore.getState().addGoal(newGoal);
 
       router.push("/dashboard/goals");
     } finally {

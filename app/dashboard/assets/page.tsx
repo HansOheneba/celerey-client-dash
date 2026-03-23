@@ -978,7 +978,7 @@ function EmptyHoldings({ onAdd }: { onAdd: () => void }) {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-16 text-center space-y-4"
+      className="flex flex-col items-center justify-center py-24 text-center space-y-4"
     >
       <div className="p-4 rounded-full bg-muted">
         <FontAwesomeIcon
@@ -986,16 +986,16 @@ function EmptyHoldings({ onAdd }: { onAdd: () => void }) {
           className="h-8 w-8 text-muted-foreground"
         />
       </div>
-      <div>
-        <p className="text-sm font-semibold">No holdings yet</p>
+      <div className="space-y-1">
+        <p className="text-sm font-semibold">No assets added yet</p>
         <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-          Add your first asset — stocks, ETFs, crypto, bonds, savings, or any
-          investment you hold.
+          Add your investments, savings, or other assets to track your
+          portfolio.
         </p>
       </div>
       <Button size="sm" className="gap-1.5" onClick={onAdd}>
         <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
-        Add your first holding
+        Add asset
       </Button>
     </motion.div>
   );
@@ -1130,12 +1130,12 @@ export default function AssetsPage() {
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   function handleSaveHolding(h: AssetHolding, val?: AssetValuation) {
-    setHoldings((prev) => {
-      const exists = prev.find((x) => x.holding_id === h.holding_id);
-      return exists
-        ? prev.map((x) => (x.holding_id === h.holding_id ? h : x))
-        : [...prev, h];
-    });
+    const exists = holdings.find((x) => x.holding_id === h.holding_id);
+    const updatedHoldings = exists
+      ? holdings.map((x) => (x.holding_id === h.holding_id ? h : x))
+      : [...holdings, h];
+    setHoldings(updatedHoldings);
+    useFinancialStore.getState().setHoldings(updatedHoldings);
     if (val) {
       setValuations((prev) => [
         ...prev.filter((v) => v.holding_id !== val.holding_id),
@@ -1146,7 +1146,9 @@ export default function AssetsPage() {
   }
 
   function handleDelete(holdingId: string) {
-    setHoldings((prev) => prev.filter((h) => h.holding_id !== holdingId));
+    const updatedHoldings = holdings.filter((h) => h.holding_id !== holdingId);
+    setHoldings(updatedHoldings);
+    useFinancialStore.getState().setHoldings(updatedHoldings);
   }
 
   // ── KPI strip ─────────────────────────────────────────────────────────────

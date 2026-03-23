@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Sidebar,
   SidebarHeader,
@@ -29,7 +29,11 @@ import {
   faBrain,
   faBellConcierge,
   faHeadset,
+  faScaleUnbalanced,
+  faScroll,
 } from "@fortawesome/free-solid-svg-icons";
+
+import { useFinancialStore } from "@/store/financialStore";
 
 const nav = [
   { label: "Overview", href: "/dashboard", icon: faChartPie },
@@ -38,15 +42,26 @@ const nav = [
   { label: "Properties", href: "/dashboard/properties", icon: faHouse },
   { label: "Insurance", href: "/dashboard/insurance", icon: faShieldHalved },
   { label: "Cash Flow", href: "/dashboard/cash-flow", icon: faMoneyBillWave },
+  {
+    label: "Liabilities",
+    href: "/dashboard/liabilities",
+    icon: faScaleUnbalanced,
+  },
   { label: "Retirement", href: "/dashboard/retirement", icon: faUmbrellaBeach },
+  { label: "Legacy", href: "/dashboard/legacy", icon: faScroll },
   { label: "Celerey Insights", href: "/dashboard/ai", icon: faBrain },
   { label: "Concierge", href: "/dashboard/concierge", icon: faBellConcierge },
 ];
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+
+  const profileCompletionScore = useFinancialStore(
+    (s) => s.profileCompletionScore,
+  );
 
   return (
     <Sidebar
@@ -166,6 +181,52 @@ export default function DashboardSidebar() {
       </SidebarContent>
 
       <SidebarSeparator className="my-3 bg-gray-200" />
+
+      {/* ── Profile Completion Widget ── */}
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            key="profile-completion"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden px-3 pb-2"
+          >
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard/profile/setup")}
+              className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors px-3 py-2.5 space-y-2"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-gray-700">
+                  Your profile is{" "}
+                  <span className="font-semibold text-[#160b35]">
+                    {profileCompletionScore}%
+                  </span>{" "}
+                  complete
+                </p>
+                <span className="text-xs tabular-nums text-gray-500">
+                  {profileCompletionScore}/100
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${profileCompletionScore}%` }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  className="h-full rounded-full bg-[#160b35]"
+                />
+              </div>
+              {profileCompletionScore < 100 && (
+                <p className="text-[11px] text-gray-500 leading-snug">
+                  Complete your profile to get the most out of Celerey
+                </p>
+              )}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Footer ── */}
       <SidebarFooter>

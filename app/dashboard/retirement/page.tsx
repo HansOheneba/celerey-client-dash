@@ -1640,7 +1640,10 @@ export default function RetirementPage() {
           open={editOpen}
           onClose={() => setEditOpen(false)}
           config={config}
-          onSave={setConfig}
+          onSave={(newConfig) => {
+            setConfig(newConfig);
+            useFinancialStore.getState().setRetirement(newConfig);
+          }}
           accountMode={accountMode}
           currentAge={currentAge}
         />

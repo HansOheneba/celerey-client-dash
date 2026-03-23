@@ -29,6 +29,7 @@ import {
   PROPERTY_TYPE_OPTIONS,
   COUNTRY_OPTIONS,
 } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 import { InsuranceSection } from "./insurance-section";
 
 // ── Form state ──────────────────────────────────────────────────
@@ -200,10 +201,10 @@ export function PropertyForm({
     setIsSubmitting(true);
 
     try {
-      const payload = {
-        ...(editingProperty
-          ? { property_id: editingProperty.property_id }
-          : {}),
+      const now = new Date().toISOString();
+      const property: Property = {
+        property_id: editingProperty?.property_id ?? `p-${Date.now()}`,
+        user_id: "u-1",
         name: form.name.trim(),
         property_type: form.propertyType,
         country: form.country,
@@ -212,10 +213,18 @@ export function PropertyForm({
         market_value: marketValueNum,
         mortgage_balance: mortgageNum,
         is_primary: form.isPrimary,
+        is_active: true,
         insurance: form.insurance,
+        created_at: editingProperty?.created_at ?? now,
+        updated_at: now,
       };
 
-      console.log(isEditing ? "Update property:" : "New property:", payload);
+      if (editingProperty) {
+        useFinancialStore
+          .getState()
+          .removeProperty(editingProperty.property_id);
+      }
+      useFinancialStore.getState().addProperty(property);
 
       router.push("/dashboard/properties");
     } finally {

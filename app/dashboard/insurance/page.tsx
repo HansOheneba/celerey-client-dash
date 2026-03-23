@@ -919,17 +919,21 @@ export default function InsurancePage() {
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   function handleSave(p: InsurancePolicy) {
-    setPolicies((prev) => {
-      const exists = prev.find((x) => x.policy_id === p.policy_id);
-      return exists
-        ? prev.map((x) => (x.policy_id === p.policy_id ? p : x))
-        : [...prev, p];
-    });
+    const exists = policies.find((x) => x.policy_id === p.policy_id);
+    if (exists) {
+      setPolicies(policies.map((x) => (x.policy_id === p.policy_id ? p : x)));
+      useFinancialStore.getState().removeInsurancePolicy(p.policy_id);
+      useFinancialStore.getState().addInsurancePolicy(p);
+    } else {
+      setPolicies([...policies, p]);
+      useFinancialStore.getState().addInsurancePolicy(p);
+    }
     setEditPolicy(null);
   }
 
   function handleDeactivate(policyId: string) {
-    setPolicies((prev) => prev.filter((p) => p.policy_id !== policyId));
+    setPolicies(policies.filter((p) => p.policy_id !== policyId));
+    useFinancialStore.getState().removeInsurancePolicy(policyId);
   }
 
   // ── KPI strip ─────────────────────────────────────────────────────────────
@@ -1339,32 +1343,62 @@ export default function InsurancePage() {
             </div>
 
             {filteredPolicies.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-12 text-center space-y-3"
-              >
-                <div className="p-3 rounded-full bg-muted">
-                  <FontAwesomeIcon
-                    icon={faShield}
-                    className="h-6 w-6 text-muted-foreground"
-                  />
+              policies.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
+                  <div className="p-4 rounded-full bg-muted">
+                    <FontAwesomeIcon
+                      icon={faShield}
+                      className="h-8 w-8 text-muted-foreground"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold">
+                      No policies added yet
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Add your insurance policies to track coverage and
+                      renewals.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditPolicy(null);
+                      setDialogOpen(true);
+                    }}
+                  >
+                    Add policy
+                  </Button>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  No policies in this category
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 text-xs"
-                  onClick={() => {
-                    setEditPolicy(null);
-                    setDialogOpen(true);
-                  }}
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-12 text-center space-y-3"
                 >
-                  <FontAwesomeIcon icon={faPlus} className="h-3 w-3" /> Add one
-                </Button>
-              </motion.div>
+                  <div className="p-3 rounded-full bg-muted">
+                    <FontAwesomeIcon
+                      icon={faShield}
+                      className="h-6 w-6 text-muted-foreground"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    No policies in this category
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs"
+                    onClick={() => {
+                      setEditPolicy(null);
+                      setDialogOpen(true);
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faPlus} className="h-3 w-3" /> Add
+                    one
+                  </Button>
+                </motion.div>
+              )
             ) : (
               <div className="space-y-2">
                 {filteredPolicies.map((policy) => (

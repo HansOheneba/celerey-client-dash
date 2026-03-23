@@ -87,6 +87,7 @@ import {
   formatCurrency,
   type CashFlowPoint,
   type CashFlowEntryDraft,
+  type ExpenseCategory,
   type RecurringType,
   type CashFlowSettings,
 } from "@/lib/client-data";
@@ -120,6 +121,16 @@ const EXPENSE_CATEGORIES = [
   "Insurance",
   "Other",
 ];
+
+const ESSENTIAL_CATEGORIES = new Set([
+  "housing",
+  "food",
+  "transport",
+  "healthcare",
+  "utilities",
+  "education",
+  "insurance",
+]);
 
 const surplusChartConfig = {
   surplus: { label: "Surplus", color: "var(--chart-1)" },
@@ -974,9 +985,22 @@ export default function CashFlowPage() {
 
   function confirmDelete() {
     if (!deleteTarget) return;
-    if (deleteTarget.type === "income")
-      setIncome((p) => p.filter((x) => x.id !== deleteTarget.row.id));
-    else setExpenses((p) => p.filter((x) => x.id !== deleteTarget.row.id));
+    if (deleteTarget.type === "income") {
+      const updatedRows = income.filter((x) => x.id !== deleteTarget.row.id);
+      setIncome(updatedRows);
+      useFinancialStore.getState().setIncome(updatedRows);
+    } else {
+      const updatedCategories = expenses.filter(
+        (x) => x.id !== deleteTarget.row.id,
+      );
+      setExpenses(updatedCategories);
+      useFinancialStore.getState().setExpenses(
+        updatedCategories.map((c) => ({
+          ...c,
+          essential: (c as ExpenseCategory).essential ?? false,
+        })),
+      );
+    }
     setDeleteOpen(false);
     setDeleteTarget(null);
   }
@@ -993,17 +1017,44 @@ export default function CashFlowPage() {
     };
 
     if (rowDialogType === "income") {
-      setIncome((p) =>
+      const updatedRows =
         rowDialogMode === "edit"
-          ? p.map((r) => (r.id === newRow.id ? newRow : r))
-          : [newRow, ...p],
-      );
+          ? income.map((r) => (r.id === newRow.id ? newRow : r))
+          : [newRow, ...income];
+      setIncome(updatedRows);
+      useFinancialStore.getState().setIncome(updatedRows);
     } else {
-      setExpenses((p) =>
+      const isEssential =
         rowDialogMode === "edit"
-          ? p.map((r) => (r.id === newRow.id ? newRow : r))
-          : [newRow, ...p],
-      );
+          ? ((
+              expenses.find((r) => r.id === newRow.id) as
+                | ExpenseCategory
+                | undefined
+            )?.essential ?? false)
+          : ESSENTIAL_CATEGORIES.has(rowDraft.category.toLowerCase());
+      const newExpenseRow: ExpenseCategory = {
+        ...newRow,
+        essential: isEssential,
+      };
+      const updatedCategories: ExpenseCategory[] =
+        rowDialogMode === "edit"
+          ? expenses.map((r) =>
+              r.id === newExpenseRow.id
+                ? newExpenseRow
+                : {
+                    ...r,
+                    essential: (r as ExpenseCategory).essential ?? false,
+                  },
+            )
+          : [
+              newExpenseRow,
+              ...expenses.map((r) => ({
+                ...r,
+                essential: (r as ExpenseCategory).essential ?? false,
+              })),
+            ];
+      setExpenses(updatedCategories);
+      useFinancialStore.getState().setExpenses(updatedCategories);
     }
 
     setRowDialogOpen(false);
@@ -1301,31 +1352,52 @@ export default function CashFlowPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <CategoryBreakdown
-                    rows={expenses}
-                    total={totalExpenses}
-                    type="expense"
-                  />
-                  <Separator />
-                  <div className="space-y-2">
-                    {expenses.map((r) => (
-                      <RowItem
-                        key={r.id}
-                        row={r}
+                  {expenses.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
+                      <div className="p-4 rounded-full bg-muted">
+                        <CreditCard className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold">
+                          Add your first expense
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Track where your money goes each month.
+                        </p>
+                      </div>
+                      <Button size="sm" onClick={() => openCreate("expense")}>
+                        Add expense
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <CategoryBreakdown
+                        rows={expenses}
                         total={totalExpenses}
-                        onEdit={() => openEdit("expense", r)}
-                        onDelete={() => requestDelete("expense", r)}
+                        type="expense"
                       />
-                    ))}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full gap-1.5 text-xs"
-                    onClick={() => openCreate("expense")}
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Add expense
-                  </Button>
+                      <Separator />
+                      <div className="space-y-2">
+                        {expenses.map((r) => (
+                          <RowItem
+                            key={r.id}
+                            row={r}
+                            total={totalExpenses}
+                            onEdit={() => openEdit("expense", r)}
+                            onDelete={() => requestDelete("expense", r)}
+                          />
+                        ))}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-1.5 text-xs"
+                        onClick={() => openCreate("expense")}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add expense
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
