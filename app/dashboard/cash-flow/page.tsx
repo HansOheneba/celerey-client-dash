@@ -82,16 +82,17 @@ import {
 import { CashFlowChart } from "@/components/dashboard/cash-flow/cash-flow-chart";
 
 import {
+  cashFlowData,
   calculateNetWorth,
   selectEmergencyFundMetrics,
+  financialDomainData,
   formatCurrency,
+  mockCashFlowHistory,
   type CashFlowPoint,
   type CashFlowEntryDraft,
-  type ExpenseCategory,
   type RecurringType,
   type CashFlowSettings,
 } from "@/lib/client-data";
-import { useFinancialStore } from "@/store/financialStore";
 
 // ─── Local-only types ──────────────────────────────────────────────────────
 
@@ -121,16 +122,6 @@ const EXPENSE_CATEGORIES = [
   "Insurance",
   "Other",
 ];
-
-const ESSENTIAL_CATEGORIES = new Set([
-  "housing",
-  "food",
-  "transport",
-  "healthcare",
-  "utilities",
-  "education",
-  "insurance",
-]);
 
 const surplusChartConfig = {
   surplus: { label: "Surplus", color: "var(--chart-1)" },
@@ -722,7 +713,7 @@ function CategoryBreakdown({
         return (
           <div key={r.id} className="space-y-1">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground truncate max-w-[160px]">
+              <span className="text-muted-foreground truncate max-w-40">
                 {r.name}
               </span>
               <div className="flex items-center gap-2 shrink-0">
@@ -766,18 +757,13 @@ function CategoryBreakdown({
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export default function CashFlowPage() {
-  const [income, setIncome] = React.useState<MoneyRow[]>(
-    () => useFinancialStore.getState().incomeRows,
-  );
+  const [income, setIncome] = React.useState<MoneyRow[]>(cashFlowData.income);
   const [expenses, setExpenses] = React.useState<MoneyRow[]>(
-    () => useFinancialStore.getState().expenseCategories,
+    cashFlowData.expenses,
   );
-  const [settings, setSettings] = React.useState<CashFlowSettings>(() => ({
-    emergencyFundMonths:
-      useFinancialStore.getState().emergencyFund.targetMonths,
-    currentCashBalance:
-      useFinancialStore.getState().emergencyFund.currentCashBalance,
-  }));
+  const [settings, setSettings] = React.useState<CashFlowSettings>(
+    cashFlowData.settings,
+  );
 
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [rowDialogOpen, setRowDialogOpen] = React.useState(false);
@@ -817,31 +803,15 @@ export default function CashFlowPage() {
   const savingsRate = totalIncome > 0 ? (surplus / totalIncome) * 100 : 0;
   const burn = burnRate(totalExpenses, totalIncome);
 
-  const storeHoldings = useFinancialStore((s) => s.holdings);
-  const storePropertyAssets = useFinancialStore((s) => s.propertyAssets);
-  const storeInsurancePolicies = useFinancialStore((s) => s.insurancePolicies);
-
   const netWorth = React.useMemo(
-    () =>
-      calculateNetWorth(
-        storeHoldings,
-        [],
-        storePropertyAssets.filter((p) => p.is_active),
-        income,
-        expenses,
-        [],
-      ),
-    [storeHoldings, storePropertyAssets, income, expenses],
+    () => calculateNetWorth(undefined, undefined, undefined, income, expenses),
+    [income, expenses],
   );
 
-  const storeCashFlowHistory = useFinancialStore((s) => s.cashFlowHistory);
-  const storeExpenseCategories = useFinancialStore((s) => s.expenseCategories);
-  const storeEmergencyFund = useFinancialStore((s) => s.emergencyFund);
-
-  const avgIncome = avgFromHistory(storeCashFlowHistory, "income");
-  const avgExpenses = avgFromHistory(storeCashFlowHistory, "expenses");
-  const incMom = momChange(storeCashFlowHistory, "income");
-  const expMom = momChange(storeCashFlowHistory, "expenses");
+  const avgIncome = avgFromHistory(mockCashFlowHistory, "income");
+  const avgExpenses = avgFromHistory(mockCashFlowHistory, "expenses");
+  const incMom = momChange(mockCashFlowHistory, "income");
+  const expMom = momChange(mockCashFlowHistory, "expenses");
 
   const insights = React.useMemo(
     () =>
@@ -849,59 +819,14 @@ export default function CashFlowPage() {
         totalIncome,
         totalExpenses,
         savingsRate,
-        storeCashFlowHistory,
+        mockCashFlowHistory,
       ),
-    [totalIncome, totalExpenses, savingsRate, storeCashFlowHistory],
+    [totalIncome, totalExpenses, savingsRate],
   );
-
-  const storeAccounts = useFinancialStore((s) => s.accounts);
-  const storeLiabilities = useFinancialStore((s) => s.liabilities);
-  const storePortfolioPerformance = useFinancialStore(
-    (s) => s.portfolioPerformance,
-  );
-  const storeAllocation = useFinancialStore((s) => s.allocation);
-  const storeTaxProfile = useFinancialStore((s) => s.taxProfile);
-  const storeIncomeRows = useFinancialStore((s) => s.incomeRows);
-  const storeFreshness = useFinancialStore((s) => s.freshness);
-  const storeRetirement = useFinancialStore((s) => s.retirement);
 
   const efMetrics = React.useMemo(
-    () =>
-      selectEmergencyFundMetrics({
-        accounts: storeAccounts,
-        liabilities: storeLiabilities,
-        propertyAssets: storePropertyAssets.map((p) => ({
-          id: p.property_id,
-          name: p.name,
-          value: p.market_value,
-          updatedAt: p.updated_at,
-        })),
-        portfolioPerformance: storePortfolioPerformance,
-        allocation: storeAllocation,
-        taxProfile: storeTaxProfile,
-        emergencyFund: storeEmergencyFund,
-        insurancePolicies: storeInsurancePolicies,
-        incomeRows: storeIncomeRows,
-        expenseCategories: storeExpenseCategories,
-        freshness: storeFreshness,
-        retirement: storeRetirement,
-        cashFlowHistory: storeCashFlowHistory,
-      }),
-    [
-      storeAccounts,
-      storeLiabilities,
-      storePropertyAssets,
-      storePortfolioPerformance,
-      storeAllocation,
-      storeTaxProfile,
-      storeEmergencyFund,
-      storeInsurancePolicies,
-      storeIncomeRows,
-      storeExpenseCategories,
-      storeFreshness,
-      storeRetirement,
-      storeCashFlowHistory,
-    ],
+    () => selectEmergencyFundMetrics(financialDomainData),
+    [],
   );
 
   const cashFlowKpis: KpiItem[] = [
@@ -987,22 +912,9 @@ export default function CashFlowPage() {
 
   function confirmDelete() {
     if (!deleteTarget) return;
-    if (deleteTarget.type === "income") {
-      const updatedRows = income.filter((x) => x.id !== deleteTarget.row.id);
-      setIncome(updatedRows);
-      useFinancialStore.getState().setIncome(updatedRows);
-    } else {
-      const updatedCategories = expenses.filter(
-        (x) => x.id !== deleteTarget.row.id,
-      );
-      setExpenses(updatedCategories);
-      useFinancialStore.getState().setExpenses(
-        updatedCategories.map((c) => ({
-          ...c,
-          essential: (c as ExpenseCategory).essential ?? false,
-        })),
-      );
-    }
+    if (deleteTarget.type === "income")
+      setIncome((p) => p.filter((x) => x.id !== deleteTarget.row.id));
+    else setExpenses((p) => p.filter((x) => x.id !== deleteTarget.row.id));
     setDeleteOpen(false);
     setDeleteTarget(null);
   }
@@ -1019,44 +931,17 @@ export default function CashFlowPage() {
     };
 
     if (rowDialogType === "income") {
-      const updatedRows =
+      setIncome((p) =>
         rowDialogMode === "edit"
-          ? income.map((r) => (r.id === newRow.id ? newRow : r))
-          : [newRow, ...income];
-      setIncome(updatedRows);
-      useFinancialStore.getState().setIncome(updatedRows);
+          ? p.map((r) => (r.id === newRow.id ? newRow : r))
+          : [newRow, ...p],
+      );
     } else {
-      const isEssential =
+      setExpenses((p) =>
         rowDialogMode === "edit"
-          ? ((
-              expenses.find((r) => r.id === newRow.id) as
-                | ExpenseCategory
-                | undefined
-            )?.essential ?? false)
-          : ESSENTIAL_CATEGORIES.has(rowDraft.category.toLowerCase());
-      const newExpenseRow: ExpenseCategory = {
-        ...newRow,
-        essential: isEssential,
-      };
-      const updatedCategories: ExpenseCategory[] =
-        rowDialogMode === "edit"
-          ? expenses.map((r) =>
-              r.id === newExpenseRow.id
-                ? newExpenseRow
-                : {
-                    ...r,
-                    essential: (r as ExpenseCategory).essential ?? false,
-                  },
-            )
-          : [
-              newExpenseRow,
-              ...expenses.map((r) => ({
-                ...r,
-                essential: (r as ExpenseCategory).essential ?? false,
-              })),
-            ];
-      setExpenses(updatedCategories);
-      useFinancialStore.getState().setExpenses(updatedCategories);
+          ? p.map((r) => (r.id === newRow.id ? newRow : r))
+          : [newRow, ...p],
+      );
     }
 
     setRowDialogOpen(false);
@@ -1146,7 +1031,7 @@ export default function CashFlowPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
-          <CashFlowChart data={storeCashFlowHistory} />
+          <CashFlowChart data={mockCashFlowHistory} />
         </motion.div>
 
         {/* Analytics */}
@@ -1176,7 +1061,7 @@ export default function CashFlowPage() {
                 <p className="text-xs text-muted-foreground mb-3">
                   Last 6 months
                 </p>
-                <SurplusHistoryChart history={storeCashFlowHistory} />
+                <SurplusHistoryChart history={mockCashFlowHistory} />
               </CardContent>
             </Card>
 
@@ -1354,52 +1239,31 @@ export default function CashFlowPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {expenses.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-                      <div className="p-4 rounded-full bg-muted">
-                        <CreditCard className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold">
-                          Add your first expense
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Track where your money goes each month.
-                        </p>
-                      </div>
-                      <Button size="sm" onClick={() => openCreate("expense")}>
-                        Add expense
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <CategoryBreakdown
-                        rows={expenses}
+                  <CategoryBreakdown
+                    rows={expenses}
+                    total={totalExpenses}
+                    type="expense"
+                  />
+                  <Separator />
+                  <div className="space-y-2">
+                    {expenses.map((r) => (
+                      <RowItem
+                        key={r.id}
+                        row={r}
                         total={totalExpenses}
-                        type="expense"
+                        onEdit={() => openEdit("expense", r)}
+                        onDelete={() => requestDelete("expense", r)}
                       />
-                      <Separator />
-                      <div className="space-y-2">
-                        {expenses.map((r) => (
-                          <RowItem
-                            key={r.id}
-                            row={r}
-                            total={totalExpenses}
-                            onEdit={() => openEdit("expense", r)}
-                            onDelete={() => requestDelete("expense", r)}
-                          />
-                        ))}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full gap-1.5 text-xs"
-                        onClick={() => openCreate("expense")}
-                      >
-                        <Plus className="h-3.5 w-3.5" /> Add expense
-                      </Button>
-                    </>
-                  )}
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-1.5 text-xs"
+                    onClick={() => openCreate("expense")}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add expense
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -1414,15 +1278,7 @@ export default function CashFlowPage() {
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         settings={settings}
-        setSettings={(s) => {
-          setSettings(s);
-          useFinancialStore.getState().setEmergencyFund({
-            ...useFinancialStore.getState().emergencyFund,
-            targetMonths: s.emergencyFundMonths,
-            currentCashBalance: s.currentCashBalance,
-            updatedAt: new Date().toISOString(),
-          });
-        }}
+        setSettings={setSettings}
       />
 
       <EnhancedRowDialog

@@ -28,7 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { type CashFlowPoint, formatCurrency } from "@/lib/client-data";
+import {
+  type CashFlowPoint,
+  formatCurrency,
+  projectMonthlyAmount,
+} from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 
 // ─── Same colors as overview page ────────────────────────────────────────────
@@ -134,15 +138,6 @@ export function CashFlowChart({
   const incomeRows = useFinancialStore((s) => s.incomeRows);
   const expenseCategories = useFinancialStore((s) => s.expenseCategories);
 
-  const monthlyIncome = React.useMemo(
-    () => incomeRows.reduce((s, i) => s + i.amount, 0),
-    [incomeRows],
-  );
-  const monthlyExpenses = React.useMemo(
-    () => expenseCategories.reduce((s, e) => s + e.amount, 0),
-    [expenseCategories],
-  );
-
   // ── Build merged actual + projected dataset ──────────────────────────────
   const mergedData = React.useMemo<EnrichedPoint[]>(() => {
     const today = new Date();
@@ -152,15 +147,12 @@ export function CashFlowChart({
       .sort((a, b) => a.month.localeCompare(b.month))
       .map((p) => ({ ...p, isProjected: false, label: toLabel(p.month) }));
 
-    const variance = (i: number, base: number): number =>
-      base + base * 0.03 * Math.sin(i * 0.8);
-
     const projected: EnrichedPoint[] = Array.from({ length: 12 }, (_, i) => {
       const month = addMonths(today, i);
       return {
         month,
-        income: variance(i, monthlyIncome),
-        expenses: variance(i, monthlyExpenses),
+        income: projectMonthlyAmount(incomeRows, month),
+        expenses: projectMonthlyAmount(expenseCategories, month),
         isProjected: true,
         label: toLabel(month),
       };
@@ -169,7 +161,7 @@ export function CashFlowChart({
     return [...actual, ...projected].sort((a, b) =>
       a.month.localeCompare(b.month),
     );
-  }, [data, monthlyIncome, monthlyExpenses]);
+  }, [data, incomeRows, expenseCategories]);
 
   // ── Filter by time range ─────────────────────────────────────────────────
   const filteredData = React.useMemo<EnrichedPoint[]>(() => {
@@ -219,7 +211,11 @@ export function CashFlowChart({
   }, [filteredData]);
 
   // ── Empty state ──────────────────────────────────────────────────────────
-  if (monthlyIncome === 0 && monthlyExpenses === 0 && data.length === 0) {
+  if (
+    incomeRows.length === 0 &&
+    expenseCategories.length === 0 &&
+    data.length === 0
+  ) {
     return (
       <Card className={className}>
         <CardHeader>

@@ -220,6 +220,10 @@ export interface CashFlowRow {
   id: string;
   name: string;
   amount: number;
+  isRecurring?: boolean;
+  recurringType?: RecurringType;
+  recurringMonths?: number;
+  startDate?: string;
 }
 
 export interface ExpenseCategory {
@@ -227,6 +231,10 @@ export interface ExpenseCategory {
   name: string;
   amount: number;
   essential: boolean;
+  isRecurring?: boolean;
+  recurringType?: RecurringType;
+  recurringMonths?: number;
+  startDate?: string;
 }
 
 export type MoneyRow = {
@@ -259,6 +267,44 @@ export interface CashFlowPoint {
   income: number;
   expenses: number;
   surplus?: number;
+}
+
+/**
+ * Returns the effective projected monthly amount for a given ISO month
+ * (YYYY-MM) from a list of income/expense rows, respecting recurring type.
+ * - "one-time" or isRecurring===false: only counts for the row's startDate month.
+ * - "months": counts for `recurringMonths` months from startDate.
+ * - "forever" or no recurring info: always counted.
+ */
+export function projectMonthlyAmount(
+  rows: Array<{
+    amount: number;
+    isRecurring?: boolean;
+    recurringType?: RecurringType;
+    recurringMonths?: number;
+    startDate?: string;
+  }>,
+  isoMonth: string,
+): number {
+  return rows
+    .filter((row) => {
+      if (!row.isRecurring || row.recurringType === "one-time") {
+        if (!row.startDate) return false;
+        return row.startDate.slice(0, 7) === isoMonth;
+      }
+      if (
+        row.recurringType === "months" &&
+        row.recurringMonths != null &&
+        row.startDate
+      ) {
+        const [sy, sm] = row.startDate.slice(0, 7).split("-").map(Number);
+        const [py, pm] = isoMonth.split("-").map(Number);
+        const diff = (py - sy) * 12 + (pm - sm);
+        return diff >= 0 && diff < row.recurringMonths;
+      }
+      return true;
+    })
+    .reduce((s, r) => s + r.amount, 0);
 }
 
 // ============================================================================

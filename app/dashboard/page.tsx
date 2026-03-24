@@ -43,7 +43,8 @@ import {
   formatCurrency,
   selectRetirementOutputs,
   selectEmergencyFundMetrics,
-  selectNetWorthBreakdown,
+  calculateNetWorth,
+  projectMonthlyAmount,
   type FinancialDomainData,
   type CashFlowPoint,
 } from "@/lib/client-data";
@@ -365,7 +366,13 @@ export default function DashboardPage() {
     const income = store.incomeRows.reduce((s, i) => s + i.amount, 0);
     const expenses = store.expenseCategories.reduce((s, e) => s + e.amount, 0);
     const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
-    const netWorth = selectNetWorthBreakdown(financialData).totalNetWorth;
+    const netWorth = calculateNetWorth(
+      store.holdings,
+      [],
+      store.propertyAssets.filter((p) => p.is_active),
+      store.incomeRows,
+      store.expenseCategories,
+    ).netWorth;
     const portfolioValue = store.holdings
       .filter((h) => h.is_active)
       .reduce((s, h) => s + currentValue(h, []), 0);
@@ -405,6 +412,13 @@ export default function DashboardPage() {
     };
   }, [store]);
 
+  // ── Asset presence check ──────────────────────────────────────────────────
+
+  const hasAssets =
+    store.holdings.length > 0 ||
+    store.accounts.length > 0 ||
+    store.propertyAssets.length > 0;
+
   // ── Net worth change ──────────────────────────────────────────────────────
 
   const [netWorthPercent, setNetWorthPercent] = React.useState<number | null>(
@@ -427,8 +441,6 @@ export default function DashboardPage() {
 
   const cashFlowChartData = useMemo(() => {
     const today = new Date();
-    const mIncome = store.incomeRows.reduce((s, i) => s + i.amount, 0);
-    const mExpenses = store.expenseCategories.reduce((s, e) => s + e.amount, 0);
     const actualSet = new Set(
       store.cashFlowHistory.map((d: CashFlowPoint) => d.month),
     );
@@ -455,9 +467,6 @@ export default function DashboardPage() {
       last.projExpenses = last.expenses;
     }
 
-    const variance = (i: number, base: number): number =>
-      base + base * 0.03 * Math.sin(i * 0.8);
-
     const projected = Array.from({ length: 6 }, (_, i) => {
       const month = addMonthStr(today, i);
       if (actualSet.has(month)) return null;
@@ -466,8 +475,12 @@ export default function DashboardPage() {
         label: toMonthLabel(month),
         income: null as number | null,
         expenses: null as number | null,
-        projIncome: variance(i, mIncome) as number | null,
-        projExpenses: variance(i, mExpenses) as number | null,
+        projIncome: projectMonthlyAmount(store.incomeRows, month) as
+          | number
+          | null,
+        projExpenses: projectMonthlyAmount(store.expenseCategories, month) as
+          | number
+          | null,
         isProjected: true,
       };
     }).filter((p): p is NonNullable<typeof p> => p !== null);
@@ -659,10 +672,18 @@ export default function DashboardPage() {
               items={[
                 {
                   label: "Net Worth",
-                  value: formatCurrency(snapshot.netWorth),
-                  subline: "Assets minus liabilities",
-                  tone: snapshot.netWorth >= 0 ? "good" : "danger",
-                  onClick: () => router.push("/dashboard/cash-flow"),
+                  value: hasAssets ? formatCurrency(snapshot.netWorth) : "—",
+                  subline: hasAssets
+                    ? "Assets minus liabilities"
+                    : "Complete your profile to calculate your net worth",
+                  tone: hasAssets
+                    ? snapshot.netWorth >= 0
+                      ? "good"
+                      : "danger"
+                    : "neutral",
+                  onClick: hasAssets
+                    ? () => router.push("/dashboard/cash-flow")
+                    : () => router.push("/dashboard/profile/setup"),
                 },
                 {
                   label: "Portfolio Value",
@@ -686,18 +707,24 @@ export default function DashboardPage() {
                 },
                 {
                   label: "Emergency Fund",
-                  value: `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
+                  value:
+                    store.emergencyFund.currentCashBalance === 0
+                      ? "Not set up"
+                      : `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
                   subline:
                     store.emergencyFund.currentCashBalance === 0
                       ? "Set up your emergency fund"
                       : efMetrics.funded
                         ? `${formatCurrency(efMetrics.currentBalance)} · Fully funded`
                         : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} short of ${efMetrics.targetMonths}mo target`,
-                  tone: efMetrics.funded
-                    ? "good"
-                    : efMetrics.runwayMonths >= 3
-                      ? "warning"
-                      : "danger",
+                  tone:
+                    store.emergencyFund.currentCashBalance === 0
+                      ? "neutral"
+                      : efMetrics.funded
+                        ? "good"
+                        : efMetrics.runwayMonths >= 3
+                          ? "warning"
+                          : "danger",
                   onClick: () => router.push("/dashboard/cash-flow"),
                 },
               ]}
