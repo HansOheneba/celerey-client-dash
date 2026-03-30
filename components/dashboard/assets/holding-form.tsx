@@ -36,11 +36,14 @@ import { useFinancialStore } from "@/store/financialStore";
 export type HoldingFormValues = {
   name: string;
   assetType: AssetType;
-  symbol: string;
-  quantity: string;
-  averageCost: string;
-  initialValue: string;
-  initialValueDate: string;
+  symbol: string; // stock, etf, crypto
+  quantity: string; // stock, etf, crypto
+  amountInvested: string; // what the user paid/invested total (cost basis)
+  currentValue: string; // manually entered current value (non-live assets)
+  faceValue: string; // bond par/face value → stored as initial_value
+  couponRate: string; // annual interest % — bonds, cash (interest-bearing)
+  maturityDate: string; // ISO date — bonds
+  purchaseDate: string; // when acquired / as-of date
 };
 
 export type HoldingFormProps = {
@@ -86,6 +89,7 @@ export function HoldingForm({
   const router = useRouter();
   const isEditing = !!editingHolding;
   const storeHoldings = useFinancialStore((s) => s.holdings);
+  const setHoldings = useFinancialStore((s) => s.setHoldings);
 
   // ── Initialise form ─────────────────────────────────────────
   const [form, setForm] = React.useState<HoldingFormValues>(() => {
@@ -95,13 +99,19 @@ export function HoldingForm({
         assetType: editingHolding.asset_type,
         symbol: editingHolding.symbol ?? "",
         quantity: editingHolding.quantity?.toString() ?? "",
-        averageCost: editingHolding.average_cost
-          ? formatNumberWithCommas(editingHolding.average_cost.toString())
+        amountInvested: editingHolding.amount_invested
+          ? formatNumberWithCommas(editingHolding.amount_invested.toString())
           : "",
-        initialValue: formatNumberWithCommas(
-          editingHolding.initial_value.toString(),
-        ),
-        initialValueDate: editingHolding.initial_value_date,
+        currentValue: editingHolding.current_value
+          ? formatNumberWithCommas(editingHolding.current_value.toString())
+          : "",
+        faceValue:
+          editingHolding.asset_type === "bond"
+            ? formatNumberWithCommas(editingHolding.initial_value.toString())
+            : "",
+        couponRate: editingHolding.coupon_rate?.toString() ?? "",
+        maturityDate: editingHolding.maturity_date ?? "",
+        purchaseDate: editingHolding.initial_value_date,
       };
     }
     return {
@@ -109,22 +119,27 @@ export function HoldingForm({
       assetType: "stock",
       symbol: "",
       quantity: "",
-      averageCost: "",
-      initialValue: "",
-      initialValueDate: new Date().toISOString().slice(0, 10),
+      amountInvested: "",
+      currentValue: "",
+      faceValue: "",
+      couponRate: "",
+      maturityDate: "",
+      purchaseDate: new Date().toISOString().slice(0, 10),
     };
   });
 
   const [symbolSearch, setSymbolSearch] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  // ── Derived ─────────────────────────────────────────────────
-  const isMarket = supportsMarket(form.assetType);
-  const quantityNum = toNumber(form.quantity);
-  const avgCostNum = toNumber(form.averageCost);
-  const initialValueNum = toNumber(form.initialValue);
+  // ── Type flags ──────────────────────────────────────────────
+  const isMarket = supportsMarket(form.assetType); // stock, etf, crypto
+  const isBond = form.assetType === "bond";
+  const isCash = form.assetType === "cash";
+  const isMutual = form.assetType === "mutual_fund";
+  const isManual =
+    form.assetType === "alternative" || form.assetType === "other";
 
-  // Get symbols for the current asset type, filter by search
+  // ── Symbol picker helpers ────────────────────────────────────
   const availableSymbols = React.useMemo(() => {
     const syms = symbolsForType(form.assetType);
     if (!symbolSearch.trim()) return syms;
@@ -154,7 +169,6 @@ export function HoldingForm({
         if (!supportsMarket(at)) {
           next.symbol = "";
           next.quantity = "";
-          next.averageCost = "";
         } else {
           // Switching to a market type - clear previous symbol if it doesn&apos;t match
           const validForType = symbolsForType(at).some(
@@ -182,19 +196,36 @@ export function HoldingForm({
   }
 
   function handleMoneyInput(
-    key: "averageCost" | "initialValue",
+    key: "amountInvested" | "currentValue" | "faceValue",
     value: string,
   ): void {
     update(key, formatNumberWithCommas(value));
   }
 
-  // ── Computed initial value ──────────────────────────────────
-  const computedInitialValue = React.useMemo(() => {
-    if (isMarket && quantityNum > 0 && avgCostNum > 0) {
-      return quantityNum * avgCostNum;
-    }
-    return initialValueNum;
-  }, [isMarket, quantityNum, avgCostNum, initialValueNum]);
+  // ── Numeric values ─────────────────────────────────────────
+  const amountInvestedNum = toNumber(form.amountInvested);
+  const currentValueNum = toNumber(form.currentValue);
+  const faceValueNum = toNumber(form.faceValue);
+  const quantityNum = toNumber(form.quantity);
+  const couponRateNum = toNumber(form.couponRate);
+
+  /** Projected bond value at maturity: face + accumulated coupon income. */
+  const projectedBondValue = React.useMemo(() => {
+    if (!isBond || !faceValueNum || !couponRateNum || !form.maturityDate)
+      return 0;
+    const years =
+      (new Date(form.maturityDate).getTime() - Date.now()) /
+      (1000 * 60 * 60 * 24 * 365.25);
+    if (years <= 0) return faceValueNum;
+    return faceValueNum + faceValueNum * (couponRateNum / 100) * years;
+  }, [isBond, faceValueNum, couponRateNum, form.maturityDate]);
+
+  /** Primary reference value for insight sizing. */
+  const insightRefValue = isBond
+    ? faceValueNum || amountInvestedNum
+    : isCash
+      ? currentValueNum
+      : amountInvestedNum || currentValueNum;
 
   // ── Contextual insight ──────────────────────────────────────
   type Insight = { tone: "info" | "good" | "warn"; message: string };
@@ -220,25 +251,42 @@ export function HoldingForm({
           "Fill in the details to see how this holding fits your portfolio.",
       };
     }
-    if (computedInitialValue <= 0) {
+    if (insightRefValue <= 0) {
       return {
         tone: "info",
-        message: "Enter the value or cost basis to preview this holding.",
+        message: "Enter the value or amount invested to preview this holding.",
       };
     }
-    if (computedInitialValue > 500_000) {
+    if (insightRefValue > 500_000) {
       return {
         tone: "warn",
-        message: `A single position worth ${currency(computedInitialValue)} is significant. Make sure this doesn\u2019t create too much concentration risk.`,
+        message: `A single position worth ${currency(insightRefValue)} is significant. Make sure this doesn\u2019t create too much concentration risk.`,
+      };
+    }
+    if (isBond && faceValueNum > 0 && couponRateNum > 0 && form.maturityDate) {
+      return {
+        tone: "good",
+        message: `Bond with a ${couponRateNum}% coupon rate. Projected value at maturity: ~${currency(projectedBondValue)}.`,
       };
     }
     return {
       tone: "good",
       message: isMarket
         ? `We\u2019ll automatically update the valuation for ${form.symbol} using market prices.`
-        : `This holding will be tracked with manual valuations starting from ${currency(computedInitialValue)}.`,
+        : `This holding will be tracked manually starting from ${currency(insightRefValue)}.`,
     };
-  }, [isDuplicate, form.symbol, form.name, computedInitialValue, isMarket]);
+  }, [
+    isDuplicate,
+    form.symbol,
+    form.name,
+    form.maturityDate,
+    insightRefValue,
+    isMarket,
+    isBond,
+    faceValueNum,
+    couponRateNum,
+    projectedBondValue,
+  ]);
 
   const insightClasses = React.useMemo(() => {
     switch (insight.tone) {
@@ -252,12 +300,41 @@ export function HoldingForm({
   }, [insight.tone]);
 
   // ── Validation ──────────────────────────────────────────────
-  const isValid =
-    form.name.trim().length > 0 &&
-    computedInitialValue > 0 &&
-    form.initialValueDate.length > 0 &&
-    (!isMarket || form.symbol.trim().length > 0) &&
-    !isDuplicate;
+  const isValid = React.useMemo(() => {
+    if (isDuplicate) return false;
+    if (!form.name.trim()) return false;
+    if (isMarket) {
+      return (
+        form.symbol.trim().length > 0 &&
+        quantityNum > 0 &&
+        amountInvestedNum > 0 &&
+        form.purchaseDate.length > 0
+      );
+    }
+    if (isBond) return faceValueNum > 0;
+    if (isCash) return currentValueNum > 0;
+    if (isMutual || isManual) {
+      return (
+        (amountInvestedNum > 0 || currentValueNum > 0) &&
+        form.purchaseDate.length > 0
+      );
+    }
+    return true;
+  }, [
+    isDuplicate,
+    form.name,
+    form.symbol,
+    form.purchaseDate,
+    isMarket,
+    isBond,
+    isCash,
+    isMutual,
+    isManual,
+    quantityNum,
+    amountInvestedNum,
+    currentValueNum,
+    faceValueNum,
+  ]);
 
   // ── Submit ──────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
@@ -266,31 +343,46 @@ export function HoldingForm({
     setIsSubmitting(true);
 
     try {
-      const payload = {
-        ...(editingHolding ? { holding_id: editingHolding.holding_id } : {}),
+      const now = new Date().toISOString();
+      const holdingId = editingHolding?.holding_id ?? `h-${Date.now()}`;
+
+      // Derive initial_value (legacy fallback):
+      // bonds → face value | cash → current balance | others → amount invested
+      const legacyInitialValue = isBond
+        ? faceValueNum
+        : isCash
+          ? currentValueNum
+          : amountInvestedNum || currentValueNum;
+
+      const holding: AssetHolding = {
+        holding_id: holdingId,
+        user_id: editingHolding?.user_id ?? "u-1",
         name: form.name.trim(),
         asset_type: form.assetType,
-        valuation_method: isMarket ? ("market" as const) : ("manual" as const),
+        valuation_method: isMarket ? "market" : "manual",
+        initial_value: legacyInitialValue,
+        initial_value_date: form.purchaseDate || now.slice(0, 10),
         symbol: form.symbol.trim() || undefined,
-        quantity: isMarket ? quantityNum : undefined,
-        average_cost: isMarket ? avgCostNum : undefined,
-        initial_value: computedInitialValue,
-        initial_value_date: form.initialValueDate,
+        quantity: isMarket ? quantityNum || undefined : undefined,
+        amount_invested: amountInvestedNum || undefined,
+        current_value:
+          isCash || isMutual || isManual
+            ? currentValueNum || undefined
+            : undefined,
+        coupon_rate: couponRateNum || undefined,
+        maturity_date: form.maturityDate || undefined,
+        is_active: true,
+        created_at: editingHolding?.created_at ?? now,
+        updated_at: now,
       };
 
-      console.log(isEditing ? "Update holding:" : "New holding:", payload);
+      const updatedHoldings = isEditing
+        ? storeHoldings.map((h) =>
+            h.holding_id === holding.holding_id ? holding : h,
+          )
+        : [...storeHoldings, holding];
 
-      // API call placeholder:
-      // const method = isEditing ? "PUT" : "POST";
-      // const url = isEditing
-      //   ? `/api/holdings/${editingHolding!.holding_id}`
-      //   : "/api/holdings";
-      // await fetch(url, {
-      //   method,
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(payload),
-      // });
-
+      setHoldings(updatedHoldings);
       router.push("/dashboard/assets");
     } finally {
       setIsSubmitting(false);
@@ -461,7 +553,11 @@ export function HoldingForm({
                   placeholder={
                     isMarket
                       ? "Auto-filled from symbol"
-                      : "e.g. Government Bond Portfolio, High-Yield Savings"
+                      : isBond
+                        ? "e.g. US Treasury 10yr, Corporate Bond"
+                        : isCash
+                          ? "e.g. High-Yield Savings, Fixed Deposit"
+                          : "e.g. Private Equity Fund, Real Estate"
                   }
                   value={form.name}
                   onChange={(e) => update("name", e.target.value)}
@@ -477,12 +573,14 @@ export function HoldingForm({
 
               <Separator />
 
-              {/* ── Market: quantity + avg cost ─────────────── */}
+              {/* ── Stock / ETF / Crypto: quantity + amount invested ── */}
               {isMarket && (
                 <>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="quantity">Quantity</Label>
+                      <Label htmlFor="quantity">
+                        How many units / shares do you hold?
+                      </Label>
                       <Input
                         id="quantity"
                         type="text"
@@ -492,97 +590,318 @@ export function HoldingForm({
                         onChange={(e) => update("quantity", e.target.value)}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Number of shares or units you own.
+                        The number of shares, coins, or units in your account.
                       </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="avg-cost">Average cost per unit</Label>
+                      <Label htmlFor="amount-invested">
+                        How much did you invest?
+                      </Label>
                       <div className="relative">
                         <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
                           $
                         </div>
                         <Input
-                          id="avg-cost"
+                          id="amount-invested"
                           type="text"
                           inputMode="numeric"
-                          placeholder="150"
-                          value={form.averageCost}
+                          placeholder="30,000"
+                          value={form.amountInvested}
                           onChange={(e) =>
-                            handleMoneyInput("averageCost", e.target.value)
+                            handleMoneyInput("amountInvested", e.target.value)
                           }
                           className="pl-7"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        What you paid on average per share.
+                        The total you paid for all your units — this is your
+                        cost basis.
                       </p>
                     </div>
                   </div>
 
-                  {quantityNum > 0 && avgCostNum > 0 && (
-                    <div className="rounded-xl border bg-muted/20 p-3 text-sm text-muted-foreground">
-                      Cost basis:{" "}
-                      <span className="font-medium text-foreground">
-                        {currency(quantityNum * avgCostNum)}
-                      </span>{" "}
-                      ({quantityNum.toLocaleString()} &times;{" "}
-                      {currency(avgCostNum)})
-                    </div>
-                  )}
-
                   <Separator />
                 </>
               )}
 
-              {/* ── Manual: initial value ──────────────────── */}
-              {!isMarket && (
+              {/* ── Mutual fund: amount invested + current value ── */}
+              {isMutual && (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="initial-value">Initial value</Label>
-                    <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                        $
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="amount-invested-mf">
+                        How much did you invest?
+                      </Label>
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                          $
+                        </div>
+                        <Input
+                          id="amount-invested-mf"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="50,000"
+                          value={form.amountInvested}
+                          onChange={(e) =>
+                            handleMoneyInput("amountInvested", e.target.value)
+                          }
+                          className="pl-7"
+                        />
                       </div>
-                      <Input
-                        id="initial-value"
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="100,000"
-                        value={form.initialValue}
-                        onChange={(e) =>
-                          handleMoneyInput("initialValue", e.target.value)
-                        }
-                        className="pl-7"
-                        required={!isMarket}
-                      />
+                      <p className="text-xs text-muted-foreground">
+                        The total you put into this fund.
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      The value when you acquired it, or as of today.
-                    </p>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="current-value-mf">
+                        What is it worth today?
+                      </Label>
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                          $
+                        </div>
+                        <Input
+                          id="current-value-mf"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="55,000"
+                          value={form.currentValue}
+                          onChange={(e) =>
+                            handleMoneyInput("currentValue", e.target.value)
+                          }
+                          className="pl-7"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        The current NAV from your fund statement.
+                      </p>
+                    </div>
                   </div>
 
                   <Separator />
                 </>
               )}
 
-              {/* Date */}
+              {/* ── Bond: face value + coupon + maturity + amount invested ── */}
+              {isBond && (
+                <>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="face-value">Face / par value</Label>
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                          $
+                        </div>
+                        <Input
+                          id="face-value"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="100,000"
+                          value={form.faceValue}
+                          onChange={(e) =>
+                            handleMoneyInput("faceValue", e.target.value)
+                          }
+                          className="pl-7"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        The principal amount paid back at maturity.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="coupon-rate">
+                        Annual interest rate (%)
+                      </Label>
+                      <Input
+                        id="coupon-rate"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="4.5"
+                        value={form.couponRate}
+                        onChange={(e) => update("couponRate", e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        The yearly interest rate printed on the bond.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="maturity-date">Maturity date</Label>
+                      <Input
+                        id="maturity-date"
+                        type="date"
+                        value={form.maturityDate}
+                        onChange={(e) => update("maturityDate", e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        When the bond pays back the face value.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="amount-invested-bond">
+                        How much did you invest?
+                      </Label>
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                          $
+                        </div>
+                        <Input
+                          id="amount-invested-bond"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="95,000"
+                          value={form.amountInvested}
+                          onChange={(e) =>
+                            handleMoneyInput("amountInvested", e.target.value)
+                          }
+                          className="pl-7"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        What you actually paid — bonds can trade above or below
+                        face value.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator />
+                </>
+              )}
+
+              {/* ── Cash: account balance + optional interest rate ── */}
+              {isCash && (
+                <>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="current-value-cash">
+                        What is it worth today?
+                      </Label>
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                          $
+                        </div>
+                        <Input
+                          id="current-value-cash"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="25,000"
+                          value={form.currentValue}
+                          onChange={(e) =>
+                            handleMoneyInput("currentValue", e.target.value)
+                          }
+                          className="pl-7"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Your current account balance.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="coupon-rate-cash">
+                        Interest rate (%){" "}
+                        <span className="font-normal text-muted-foreground">
+                          — optional
+                        </span>
+                      </Label>
+                      <Input
+                        id="coupon-rate-cash"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="4.2"
+                        value={form.couponRate}
+                        onChange={(e) => update("couponRate", e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Annual interest for savings or fixed-deposit accounts.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator />
+                </>
+              )}
+
+              {/* ── Alternative / Other: amount invested + current value ── */}
+              {isManual && (
+                <>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="amount-invested-alt">
+                        How much did you invest?
+                      </Label>
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                          $
+                        </div>
+                        <Input
+                          id="amount-invested-alt"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="50,000"
+                          value={form.amountInvested}
+                          onChange={(e) =>
+                            handleMoneyInput("amountInvested", e.target.value)
+                          }
+                          className="pl-7"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        The total you put in — this is your cost basis.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="current-value-alt">
+                        What is it worth today?
+                      </Label>
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                          $
+                        </div>
+                        <Input
+                          id="current-value-alt"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="62,500"
+                          value={form.currentValue}
+                          onChange={(e) =>
+                            handleMoneyInput("currentValue", e.target.value)
+                          }
+                          className="pl-7"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        The current estimated value from your latest statement.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator />
+                </>
+              )}
+
+              {/* Date (purchase / acquisition — bonds use maturityDate above) */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="date">
-                    {isMarket ? "Purchase date" : "As-of date"}
+                  <Label htmlFor="purchase-date">
+                    {isCash ? "As-of date" : "When did you buy this?"}
                   </Label>
                   <Input
-                    id="date"
+                    id="purchase-date"
                     type="date"
-                    value={form.initialValueDate}
-                    onChange={(e) => update("initialValueDate", e.target.value)}
-                    required
+                    value={form.purchaseDate}
+                    onChange={(e) => update("purchaseDate", e.target.value)}
+                    required={!isCash}
                   />
                   <p className="text-xs text-muted-foreground">
-                    {isMarket
-                      ? "When you bought this position."
-                      : "When was it acquired or last valued?"}
+                    {isCash
+                      ? "When was this balance recorded?"
+                      : "When you first acquired this holding."}
                   </p>
                 </div>
               </div>
@@ -636,33 +955,121 @@ export function HoldingForm({
                   />
                   <SummaryRow
                     label="Pricing"
-                    value={isMarket ? "Automatic" : "Manual"}
+                    value={isMarket ? "Automatic (live)" : "Manual"}
                   />
 
                   <Separator />
 
+                  {/* Market assets: symbol, qty, amount invested, current value live */}
                   {isMarket && form.symbol && (
                     <SummaryRow label="Symbol" value={form.symbol} />
                   )}
                   {isMarket && quantityNum > 0 && (
                     <SummaryRow
-                      label="Quantity"
+                      label="Shares / units"
                       value={quantityNum.toLocaleString()}
                     />
                   )}
+                  {isMarket && amountInvestedNum > 0 && (
+                    <SummaryRow
+                      label="Amount invested"
+                      value={currency(amountInvestedNum)}
+                    />
+                  )}
+                  {isMarket && (
+                    <SummaryRow label="Current value" value="Updated live" />
+                  )}
 
-                  <SummaryRow
-                    label={isMarket ? "Cost Basis" : "Initial Value"}
-                    value={
-                      computedInitialValue > 0
-                        ? currency(computedInitialValue)
-                        : "-"
-                    }
-                  />
-                  <SummaryRow
-                    label={isMarket ? "Purchase Date" : "As-of Date"}
-                    value={form.initialValueDate || "-"}
-                  />
+                  {/* Mutual fund */}
+                  {isMutual && amountInvestedNum > 0 && (
+                    <SummaryRow
+                      label="Amount invested"
+                      value={currency(amountInvestedNum)}
+                    />
+                  )}
+                  {isMutual && currentValueNum > 0 && (
+                    <SummaryRow
+                      label="Current value"
+                      value={currency(currentValueNum)}
+                    />
+                  )}
+                  {isMutual && amountInvestedNum > 0 && currentValueNum > 0 && (
+                    <SummaryRow
+                      label="Gain / loss"
+                      value={`${currentValueNum - amountInvestedNum >= 0 ? "+" : ""}${currency(currentValueNum - amountInvestedNum)}`}
+                    />
+                  )}
+
+                  {/* Bond */}
+                  {isBond && faceValueNum > 0 && (
+                    <SummaryRow
+                      label="Face value"
+                      value={currency(faceValueNum)}
+                    />
+                  )}
+                  {isBond && couponRateNum > 0 && (
+                    <SummaryRow
+                      label="Coupon rate"
+                      value={`${couponRateNum}% p.a.`}
+                    />
+                  )}
+                  {isBond && form.maturityDate && (
+                    <SummaryRow label="Matures" value={form.maturityDate} />
+                  )}
+                  {isBond && projectedBondValue > 0 && (
+                    <SummaryRow
+                      label="Projected at maturity"
+                      value={`~${currency(projectedBondValue)}`}
+                    />
+                  )}
+                  {isBond && amountInvestedNum > 0 && (
+                    <SummaryRow
+                      label="Amount invested"
+                      value={currency(amountInvestedNum)}
+                    />
+                  )}
+
+                  {/* Cash */}
+                  {isCash && currentValueNum > 0 && (
+                    <SummaryRow
+                      label="Account balance"
+                      value={currency(currentValueNum)}
+                    />
+                  )}
+                  {isCash && couponRateNum > 0 && (
+                    <SummaryRow
+                      label="Interest rate"
+                      value={`${couponRateNum}% p.a.`}
+                    />
+                  )}
+
+                  {/* Alternative / Other */}
+                  {isManual && amountInvestedNum > 0 && (
+                    <SummaryRow
+                      label="Amount invested"
+                      value={currency(amountInvestedNum)}
+                    />
+                  )}
+                  {isManual && currentValueNum > 0 && (
+                    <SummaryRow
+                      label="Current value"
+                      value={currency(currentValueNum)}
+                    />
+                  )}
+                  {isManual && amountInvestedNum > 0 && currentValueNum > 0 && (
+                    <SummaryRow
+                      label="Gain / loss"
+                      value={`${currentValueNum - amountInvestedNum >= 0 ? "+" : ""}${currency(currentValueNum - amountInvestedNum)}`}
+                    />
+                  )}
+
+                  {/* Date */}
+                  {!isBond && form.purchaseDate && (
+                    <SummaryRow
+                      label={isCash ? "As-of date" : "Purchase date"}
+                      value={form.purchaseDate}
+                    />
+                  )}
                 </div>
 
                 {/* Contextual guidance */}

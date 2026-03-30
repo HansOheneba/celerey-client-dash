@@ -68,10 +68,12 @@ export function Step2Goals({
   onBack,
 }: Step2GoalsProps) {
   const [goals, setGoals] = useState<GoalData[]>(defaultValues);
-  const [listError, setListError] = useState("");
+  // Show form by default if no goals yet, hide it after first save
+  const [showForm, setShowForm] = useState(defaultValues.length === 0);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
   const store = useOnboardingStore();
   const preferredCurrency = store.identity?.preferred_currency || "USD";
-  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const {
     register,
@@ -80,15 +82,23 @@ export function Step2Goals({
     reset,
     watch,
     control,
-    trigger,
     formState: { errors },
   } = useForm<GoalFormValues>({
     resolver: zodResolver(goalSchema) as never,
     defaultValues: { title: "", target_amount: 0, target_date: "" },
+    mode: "onChange",
+    reValidateMode: "onChange",
   });
 
   const titleValue = watch("title");
   const watchedValues = watch();
+
+  // Button is enabled as soon as all required fields are filled — no need to explicitly "save" first
+  const canSaveGoal = Boolean(
+    watchedValues.title?.trim() &&
+    Number(watchedValues.target_amount) > 0 &&
+    watchedValues.target_date,
+  );
 
   function addGoal(data: GoalFormValues) {
     setGoals((prev) => [
@@ -101,48 +111,25 @@ export function Step2Goals({
       },
     ]);
     reset({ title: "", target_amount: 0, target_date: "" });
-    setListError("");
+    // Hide the form after saving — user can re-open with "+ Add another goal"
+    setShowForm(false);
   }
 
   function removeGoal(i: number) {
-    setGoals((prev) => prev.filter((_, idx) => idx !== i));
+    setGoals((prev) => {
+      const next = prev.filter((_, idx) => idx !== i);
+      // If all goals removed, reopen the form automatically
+      if (next.length === 0) setShowForm(true);
+      return next;
+    });
   }
 
   function applySuggestion(label: string) {
     setValue("title", label, { shouldValidate: true });
   }
 
-  // 🔥 KEY FIX: Auto-add on Continue
-  async function handleNext() {
-    const hasPartialInput =
-      watchedValues.title ||
-      watchedValues.target_amount ||
-      watchedValues.target_date;
-
-    if (hasPartialInput) {
-      const isValid = await trigger();
-
-      if (!isValid) return;
-
-      addGoal(watchedValues as GoalFormValues);
-    }
-
-    if (goals.length === 0 && !hasPartialInput) {
-      setListError("Please add at least one goal to continue.");
-      return;
-    }
-
-    onComplete(
-      hasPartialInput
-        ? [
-            ...goals,
-            {
-              ...watchedValues,
-              status: "active",
-            } as GoalData,
-          ]
-        : goals,
-    );
+  function handleContinue() {
+    onComplete(goals);
   }
 
   return (
@@ -157,129 +144,149 @@ export function Step2Goals({
         </p>
       </div>
 
-      {/* Suggestions */}
-      <div className="flex flex-wrap gap-2">
-        {SUGGESTED_GOALS.map((g) => (
-          <button
-            key={g}
-            type="button"
-            onClick={() => applySuggestion(g)}
-            className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-              titleValue === g
-                ? "border-[#151339] bg-[#151339] text-white"
-                : "border-slate-200 bg-white text-slate-600 hover:border-[#151339] hover:text-[#151339]"
-            }`}
-          >
-            {g}
-          </button>
-        ))}
-      </div>
-
-      {/* Form */}
-      <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-          Add a goal
-        </p>
-
-        {/* Title */}
-        <div className="space-y-1.5">
-          <Label htmlFor="goal-title">Goal name</Label>
-          <Input
-            id="goal-title"
-            placeholder="e.g. Buy a Home"
-            {...register("title")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleSubmit(addGoal)();
-              }
-            }}
-          />
-          {errors.title && (
-            <p className="text-xs text-red-500">{errors.title.message}</p>
-          )}
+      {/* Suggestions — only shown when form is open */}
+      {showForm && (
+        <div className="flex flex-wrap gap-2">
+          {SUGGESTED_GOALS.map((g) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => applySuggestion(g)}
+              className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                titleValue === g
+                  ? "border-[#151339] bg-[#151339] text-white"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-[#151339] hover:text-[#151339]"
+              }`}
+            >
+              {g}
+            </button>
+          ))}
         </div>
+      )}
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Amount */}
+      {/* Goal entry form */}
+      {showForm && (
+        <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+            {goals.length === 0 ? "Add your first goal" : "Add another goal"}
+          </p>
+
+          {/* Title */}
           <div className="space-y-1.5">
-            <Label>Target amount</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                {getCurrencyPrefix(preferredCurrency)}
-              </span>
-              <CurrencyNumberInputField
+            <Label htmlFor="goal-title">Goal name</Label>
+            <Input
+              id="goal-title"
+              placeholder="e.g. Buy a Home"
+              {...register("title")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canSaveGoal) {
+                  e.preventDefault();
+                  handleSubmit(addGoal)();
+                }
+              }}
+            />
+            {errors.title && (
+              <p className="text-xs text-red-500">{errors.title.message}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Amount */}
+            <div className="space-y-1.5">
+              <Label>Target amount</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                  {getCurrencyPrefix(preferredCurrency)}
+                </span>
+                <CurrencyNumberInputField
+                  control={control}
+                  name="target_amount"
+                  className="pl-12"
+                />
+              </div>
+              {errors.target_amount && (
+                <p className="text-xs text-red-500">
+                  {errors.target_amount.message}
+                </p>
+              )}
+            </div>
+
+            {/* Date */}
+            <div className="space-y-1.5">
+              <Label>Target date</Label>
+              <Controller
                 control={control}
-                name="target_amount"
-                className="pl-12"
+                name="target_date"
+                render={({ field }) => {
+                  const dateValue = field.value
+                    ? new Date(field.value)
+                    : undefined;
+
+                  return (
+                    <div className="space-y-1.5">
+                      <Popover
+                        open={calendarOpen}
+                        onOpenChange={setCalendarOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateValue
+                              ? format(dateValue, "PPP")
+                              : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0">
+                          <Calendar
+                            mode="single"
+                            selected={dateValue}
+                            captionLayout="dropdown"
+                            startMonth={new Date(new Date().getFullYear(), 0)}
+                            endMonth={
+                              new Date(new Date().getFullYear() + 50, 11)
+                            }
+                            disabled={{ before: new Date() }}
+                            onSelect={(date) => {
+                              field.onChange(
+                                date ? format(date, "yyyy-MM-dd") : "",
+                              );
+                              setCalendarOpen(false);
+                            }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+
+                      {dateValue && (
+                        <p className="text-xs text-[#151339]">
+                          {naturalCountdown(dateValue)}
+                        </p>
+                      )}
+                      {errors.target_date && (
+                        <p className="text-xs text-red-500">
+                          {errors.target_date.message}
+                        </p>
+                      )}
+                    </div>
+                  );
+                }}
               />
             </div>
           </div>
 
-          {/* Date */}
-          <div className="space-y-1.5">
-            <Label>Target date</Label>
-            <Controller
-              control={control}
-              name="target_date"
-              render={({ field }) => {
-                const dateValue = field.value
-                  ? new Date(field.value)
-                  : undefined;
-
-                return (
-                  <div className="space-y-1.5">
-                    <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateValue ? format(dateValue, "PPP") : "Pick a date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0">
-                        <Calendar
-                          mode="single"
-                          selected={dateValue}
-                          captionLayout="dropdown"
-                          startMonth={new Date(new Date().getFullYear(), 0)}
-                          endMonth={new Date(new Date().getFullYear() + 50, 11)}
-                          disabled={{ before: new Date() }}
-                          onSelect={(date) => {
-                            field.onChange(
-                              date ? format(date, "yyyy-MM-dd") : "",
-                            );
-                            setCalendarOpen(false); // closes on select
-                          }}
-                        />
-                      </PopoverContent>
-                    </Popover>
-
-                    {dateValue && (
-                      <p className="text-xs text-[#151339]">
-                        {naturalCountdown(dateValue)}
-                      </p>
-                    )}
-                  </div>
-                );
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-end justify-end">
+          {/* Save goal — this IS the primary CTA while the form is open */}
           <Button
             type="button"
-            variant="outline"
             onClick={handleSubmit(addGoal)}
-            className="gap-2 border-dashed"
+            disabled={!canSaveGoal}
+            className="w-full h-11 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
           >
             <Plus className="h-4 w-4" />
             Save goal
           </Button>
         </div>
-      </div>
+      )}
 
-      {/* List */}
+      {/* Saved goals list */}
       {goals.length > 0 && (
         <div className="space-y-3">
           <p className="text-xs uppercase text-slate-400">
@@ -289,27 +296,42 @@ export function Step2Goals({
           {goals.map((g, i) => (
             <div
               key={i}
-              className="flex justify-between items-center border p-4 rounded-xl"
+              className="flex justify-between items-center border border-slate-100 bg-white p-4 rounded-xl shadow-sm"
             >
               <div>
-                <p className="text-sm font-medium">{g.title}</p>
-                <p className="text-xs text-slate-500">
+                <p className="text-sm font-medium text-slate-800">{g.title}</p>
+                <p className="text-xs text-slate-500 mt-0.5">
                   {formatCurrencyAmount(g.target_amount, preferredCurrency)} ·{" "}
                   {naturalCountdown(new Date(g.target_date))}
                 </p>
               </div>
 
-              <button onClick={() => removeGoal(i)}>
-                <Trash2 className="h-4 w-4 text-red-400" />
+              <button
+                type="button"
+                onClick={() => removeGoal(i)}
+                aria-label="Remove goal"
+                className="text-slate-300 hover:text-red-500 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
           ))}
+
+          {/* Add another goal — only shown when form is hidden */}
+          {!showForm && goals.length < 3 && (
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm text-slate-500 hover:border-[#151339] hover:text-[#151339] transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add another goal
+            </button>
+          )}
         </div>
       )}
 
-      {listError && <p className="text-red-500">{listError}</p>}
-
-      {/* Continue */}
+      {/* Navigation */}
       <div className="flex gap-3">
         {onBack && (
           <Button
@@ -323,14 +345,9 @@ export function Step2Goals({
           </Button>
         )}
         <Button
-          onClick={handleNext}
-          disabled={
-            goals.length === 0 &&
-            !watchedValues.title &&
-            !watchedValues.target_date &&
-            !Number(watchedValues.target_amount)
-          }
-          className="flex-1 gap-2 h-12"
+          onClick={handleContinue}
+          disabled={goals.length === 0}
+          className="flex-1 gap-2 h-12 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
         >
           Continue
           <ArrowRight className="h-4 w-4" />

@@ -19,13 +19,13 @@ const OPTIONS: AccountModeOption[] = [
   {
     value: "solo",
     icon: <User className="h-6 w-6" />,
-    label: "Just me",
+    label: "Solo",
     description: "I am setting this up for myself.",
   },
   {
     value: "partner",
     icon: <Users className="h-6 w-6" />,
-    label: "Me and my partner",
+    label: "Partner",
     description: "We are managing our finances together.",
   },
   {

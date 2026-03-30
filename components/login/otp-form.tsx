@@ -9,9 +9,11 @@ import {
   InputOTPSlot,
   InputOTPSeparator,
 } from "@/components/ui/input-otp";
+import type { AuthMode } from "@/components/login/types";
 
 interface OtpFormProps {
   email: string;
+  mode: AuthMode;
   onVerify: (otp: string) => void;
   onBack: () => void;
   isSubmitting: boolean;
@@ -21,6 +23,7 @@ const OTP_LENGTH = 6;
 
 export function OtpForm({
   email,
+  mode,
   onVerify,
   onBack,
   isSubmitting,
@@ -53,13 +56,13 @@ export function OtpForm({
       </button>
 
       <h1 className="text-3xl font-semibold tracking-tight">
-        Check your email
+        {mode === "login" ? "Enter your login code" : "Check your email"}
       </h1>
 
       <p className="mt-2 text-sm text-muted-foreground">
         We sent a 6-digit code to{" "}
         <span className="font-medium text-foreground">{email}</span>. Enter it
-        below to continue.
+        below to {mode === "login" ? "log in" : "continue"}.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
@@ -89,7 +92,11 @@ export function OtpForm({
           disabled={isSubmitting || otp.length < OTP_LENGTH}
           className="h-11 w-full rounded-full"
         >
-          {isSubmitting ? "Verifying…" : "Verify & Continue"}
+          {isSubmitting
+            ? "Verifying…"
+            : mode === "login"
+              ? "Verify & Log in"
+              : "Verify & Continue"}
         </Button>
 
         <p className="text-xs text-muted-foreground">

@@ -81,18 +81,20 @@ import {
 } from "@/components/dashboard/cash-flow/delete-confirm-dialog";
 import { CashFlowChart } from "@/components/dashboard/cash-flow/cash-flow-chart";
 
+import { useRouter } from "next/navigation";
 import {
-  cashFlowData,
   calculateNetWorth,
   selectEmergencyFundMetrics,
-  financialDomainData,
   formatCurrency,
-  mockCashFlowHistory,
   type CashFlowPoint,
+  type CashFlowRow,
+  type ExpenseCategory,
   type CashFlowEntryDraft,
   type RecurringType,
   type CashFlowSettings,
+  type FinancialDomainData,
 } from "@/lib/client-data";
+import { useFinancialStore } from "@/store/financialStore";
 
 // ─── Local-only types ──────────────────────────────────────────────────────
 
@@ -713,7 +715,7 @@ function CategoryBreakdown({
         return (
           <div key={r.id} className="space-y-1">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground truncate max-w-40">
+              <span className="text-muted-foreground truncate max-w-[160px]">
                 {r.name}
               </span>
               <div className="flex items-center gap-2 shrink-0">
@@ -757,13 +759,27 @@ function CategoryBreakdown({
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export default function CashFlowPage() {
-  const [income, setIncome] = React.useState<MoneyRow[]>(cashFlowData.income);
-  const [expenses, setExpenses] = React.useState<MoneyRow[]>(
-    cashFlowData.expenses,
+  const router = useRouter();
+
+  // ── Store subscriptions ───────────────────────────────────────────────────
+  const storeHoldings = useFinancialStore((s) => s.holdings);
+  const storePropertyAssets = useFinancialStore((s) => s.propertyAssets);
+  const storeAccounts = useFinancialStore((s) => s.accounts);
+  const storeEmergencyFund = useFinancialStore((s) => s.emergencyFund);
+  const storeCashFlowHistory = useFinancialStore((s) => s.cashFlowHistory);
+
+  const [income, setIncome] = React.useState<CashFlowRow[]>(
+    () => useFinancialStore.getState().incomeRows,
   );
-  const [settings, setSettings] = React.useState<CashFlowSettings>(
-    cashFlowData.settings,
+  const [expenses, setExpenses] = React.useState<ExpenseCategory[]>(
+    () => useFinancialStore.getState().expenseCategories,
   );
+  const [settings, setSettings] = React.useState<CashFlowSettings>(() => ({
+    emergencyFundMonths:
+      useFinancialStore.getState().emergencyFund.targetMonths,
+    currentCashBalance:
+      useFinancialStore.getState().emergencyFund.currentCashBalance,
+  }));
 
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [rowDialogOpen, setRowDialogOpen] = React.useState(false);
@@ -804,14 +820,22 @@ export default function CashFlowPage() {
   const burn = burnRate(totalExpenses, totalIncome);
 
   const netWorth = React.useMemo(
-    () => calculateNetWorth(undefined, undefined, undefined, income, expenses),
-    [income, expenses],
+    () =>
+      calculateNetWorth(
+        storeHoldings,
+        [],
+        storePropertyAssets.filter((p) => p.is_active),
+        income,
+        expenses,
+        [],
+      ),
+    [storeHoldings, storePropertyAssets, income, expenses],
   );
 
-  const avgIncome = avgFromHistory(mockCashFlowHistory, "income");
-  const avgExpenses = avgFromHistory(mockCashFlowHistory, "expenses");
-  const incMom = momChange(mockCashFlowHistory, "income");
-  const expMom = momChange(mockCashFlowHistory, "expenses");
+  const avgIncome = avgFromHistory(storeCashFlowHistory, "income");
+  const avgExpenses = avgFromHistory(storeCashFlowHistory, "expenses");
+  const incMom = momChange(storeCashFlowHistory, "income");
+  const expMom = momChange(storeCashFlowHistory, "expenses");
 
   const insights = React.useMemo(
     () =>
@@ -819,22 +843,84 @@ export default function CashFlowPage() {
         totalIncome,
         totalExpenses,
         savingsRate,
-        mockCashFlowHistory,
+        storeCashFlowHistory,
       ),
-    [totalIncome, totalExpenses, savingsRate],
+    [totalIncome, totalExpenses, savingsRate, storeCashFlowHistory],
+  );
+
+  const financialData: FinancialDomainData = React.useMemo(
+    () => ({
+      accounts: storeAccounts,
+      liabilities: [],
+      propertyAssets: storePropertyAssets.map((p) => ({
+        id: p.property_id,
+        name: p.name,
+        value: p.market_value,
+        updatedAt: p.updated_at,
+      })),
+      portfolioPerformance: [],
+      allocation: [],
+      taxProfile: {
+        effectiveTaxRatePct: 0,
+        marginalTaxRatePct: 0,
+        filingStatus: "single" as const,
+        updatedAt: new Date().toISOString(),
+      },
+      emergencyFund: storeEmergencyFund,
+      insurancePolicies: [],
+      incomeRows: income,
+      expenseCategories: expenses,
+      freshness: [],
+      retirement: {
+        currentAge: 0,
+        retirementAge: 0,
+        lifeExpectancy: 85,
+        currentInvested: 0,
+        monthlySavings: 0,
+        existingPensionBalance: 0,
+        monthlyPensionContribution: 0,
+        expectedReturnPct: 7,
+        inflationPct: 2,
+        safeWithdrawalRatePct: 4,
+        desiredMonthlyIncome: 0,
+      },
+      cashFlowHistory: storeCashFlowHistory,
+    }),
+    [
+      storeAccounts,
+      storePropertyAssets,
+      storeEmergencyFund,
+      income,
+      expenses,
+      storeCashFlowHistory,
+    ],
   );
 
   const efMetrics = React.useMemo(
-    () => selectEmergencyFundMetrics(financialDomainData),
-    [],
+    () => selectEmergencyFundMetrics(financialData),
+    [financialData],
   );
+
+  const hasAssets =
+    storeHoldings.length > 0 ||
+    storeAccounts.length > 0 ||
+    storePropertyAssets.length > 0;
 
   const cashFlowKpis: KpiItem[] = [
     {
       label: "Net Worth",
-      value: formatCurrency(netWorth.netWorth),
-      subline: "Assets minus liabilities",
-      tone: netWorth.netWorth >= 0 ? "good" : "danger",
+      value: hasAssets ? formatCurrency(netWorth.netWorth) : "—",
+      subline: hasAssets
+        ? "Assets minus liabilities"
+        : "Add assets to see net worth",
+      tone: hasAssets
+        ? netWorth.netWorth >= 0
+          ? "good"
+          : "danger"
+        : "neutral",
+      onClick: hasAssets
+        ? undefined
+        : () => router.push("/dashboard/profile/setup"),
     },
     {
       label: "Monthly Income",
@@ -866,18 +952,31 @@ export default function CashFlowPage() {
       subline: "Target ≥ 20%",
       tone: savingsRate >= 20 ? "good" : savingsRate > 0 ? "warning" : "danger",
     },
-    {
-      label: "Emergency Fund",
-      value: `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
-      subline: efMetrics.funded
-        ? `${formatCurrency(efMetrics.currentBalance)} · target ${efMetrics.targetMonths}mo`
-        : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} below ${efMetrics.targetMonths}mo target`,
-      tone: efMetrics.funded
-        ? "good"
-        : efMetrics.runwayMonths >= 3
-          ? "warning"
-          : "danger",
-    },
+    storeEmergencyFund.currentCashBalance === 0
+      ? {
+          label: "Emergency Fund",
+          value: "Not set up",
+          subline: "Add a cash balance to track runway",
+          tone: "neutral" as const,
+        }
+      : {
+          label: "Emergency Fund",
+          value:
+            efMetrics.runwayMonths > 9
+              ? "9+ mo runway"
+              : `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
+          subline:
+            totalExpenses === 0
+              ? `${formatCurrency(efMetrics.currentBalance)} saved · add expenses to see runway`
+              : efMetrics.funded
+                ? `${formatCurrency(efMetrics.currentBalance)} · target ${efMetrics.targetMonths}mo`
+                : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} below ${efMetrics.targetMonths}mo target`,
+          tone: efMetrics.funded
+            ? "good"
+            : efMetrics.runwayMonths >= 3
+              ? "warning"
+              : "danger",
+        },
   ];
 
   // ── Dialog helpers ────────────────────────────────────────────────────────
@@ -912,9 +1011,15 @@ export default function CashFlowPage() {
 
   function confirmDelete() {
     if (!deleteTarget) return;
-    if (deleteTarget.type === "income")
-      setIncome((p) => p.filter((x) => x.id !== deleteTarget.row.id));
-    else setExpenses((p) => p.filter((x) => x.id !== deleteTarget.row.id));
+    if (deleteTarget.type === "income") {
+      const updated = income.filter((x) => x.id !== deleteTarget.row.id);
+      setIncome(updated);
+      useFinancialStore.getState().setIncome(updated);
+    } else {
+      const updated = expenses.filter((x) => x.id !== deleteTarget.row.id);
+      setExpenses(updated);
+      useFinancialStore.getState().setExpenses(updated);
+    }
     setDeleteOpen(false);
     setDeleteTarget(null);
   }
@@ -924,24 +1029,33 @@ export default function CashFlowPage() {
     if (!rowDraft.name.trim() || !Number.isFinite(amountNum) || amountNum < 0)
       return;
 
-    const newRow: MoneyRow = {
-      id: rowDialogMode === "edit" && editingId ? editingId : uid(),
-      name: rowDraft.name.trim(),
-      amount: Math.round(amountNum),
-    };
+    const rowId = rowDialogMode === "edit" && editingId ? editingId : uid();
 
     if (rowDialogType === "income") {
-      setIncome((p) =>
+      const newRow: CashFlowRow = {
+        id: rowId,
+        name: rowDraft.name.trim(),
+        amount: Math.round(amountNum),
+      };
+      const updated =
         rowDialogMode === "edit"
-          ? p.map((r) => (r.id === newRow.id ? newRow : r))
-          : [newRow, ...p],
-      );
+          ? income.map((r) => (r.id === newRow.id ? newRow : r))
+          : [newRow, ...income];
+      setIncome(updated);
+      useFinancialStore.getState().setIncome(updated);
     } else {
-      setExpenses((p) =>
+      const newRow: ExpenseCategory = {
+        id: rowId,
+        name: rowDraft.name.trim(),
+        amount: Math.round(amountNum),
+        essential: false,
+      };
+      const updated =
         rowDialogMode === "edit"
-          ? p.map((r) => (r.id === newRow.id ? newRow : r))
-          : [newRow, ...p],
-      );
+          ? expenses.map((r) => (r.id === newRow.id ? newRow : r))
+          : [newRow, ...expenses];
+      setExpenses(updated);
+      useFinancialStore.getState().setExpenses(updated);
     }
 
     setRowDialogOpen(false);
@@ -1031,7 +1145,7 @@ export default function CashFlowPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
-          <CashFlowChart data={mockCashFlowHistory} />
+          <CashFlowChart data={storeCashFlowHistory} />
         </motion.div>
 
         {/* Analytics */}
@@ -1061,7 +1175,7 @@ export default function CashFlowPage() {
                 <p className="text-xs text-muted-foreground mb-3">
                   Last 6 months
                 </p>
-                <SurplusHistoryChart history={mockCashFlowHistory} />
+                <SurplusHistoryChart history={storeCashFlowHistory} />
               </CardContent>
             </Card>
 
@@ -1278,7 +1392,15 @@ export default function CashFlowPage() {
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         settings={settings}
-        setSettings={setSettings}
+        setSettings={(s) => {
+          setSettings(s);
+          useFinancialStore.getState().setEmergencyFund({
+            ...useFinancialStore.getState().emergencyFund,
+            targetMonths: s.emergencyFundMonths,
+            currentCashBalance: s.currentCashBalance,
+            updatedAt: new Date().toISOString(),
+          });
+        }}
       />
 
       <EnhancedRowDialog

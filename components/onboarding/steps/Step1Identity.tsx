@@ -51,6 +51,25 @@ const COUNTRY_LIST = Object.entries(countries)
   }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
+const DIAL_CODE_LIST = COUNTRY_LIST.filter((country) => country.dialCode);
+
+function extractDialCode(phoneNumber?: string) {
+  if (!phoneNumber?.trim()) return null;
+
+  const matchedCountry = [...DIAL_CODE_LIST]
+    .sort((a, b) => b.dialCode.length - a.dialCode.length)
+    .find((country) => phoneNumber.startsWith(country.dialCode));
+
+  return matchedCountry?.dialCode ?? null;
+}
+
+function stripDialCode(phoneNumber: string | undefined, dialCode: string) {
+  if (!phoneNumber) return "";
+  return phoneNumber.startsWith(dialCode)
+    ? phoneNumber.slice(dialCode.length).trim()
+    : phoneNumber;
+}
+
 // ─── Currencies ──────────────────────────────────────────────────────────────
 const CURRENCIES = [
   { code: "USD", label: "USD — US Dollar" },
@@ -89,8 +108,11 @@ export function Step1Identity({
   onComplete,
   onBack,
 }: Step1IdentityProps) {
-  const [dialCode, setDialCode] = React.useState("+233");
+  const [dialCode, setDialCode] = React.useState(
+    () => extractDialCode(defaultValues?.phone_number) ?? "+233",
+  );
   const [countryOpen, setCountryOpen] = React.useState(false);
+  const [dialCodeOpen, setDialCodeOpen] = React.useState(false);
 
   const { accountMode } = useOnboardingStore();
   const isSolo = accountMode === "solo";
@@ -104,7 +126,6 @@ export function Step1Identity({
     country: defaultValues?.country ?? "",
     resident_city: defaultValues?.resident_city ?? "",
     preferred_currency: defaultValues?.preferred_currency ?? "",
-    // account_mode is driven by the store, not re-selected here
     account_mode: accountMode,
     marital_status: defaultValues?.marital_status ?? "",
     occupation: defaultValues?.occupation ?? "",
@@ -120,9 +141,39 @@ export function Step1Identity({
   } = useForm<IdentityFormValues>({
     resolver: zodResolver(identitySchema),
     defaultValues: initialValues,
+    mode: "onChange",
+    reValidateMode: "onChange",
   });
 
   const selectedCountry = watch("country");
+  const watchedPhoneNumber = watch("phone_number");
+  const watchedResidentCity = watch("resident_city");
+  const watchedCurrency = watch("preferred_currency");
+  const watchedDisplayName = watch("display_name");
+  const watchedFirstName = watch("first_name");
+  const watchedLastName = watch("last_name");
+  const watchedDateOfBirth = watch("date_of_birth");
+
+  const hasPhoneDigits =
+    stripDialCode(watchedPhoneNumber, dialCode).replace(/\s/g, "").length > 0;
+
+  const canContinue = isSolo
+    ? Boolean(
+        watchedFirstName?.trim() &&
+        watchedLastName?.trim() &&
+        watchedDateOfBirth &&
+        hasPhoneDigits &&
+        selectedCountry &&
+        watchedResidentCity?.trim() &&
+        watchedCurrency,
+      )
+    : Boolean(
+        watchedDisplayName?.trim() &&
+        hasPhoneDigits &&
+        selectedCountry &&
+        watchedResidentCity?.trim() &&
+        watchedCurrency,
+      );
 
   // Keep account_mode in sync with store value (in case user went back and changed it)
   React.useEffect(() => {
@@ -140,7 +191,9 @@ export function Step1Identity({
             if (!defaultValues?.country) {
               setValue("country", match.name);
             }
-            setDialCode(match.dialCode);
+            if (!defaultValues?.phone_number && match.dialCode) {
+              setDialCode(match.dialCode);
+            }
           }
         }
       })
@@ -255,40 +308,71 @@ export function Step1Identity({
                 control={control}
                 name="phone_number"
                 render={({ field }) => {
-                  const rawNumber = field.value?.startsWith(dialCode)
-                    ? field.value.slice(dialCode.length).trim()
-                    : field.value;
+                  const rawNumber = stripDialCode(field.value, dialCode);
+
+                  const selectedDialCodeCountry = DIAL_CODE_LIST.find(
+                    (country) => country.dialCode === dialCode,
+                  );
+
+                  function handleDialCodeChange(nextDialCode: string) {
+                    setDialCode(nextDialCode);
+                    field.onChange(
+                      `${nextDialCode} ${stripDialCode(field.value, dialCode)}`.trim(),
+                    );
+                    setDialCodeOpen(false);
+                  }
 
                   return (
                     <div className="flex gap-2">
-                      <Select
-                        value={dialCode}
-                        onValueChange={(val) => {
-                          setDialCode(val);
-                          const raw = field.value?.startsWith(dialCode)
-                            ? field.value.slice(dialCode.length).trim()
-                            : field.value;
-                          field.onChange(`${val} ${raw}`.trim());
-                        }}
+                      <Popover
+                        open={dialCodeOpen}
+                        onOpenChange={setDialCodeOpen}
                       >
-                        <SelectTrigger className="w-27.5 shrink-0">
-                          <SelectValue>
-                            {COUNTRY_LIST.find((c) => c.dialCode === dialCode)
-                              ?.flag ?? "🌍"}{" "}
-                            {dialCode}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent className="max-h-64">
-                          {COUNTRY_LIST.filter((c) => c.dialCode).map((c) => (
-                            <SelectItem
-                              key={`${c.code}-${c.dialCode}`}
-                              value={c.dialCode}
-                            >
-                              {c.flag} {c.dialCode} — {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={dialCodeOpen}
+                            className="w-33 shrink-0 justify-between font-normal h-10"
+                          >
+                            <span className="truncate">
+                              {selectedDialCodeCountry?.flag ?? "🌍"} {dialCode}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-78 p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search phone code or country..." />
+                            <CommandList>
+                              <CommandEmpty>No phone code found.</CommandEmpty>
+                              <CommandGroup>
+                                {DIAL_CODE_LIST.map((country) => (
+                                  <CommandItem
+                                    key={`${country.code}-${country.dialCode}`}
+                                    value={`${country.name} ${country.dialCode} ${country.code}`}
+                                    onSelect={() =>
+                                      handleDialCodeChange(country.dialCode)
+                                    }
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        dialCode === country.dialCode
+                                          ? "opacity-100"
+                                          : "opacity-0",
+                                      )}
+                                    />
+                                    {country.flag} {country.dialCode} -{" "}
+                                    {country.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
 
                       <Input
                         type="tel"
@@ -399,13 +483,11 @@ export function Step1Identity({
                             key={c.code}
                             value={c.name}
                             onSelect={(val) => {
-                              setValue("country", val);
-                              // sync dial code when country changes
-                              const match = COUNTRY_LIST.find(
-                                (x) =>
-                                  x.name.toLowerCase() === val.toLowerCase(),
-                              );
-                              if (match?.dialCode) setDialCode(match.dialCode);
+                              setValue("country", val, {
+                                shouldValidate: true,
+                                shouldDirty: true,
+                                shouldTouch: true,
+                              });
                               setCountryOpen(false);
                             }}
                           >
@@ -491,12 +573,18 @@ export function Step1Identity({
         <Button
           type="button"
           onClick={handleSubmit(onSubmit)}
+          disabled={!canContinue}
           className="flex-1 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl"
         >
           Continue
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
+      {!canContinue && (
+        <p className="text-sm text-red-500">
+          Please fill in all required fields before continuing.
+        </p>
+      )}
     </div>
   );
 }

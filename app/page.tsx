@@ -10,7 +10,7 @@ import { LoginCarousel } from "@/components/login/login-carousel";
 import { EmailForm } from "@/components/login/email-form";
 import { OtpForm } from "@/components/login/otp-form";
 import { CelereyLoader } from "@/components/login/celerey-loader";
-import type { AuthStep } from "@/components/login/types";
+import type { AuthMode, AuthStep } from "@/components/login/types";
 import { setAuth, getSubscription, isOnboarded } from "../lib/client-data";
 
 function sleep(ms: number) {
@@ -21,6 +21,7 @@ export default function Home() {
   const router = useRouter();
 
   const [step, setStep] = React.useState<AuthStep>("email");
+  const [mode, setMode] = React.useState<AuthMode>("signup");
   const [email, setEmail] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isNavigating, setIsNavigating] = React.useState(false);
@@ -62,6 +63,12 @@ export default function Home() {
     setStep("email");
   }
 
+  function handleModeToggle() {
+    setMode((currentMode) => (currentMode === "signup" ? "login" : "signup"));
+    setStep("email");
+    setEmail("");
+  }
+
   return (
     <div className="min-h-screen flex justify-center items-center bg-muted/40 px-4 py-5 md:px-7 md:py-8">
       <div className="mx-auto w-full max-w-6xl rounded-sm bg-background shadow-sm ring-1 ring-border">
@@ -87,11 +94,14 @@ export default function Home() {
               {step === "email" ? (
                 <EmailForm
                   onSubmit={handleEmailSubmit}
+                  mode={mode}
+                  onModeToggle={handleModeToggle}
                   isSubmitting={isSubmitting}
                 />
               ) : (
                 <OtpForm
                   email={email}
+                  mode={mode}
                   onVerify={handleOtpVerify}
                   onBack={handleBack}
                   isSubmitting={isSubmitting}

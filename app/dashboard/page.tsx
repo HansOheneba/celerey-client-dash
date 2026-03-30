@@ -710,13 +710,17 @@ export default function DashboardPage() {
                   value:
                     store.emergencyFund.currentCashBalance === 0
                       ? "Not set up"
-                      : `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
+                      : efMetrics.runwayMonths > 9
+                        ? "9+ mo runway"
+                        : `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
                   subline:
                     store.emergencyFund.currentCashBalance === 0
                       ? "Set up your emergency fund"
-                      : efMetrics.funded
-                        ? `${formatCurrency(efMetrics.currentBalance)} · Fully funded`
-                        : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} short of ${efMetrics.targetMonths}mo target`,
+                      : store.expenseCategories.length === 0
+                        ? `${formatCurrency(efMetrics.currentBalance)} saved · add expenses to see runway`
+                        : efMetrics.funded
+                          ? `${formatCurrency(efMetrics.currentBalance)} · Fully funded`
+                          : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} short of ${efMetrics.targetMonths}mo target`,
                   tone:
                     store.emergencyFund.currentCashBalance === 0
                       ? "neutral"

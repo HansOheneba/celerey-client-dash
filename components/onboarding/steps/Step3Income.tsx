@@ -82,7 +82,6 @@ function EditIncomePopover({
       },
     });
   const isRecurring = watch("is_recurring");
-  const category = watch("category");
 
   function save(data: IncomeFormValues) {
     onSave({ ...data, amount_monthly: data.amount_monthly as number });
@@ -109,12 +108,7 @@ function EditIncomePopover({
             <Label className="text-xs">Income type</Label>
             <Select
               defaultValue={income.category}
-              onValueChange={(v) => {
-                setValue("category", v);
-                if (v !== "Other")
-                  setValue("name", v, { shouldValidate: true });
-                else setValue("name", "");
-              }}
+              onValueChange={(v) => setValue("category", v)}
             >
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue />
@@ -139,16 +133,14 @@ function EditIncomePopover({
               </SelectContent>
             </Select>
           </div>
-          {category === "Other" && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Description</Label>
-              <Input
-                className="h-8 text-sm"
-                placeholder="e.g. Tutoring"
-                {...register("name")}
-              />
-            </div>
-          )}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Income name</Label>
+            <Input
+              className="h-8 text-sm"
+              placeholder="e.g. Main job salary"
+              {...register("name")}
+            />
+          </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Monthly amount</Label>
             <div className="relative">
@@ -282,7 +274,8 @@ function IncomeAccordionItem({
 /* ─── Main Step ─────────────────────────────────────────────────── */
 export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
   const [incomes, setIncomes] = useState<IncomeData[]>(defaultValues);
-  const [listError, setListError] = useState("");
+  // Show form by default if no incomes yet, hide after first save
+  const [showForm, setShowForm] = useState(defaultValues.length === 0);
   const store = useOnboardingStore();
   const preferredCurrency = store.identity?.preferred_currency || "USD";
 
@@ -293,7 +286,6 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
     watch,
     reset,
     control,
-    trigger,
     formState: { errors },
   } = useForm<IncomeFormValues>({
     resolver: zodResolver(incomeSchema) as never,
@@ -303,11 +295,20 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
       category: "",
       is_recurring: true,
     },
+    mode: "onChange",
+    reValidateMode: "onChange",
   });
 
   const isRecurring = watch("is_recurring");
   const selectedCategory = watch("category");
   const watchedValues = watch();
+
+  // Enabled as soon as all required fields are filled
+  const canSaveIncome = Boolean(
+    watchedValues.category &&
+    watchedValues.name?.trim() &&
+    Number(watchedValues.amount_monthly) > 0,
+  );
 
   const takenCategories = incomes
     .filter((i) => i.category !== "Other")
@@ -324,40 +325,29 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
       { ...data, amount_monthly: data.amount_monthly as number },
     ]);
     reset({ name: "", amount_monthly: 0, category: "", is_recurring: true });
-    setListError("");
+    // Hide form after saving
+    setShowForm(false);
   }
 
   function handleCategoryChange(v: string) {
-    setValue("category", v);
-    if (v !== "Other") setValue("name", v, { shouldValidate: true });
-    else setValue("name", "");
+    setValue("category", v, { shouldValidate: true, shouldTouch: true });
   }
 
   function removeIncome(i: number) {
-    setIncomes((prev) => prev.filter((_, idx) => idx !== i));
+    setIncomes((prev) => {
+      const next = prev.filter((_, idx) => idx !== i);
+      // Reopen form automatically if all removed
+      if (next.length === 0) setShowForm(true);
+      return next;
+    });
   }
 
   function updateIncome(i: number, updated: IncomeData) {
     setIncomes((prev) => prev.map((inc, idx) => (idx === i ? updated : inc)));
   }
 
-  async function handleNext() {
-    const hasPartial =
-      watchedValues.name ||
-      watchedValues.amount_monthly ||
-      watchedValues.category;
-    if (hasPartial) {
-      const valid = await trigger();
-      if (!valid) return;
-      addIncome(watchedValues as IncomeFormValues);
-    }
-    if (incomes.length === 0 && !hasPartial) {
-      setListError("Add at least one income source to continue.");
-      return;
-    }
-    onComplete(
-      hasPartial ? [...incomes, { ...watchedValues } as IncomeData] : incomes,
-    );
+  function handleContinue() {
+    onComplete(incomes);
   }
 
   return (
@@ -373,7 +363,7 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
         </p>
       </div>
 
-      {/* Total card — always visible at top, shows 0 if empty */}
+      {/* Total card — always visible, animates as incomes change */}
       <div className="rounded-2xl bg-[#151339] text-white p-5 flex items-center justify-between">
         <div>
           <p className="text-xs font-medium text-white/60 uppercase tracking-widest">
@@ -393,7 +383,7 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
         </div>
       </div>
 
-      {/* Income list — accordion */}
+      {/* Saved income list */}
       {incomes.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
@@ -412,94 +402,117 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
               />
             ))}
           </AnimatePresence>
+
+          {/* Add another — only shown when form is hidden */}
+          {!showForm && (
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm text-slate-500 hover:border-[#151339] hover:text-[#151339] transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add another income source
+            </button>
+          )}
         </div>
       )}
 
       {/* Add income form */}
-      <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm space-y-5">
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-          Add income source
-        </p>
+      {showForm && (
+        <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm space-y-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+            {incomes.length === 0
+              ? "Add your first income source"
+              : "Add another income source"}
+          </p>
 
-        {/* Category */}
-        <div className="space-y-1.5">
-          <Label>Income type</Label>
-          <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent>
-              {INCOME_CATEGORIES.map((c) => {
-                const isTaken = c !== "Other" && takenCategories.includes(c);
-                return (
-                  <SelectItem key={c} value={c} disabled={isTaken}>
-                    {c}
-                    {isTaken && (
-                      <span className="ml-2 text-xs text-slate-400">
-                        (already added)
-                      </span>
-                    )}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Name if Other */}
-        {selectedCategory === "Other" && (
+          {/* Category */}
           <div className="space-y-1.5">
-            <Label>Description</Label>
-            <Input placeholder="e.g. Tutoring" {...register("name")} />
-          </div>
-        )}
-
-        {/* Amount + recurring */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>Monthly amount</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                {getCurrencyPrefix(preferredCurrency)}
-              </span>
-              <CurrencyNumberInputField
-                control={control}
-                name="amount_monthly"
-                className="pl-12"
-              />
-            </div>
-            {errors.amount_monthly && (
-              <p className="text-xs text-red-500">
-                {(errors.amount_monthly as any).message}
-              </p>
+            <Label>Income type</Label>
+            <Select
+              value={selectedCategory}
+              onValueChange={handleCategoryChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {INCOME_CATEGORIES.map((c) => {
+                  const isTaken = c !== "Other" && takenCategories.includes(c);
+                  return (
+                    <SelectItem key={c} value={c} disabled={isTaken}>
+                      {c}
+                      {isTaken && (
+                        <span className="ml-2 text-xs text-slate-400">
+                          (already added)
+                        </span>
+                      )}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            {errors.category && (
+              <p className="text-xs text-red-500">{errors.category.message}</p>
             )}
           </div>
-          <div className="flex items-end pb-1">
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={isRecurring}
-                onCheckedChange={(v) => setValue("is_recurring", v)}
-              />
-              <span className="text-sm text-slate-600">Monthly recurring</span>
+
+          {/* Name */}
+          <div className="space-y-1.5">
+            <Label>Income name</Label>
+            <Input placeholder="e.g. Main job salary" {...register("name")} />
+            {errors.name && (
+              <p className="text-xs text-red-500">{errors.name.message}</p>
+            )}
+          </div>
+
+          {/* Amount + recurring */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Monthly amount</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                  {getCurrencyPrefix(preferredCurrency)}
+                </span>
+                <CurrencyNumberInputField
+                  control={control}
+                  name="amount_monthly"
+                  className="pl-12"
+                />
+              </div>
+              {errors.amount_monthly && (
+                <p className="text-xs text-red-500">
+                  {(errors.amount_monthly as any).message}
+                </p>
+              )}
+            </div>
+            <div className="flex items-end pb-1">
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={isRecurring}
+                  onCheckedChange={(v) => setValue("is_recurring", v)}
+                />
+                <span className="text-sm text-slate-600">
+                  Monthly recurring
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex justify-end">
+          {/* Save income — primary CTA while form is open */}
           <Button
             type="button"
-            variant="outline"
             onClick={handleSubmit(addIncome)}
-            className="gap-2 border-dashed"
+            disabled={!canSaveIncome}
+            className="w-full h-11 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
           >
-            <Plus className="h-4 w-4" /> Save income
+            <Plus className="h-4 w-4" />
+            Save income source
           </Button>
         </div>
-      </div>
+      )}
 
-      {listError && <p className="text-sm text-red-500">{listError}</p>}
-
-      {/* CTA */}
+      {/* Navigation */}
       <div className="flex gap-3">
         {onBack && (
           <Button
@@ -512,15 +525,8 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
           </Button>
         )}
         <Button
-          onClick={handleNext}
-          disabled={
-            incomes.length === 0 &&
-            !(
-              watchedValues.category &&
-              Number(watchedValues.amount_monthly) > 0 &&
-              (watchedValues.category !== "Other" || !!watchedValues.name)
-            )
-          }
+          onClick={handleContinue}
+          disabled={incomes.length === 0}
           className="flex-1 h-12 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
         >
           Continue <ArrowRight className="h-4 w-4" />

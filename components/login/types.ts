@@ -6,3 +6,5 @@ export type Slide = {
 };
 
 export type AuthStep = "email" | "otp";
+
+export type AuthMode = "signup" | "login";

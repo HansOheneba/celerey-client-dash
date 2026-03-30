@@ -136,22 +136,28 @@ interface PriceCacheEntry {
 interface HoldingDraft {
   name: string;
   asset_type: AssetType;
-  valuation_method: ValuationMethod;
   symbol: string;
   quantity: string;
-  average_cost: string;
-  manual_value: string;
+  amount_invested: string;
+  current_value: string;
+  face_value: string;
+  coupon_rate: string;
+  maturity_date: string;
+  purchase_date: string;
   note: string;
 }
 
 const defaultDraft: HoldingDraft = {
   name: "",
   asset_type: "stock",
-  valuation_method: "market",
   symbol: "",
   quantity: "",
-  average_cost: "",
-  manual_value: "",
+  amount_invested: "",
+  current_value: "",
+  face_value: "",
+  coupon_rate: "",
+  maturity_date: "",
+  purchase_date: "",
   note: "",
 };
 
@@ -269,9 +275,12 @@ function getLiveValue(
   valuations: AssetValuation[],
   livePrices: LivePrices,
 ): number {
+  // Live pricing for market assets (stock, ETF, crypto)
   const livePrice = livePrices[holding.holding_id];
   if (livePrice != null && holding.quantity)
     return livePrice * holding.quantity;
+  // Use manually entered current_value when present
+  if (holding.current_value != null) return holding.current_value;
   return currentValue(holding, valuations);
 }
 
@@ -281,10 +290,8 @@ function getLiveGainLoss(
   livePrices: LivePrices,
 ): { amount: number; pct: number } {
   const cv = getLiveValue(holding, valuations, livePrices);
-  const cost =
-    holding.average_cost && holding.quantity
-      ? holding.average_cost * holding.quantity
-      : holding.initial_value;
+  // Cost basis is amount_invested if set, otherwise fall back to initial_value
+  const cost = holding.amount_invested ?? holding.initial_value;
   const amount = cv - cost;
   const pct = cost > 0 ? (amount / cost) * 100 : 0;
   return { amount, pct };
@@ -337,13 +344,23 @@ function AddHoldingDialog({
       setDraft({
         name: editHolding.name,
         asset_type: editHolding.asset_type,
-        valuation_method: editHolding.valuation_method,
         symbol: editHolding.symbol ?? "",
         quantity: editHolding.quantity ? String(editHolding.quantity) : "",
-        average_cost: editHolding.average_cost
-          ? String(editHolding.average_cost)
+        amount_invested: editHolding.amount_invested
+          ? String(editHolding.amount_invested)
           : "",
-        manual_value: String(editHolding.initial_value),
+        current_value: editHolding.current_value
+          ? String(editHolding.current_value)
+          : "",
+        face_value:
+          editHolding.asset_type === "bond"
+            ? String(editHolding.initial_value)
+            : "",
+        coupon_rate: editHolding.coupon_rate
+          ? String(editHolding.coupon_rate)
+          : "",
+        maturity_date: editHolding.maturity_date ?? "",
+        purchase_date: editHolding.initial_value_date,
         note: "",
       });
     } else {
@@ -351,8 +368,12 @@ function AddHoldingDialog({
     }
   }, [open, editHolding]);
 
-  const isMarket =
-    supportsMarket(draft.asset_type) && draft.valuation_method === "market";
+  const isMarket = supportsMarket(draft.asset_type);
+  const isBond = draft.asset_type === "bond";
+  const isCash = draft.asset_type === "cash";
+  const isMutual = draft.asset_type === "mutual_fund";
+  const isManual =
+    draft.asset_type === "alternative" || draft.asset_type === "other";
 
   function handleSymbolChange(sym: string) {
     const upper = sym.toUpperCase();
@@ -369,31 +390,47 @@ function AddHoldingDialog({
     const now = new Date().toISOString();
     const id = editHolding?.holding_id ?? `h-${Date.now()}`;
 
+    const amountInvested = Number(draft.amount_invested) || undefined;
+    const currentVal = Number(draft.current_value) || undefined;
+    const faceValue = Number(draft.face_value) || 0;
+    const couponRate = Number(draft.coupon_rate) || undefined;
+
+    // Compute initial_value (legacy fallback):
+    // bonds → face value | cash → current balance | others → amount invested
+    const legacyInitialValue = isBond
+      ? faceValue
+      : isCash
+        ? Number(draft.current_value) || 0
+        : Number(draft.amount_invested) || Number(draft.current_value) || 0;
+
     const holding: AssetHolding = {
       holding_id: id,
       user_id: "u-1",
       asset_type: draft.asset_type,
       valuation_method: isMarket ? "market" : "manual",
-      initial_value: isMarket
-        ? Number(draft.quantity) * Number(draft.average_cost) || 0
-        : Number(draft.manual_value),
-      initial_value_date: now.slice(0, 10),
+      initial_value: legacyInitialValue,
+      initial_value_date: draft.purchase_date || now.slice(0, 10),
       symbol: draft.symbol || undefined,
       name: draft.name || draft.symbol || "Unnamed",
       quantity: draft.quantity ? Number(draft.quantity) : undefined,
-      average_cost: draft.average_cost ? Number(draft.average_cost) : undefined,
+      amount_invested: amountInvested,
+      current_value: isCash || isMutual || isManual ? currentVal : undefined,
+      coupon_rate: couponRate,
+      maturity_date: draft.maturity_date || undefined,
       is_active: true,
       created_at: editHolding?.created_at ?? now,
       updated_at: now,
     };
 
     let valuation: AssetValuation | undefined;
-    if (!isMarket && draft.manual_value) {
+    if (!isMarket && (draft.current_value || draft.face_value)) {
+      const valValue =
+        Number(draft.current_value) || Number(draft.face_value) || 0;
       valuation = {
         valuation_id: `val-${Date.now()}`,
         holding_id: id,
-        value: Number(draft.manual_value),
-        as_of: now.slice(0, 10),
+        value: valValue,
+        as_of: draft.purchase_date || now.slice(0, 10),
         source: "manual",
         created_at: now,
       };
@@ -458,37 +495,7 @@ function AddHoldingDialog({
 
           <Separator />
 
-          {/* Valuation method toggle (only for market-capable types) */}
-          {supportsMarket(draft.asset_type) && (
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold">Valuation method</Label>
-              <div className="flex items-center gap-1 text-xs">
-                {(["market", "manual"] as ValuationMethod[]).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() =>
-                      setDraft((d) => ({ ...d, valuation_method: m }))
-                    }
-                    className={`px-3 py-1 rounded-md transition-colors ${
-                      draft.valuation_method === m
-                        ? "text-white"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                    style={
-                      draft.valuation_method === m
-                        ? { backgroundColor: "#151339" }
-                        : {}
-                    }
-                  >
-                    {m === "market" ? "Live price" : "Manual"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Symbol (market assets with live pricing) */}
+          {/* Symbol (market assets only: stock, ETF, crypto) */}
           {isMarket && (
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Ticker / Symbol</Label>
@@ -517,8 +524,8 @@ function AddHoldingDialog({
                   icon={faBroadcastTower}
                   className="h-2.5 w-2.5"
                 />
-                Crypto prices update live from 3rd party sources. Stocks
-                require manual update for now.
+                Crypto prices update live from 3rd party sources. Stocks require
+                manual update for now.
               </p>
             </div>
           )}
@@ -543,12 +550,12 @@ function AddHoldingDialog({
             />
           </div>
 
-          {/* Quantity + avg cost (market) OR manual value */}
-          {isMarket ? (
+          {/* ── Stock / ETF / Crypto: quantity + amount invested ── */}
+          {isMarket && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">
-                  Quantity / Units
+                  How many units / shares?
                 </Label>
                 <Input
                   type="number"
@@ -559,13 +566,12 @@ function AddHoldingDialog({
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  We multiply this by the live price
+                  The number of shares, coins, or units.
                 </p>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold flex items-center gap-1">
-                  Avg. cost per unit
-                  <InfoTip content="Your average purchase price per share/coin. Used to calculate your gain or loss vs current market price." />
+                <Label className="text-xs font-semibold">
+                  How much did you invest?
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
@@ -575,52 +581,279 @@ function AddHoldingDialog({
                     type="number"
                     placeholder="0.00"
                     className="pl-6"
-                    value={draft.average_cost}
+                    value={draft.amount_invested}
                     onChange={(e) =>
-                      setDraft((d) => ({ ...d, average_cost: e.target.value }))
+                      setDraft((d) => ({
+                        ...d,
+                        amount_invested: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Total you paid — your cost basis.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Mutual fund: amount invested + current value ── */}
+          {isMutual && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">
+                  How much did you invest?
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    $
+                  </span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    className="pl-6"
+                    value={draft.amount_invested}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        amount_invested: e.target.value,
+                      }))
                     }
                   />
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">
+                  What is it worth today?
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    $
+                  </span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    className="pl-6"
+                    value={draft.current_value}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        current_value: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Current NAV from your statement.
+                </p>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold flex items-center gap-1">
-                Current value
-                <InfoTip
-                  content={
-                    draft.asset_type === "bond"
-                      ? "Enter the current face or market value of this bond position from your latest statement."
-                      : draft.asset_type === "cash"
-                        ? "Enter the current account balance."
-                        : draft.asset_type === "alternative"
-                          ? "Enter the last known value from your fund statement or capital account."
-                          : "Enter the current estimated value of this asset."
-                  }
-                />
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  $
-                </span>
+          )}
+
+          {/* ── Bond: face value + coupon + maturity + amount invested ── */}
+          {isBond && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">
+                    Face / par value
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      $
+                    </span>
+                    <Input
+                      type="number"
+                      placeholder="100,000"
+                      className="pl-6"
+                      value={draft.face_value}
+                      onChange={(e) =>
+                        setDraft((d) => ({ ...d, face_value: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Principal paid back at maturity.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">
+                    Annual interest rate (%)
+                  </Label>
+                  <Input
+                    type="number"
+                    placeholder="4.5"
+                    value={draft.coupon_rate}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, coupon_rate: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Maturity date</Label>
+                  <Input
+                    type="date"
+                    value={draft.maturity_date}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        maturity_date: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">
+                    How much did you invest?
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      $
+                    </span>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      className="pl-6"
+                      value={draft.amount_invested}
+                      onChange={(e) =>
+                        setDraft((d) => ({
+                          ...d,
+                          amount_invested: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    What you actually paid (may differ from face value).
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Cash: balance + optional interest rate ── */}
+          {isCash && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">
+                  What is it worth today?
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    $
+                  </span>
+                  <Input
+                    type="number"
+                    placeholder="25,000"
+                    className="pl-6"
+                    value={draft.current_value}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        current_value: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Current account balance.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">
+                  Interest rate (%)
+                  <span className="font-normal text-muted-foreground">
+                    {" "}
+                    — optional
+                  </span>
+                </Label>
                 <Input
                   type="number"
-                  placeholder="0"
-                  className="pl-6"
-                  value={draft.manual_value}
+                  placeholder="4.2"
+                  value={draft.coupon_rate}
                   onChange={(e) =>
-                    setDraft((d) => ({ ...d, manual_value: e.target.value }))
+                    setDraft((d) => ({ ...d, coupon_rate: e.target.value }))
                   }
                 />
+                <p className="text-xs text-muted-foreground">
+                  For savings or fixed-deposit accounts.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <FontAwesomeIcon icon={faInfoCircle} className="h-2.5 w-2.5" />
-                {draft.asset_type === "bond"
-                  ? "Update when you receive your bond statement."
-                  : draft.asset_type === "alternative"
-                    ? "Update from your quarterly capital account statement."
-                    : "You can update this value at any time."}
-              </p>
+            </div>
+          )}
+
+          {/* ── Alternative / Other: amount invested + current value ── */}
+          {isManual && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">
+                  How much did you invest?
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    $
+                  </span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    className="pl-6"
+                    value={draft.amount_invested}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        amount_invested: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">
+                  What is it worth today?
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    $
+                  </span>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    className="pl-6"
+                    value={draft.current_value}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        current_value: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <FontAwesomeIcon
+                    icon={faInfoCircle}
+                    className="h-2.5 w-2.5"
+                  />
+                  Update from your latest statement.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Purchase date (for non-bond types) */}
+          {!isBond && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">
+                {isCash ? "As-of date" : "When did you buy this?"}
+              </Label>
+              <Input
+                type="date"
+                value={draft.purchase_date}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, purchase_date: e.target.value }))
+                }
+              />
             </div>
           )}
         </div>
@@ -884,28 +1117,54 @@ function HoldingRow({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {holding.quantity != null && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Quantity</p>
+                    <p className="text-xs text-muted-foreground">
+                      Shares / units
+                    </p>
                     <p className="text-sm font-semibold">
                       {holding.quantity.toLocaleString()}
                     </p>
                   </div>
                 )}
-                {holding.average_cost != null && (
+                {holding.amount_invested != null && (
                   <div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      Avg. cost{" "}
-                      <InfoTip content="Your average purchase price per unit, used to calculate gain/loss." />
+                    <p className="text-xs text-muted-foreground">
+                      Amount invested
                     </p>
                     <p className="text-sm font-semibold">
-                      {formatCurrency(holding.average_cost)}
+                      {formatCurrency(holding.amount_invested)}
                     </p>
                   </div>
                 )}
-                {holding.quantity != null && holding.average_cost != null && (
+                {holding.current_value != null && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Cost basis</p>
+                    <p className="text-xs text-muted-foreground">
+                      Current value
+                    </p>
                     <p className="text-sm font-semibold">
-                      {formatCurrency(holding.quantity * holding.average_cost)}
+                      {formatCurrency(holding.current_value)}
+                    </p>
+                  </div>
+                )}
+                {holding.coupon_rate != null && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      Coupon / interest rate
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {holding.coupon_rate}% p.a.
+                    </p>
+                  </div>
+                )}
+                {holding.maturity_date && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      Maturity date
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {new Date(holding.maturity_date).toLocaleDateString(
+                        "en-US",
+                        { month: "short", day: "numeric", year: "numeric" },
+                      )}
                     </p>
                   </div>
                 )}
@@ -1039,10 +1298,7 @@ export default function AssetsPage() {
   const totalCostBasis = React.useMemo(
     () =>
       holdings.reduce((s, h) => {
-        const cost =
-          h.average_cost && h.quantity
-            ? h.average_cost * h.quantity
-            : h.initial_value;
+        const cost = h.amount_invested ?? h.initial_value;
         return s + cost;
       }, 0),
     [holdings],

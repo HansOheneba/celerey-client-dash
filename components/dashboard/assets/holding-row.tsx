@@ -78,9 +78,13 @@ export function HoldingRow({
             </div>
 
             <div>
-              <div className="text-xs text-muted-foreground">Cost Basis</div>
+              <div className="text-xs text-muted-foreground">
+                Amount Invested
+              </div>
               <div className="text-sm font-semibold tabular-nums">
-                {formatCurrency(holding.initial_value)}
+                {formatCurrency(
+                  holding.amount_invested ?? holding.initial_value,
+                )}
               </div>
             </div>
 

@@ -706,12 +706,20 @@ export type AssetHolding = {
   user_id: string;
   asset_type: AssetType;
   valuation_method: ValuationMethod;
+  /** Face value for bonds; fallback cost basis for other types. */
   initial_value: number;
   initial_value_date: string;
   symbol?: string;
   name: string;
   quantity?: number;
-  average_cost?: number;
+  /** What the user actually paid / put in — the cost basis. */
+  amount_invested?: number;
+  /** Manually entered current market / account value. */
+  current_value?: number;
+  /** Annual interest rate % — bonds, fixed deposits, T-bills. */
+  coupon_rate?: number;
+  /** ISO date string — bonds, fixed deposits. */
+  maturity_date?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -741,6 +749,8 @@ export function currentValue(
   holding: AssetHolding,
   valuations: AssetValuation[],
 ): number {
+  // Prefer explicitly entered current value
+  if (holding.current_value != null) return holding.current_value;
   const latest = latestValuation(holding.holding_id, valuations);
   return latest ? latest.value : holding.initial_value;
 }
@@ -750,9 +760,9 @@ export function gainLoss(
   valuations: AssetValuation[],
 ): { amount: number; pct: number } {
   const cv = currentValue(holding, valuations);
-  const amount = cv - holding.initial_value;
-  const pct =
-    holding.initial_value > 0 ? (amount / holding.initial_value) * 100 : 0;
+  const cost = holding.amount_invested ?? holding.initial_value;
+  const amount = cv - cost;
+  const pct = cost > 0 ? (amount / cost) * 100 : 0;
   return { amount, pct };
 }
 
@@ -761,7 +771,7 @@ export function assetTypeLabel(type: AssetType): string {
 }
 
 export function supportsMarket(type: AssetType): boolean {
-  return ["stock", "etf", "crypto", "mutual_fund"].includes(type);
+  return ["stock", "etf", "crypto"].includes(type);
 }
 
 export type SymbolInfo = { symbol: string; name: string; assetType: AssetType };
@@ -881,12 +891,12 @@ export const mockHoldings: AssetHolding[] = [
     user_id: "u-1",
     asset_type: "stock",
     valuation_method: "market",
-    initial_value: 100000,
+    initial_value: 30000,
     initial_value_date: "2024-01-15",
     symbol: "AAPL",
     name: "Apple Inc.",
     quantity: 200,
-    average_cost: 150,
+    amount_invested: 30000,
     is_active: true,
     created_at: _assetNow,
     updated_at: _assetNow,
@@ -896,12 +906,12 @@ export const mockHoldings: AssetHolding[] = [
     user_id: "u-1",
     asset_type: "etf",
     valuation_method: "market",
-    initial_value: 250000,
+    initial_value: 200000,
     initial_value_date: "2023-06-01",
     symbol: "VOO",
     name: "Vanguard S&P 500 ETF",
     quantity: 500,
-    average_cost: 400,
+    amount_invested: 200000,
     is_active: true,
     created_at: _assetNow,
     updated_at: _assetNow,
@@ -914,6 +924,10 @@ export const mockHoldings: AssetHolding[] = [
     initial_value: 312500,
     initial_value_date: "2022-11-01",
     name: "Government Bond Portfolio",
+    amount_invested: 300000,
+    current_value: 320000,
+    coupon_rate: 4.5,
+    maturity_date: "2030-11-01",
     is_active: true,
     created_at: _assetNow,
     updated_at: _assetNow,
@@ -926,6 +940,8 @@ export const mockHoldings: AssetHolding[] = [
     initial_value: 125000,
     initial_value_date: "2025-01-01",
     name: "High-Yield Savings",
+    current_value: 128000,
+    coupon_rate: 4.2,
     is_active: true,
     created_at: _assetNow,
     updated_at: _assetNow,
@@ -938,6 +954,8 @@ export const mockHoldings: AssetHolding[] = [
     initial_value: 50000,
     initial_value_date: "2024-03-10",
     name: "Private Equity Fund",
+    amount_invested: 50000,
+    current_value: 62500,
     is_active: true,
     created_at: _assetNow,
     updated_at: _assetNow,
@@ -952,7 +970,7 @@ export const mockHoldings: AssetHolding[] = [
     symbol: "BTC",
     name: "Bitcoin",
     quantity: 0.45,
-    average_cost: 66667,
+    amount_invested: 30000,
     is_active: true,
     created_at: _assetNow,
     updated_at: _assetNow,
@@ -2671,11 +2689,20 @@ export function selectEmergencyFundMetrics(
   data: FinancialDomainData,
 ): EmergencyFundMetrics {
   const essentialExpenses = selectEssentialExpenses(data.expenseCategories);
+  const totalExpenses = selectMonthlyExpenses(data);
+  // Use essential expenses first; fall back to total expenses if none are marked essential
+  const monthlyExpenses =
+    essentialExpenses > 0 ? essentialExpenses : totalExpenses;
   const currentBalance = data.emergencyFund.currentCashBalance;
   const targetMonths = data.emergencyFund.targetMonths;
-  const targetBalance = essentialExpenses * targetMonths;
+  const targetBalance = monthlyExpenses * targetMonths;
+  // When expenses are 0 but balance exists, treat as well-covered (capped at 9+ in display)
   const runwayMonths =
-    essentialExpenses > 0 ? currentBalance / essentialExpenses : 0;
+    monthlyExpenses > 0
+      ? currentBalance / monthlyExpenses
+      : currentBalance > 0
+        ? 10
+        : 0;
   return {
     currentBalance,
     targetBalance,
