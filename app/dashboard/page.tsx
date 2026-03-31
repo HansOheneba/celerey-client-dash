@@ -47,6 +47,7 @@ import {
   projectMonthlyAmount,
   type FinancialDomainData,
   type CashFlowPoint,
+  type RecurringType,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 
@@ -285,6 +286,49 @@ function toMonthLabel(isoMonth: string): string {
   });
 }
 
+function nextIsoMonthStr(m: string): string {
+  const [y, mon] = m.split("-").map(Number);
+  return addMonthStr(new Date(y, mon - 1, 1), 1);
+}
+
+/**
+ * Like `projectMonthlyAmount` but ONLY counts rows that carry an explicit
+ * `startDate` on or before `isoMonth`. Rows without a startDate that are
+ * ongoing/forever are also included (matching forward-projection behaviour).
+ * Used to build synthetic historical data so the chart never shows stale
+ * cashFlowHistory snapshots.
+ */
+function projectHistoricalAmountOverview(
+  rows: Array<{
+    amount: number;
+    isRecurring?: boolean;
+    recurringType?: RecurringType;
+    recurringMonths?: number;
+    startDate?: string;
+  }>,
+  isoMonth: string,
+): number {
+  return rows
+    .filter((row) => {
+      const isOngoing =
+        row.recurringType !== "one-time" && row.isRecurring !== false;
+      if (!row.startDate) return isOngoing;
+      const startMonth = row.startDate.slice(0, 7);
+      if (isoMonth < startMonth) return false;
+      if (!row.isRecurring || row.recurringType === "one-time") {
+        return startMonth === isoMonth;
+      }
+      if (row.recurringType === "months" && row.recurringMonths != null) {
+        const [sy, sm] = startMonth.split("-").map(Number);
+        const [py, pm] = isoMonth.split("-").map(Number);
+        const diff = (py - sy) * 12 + (pm - sm);
+        return diff >= 0 && diff < row.recurringMonths;
+      }
+      return true;
+    })
+    .reduce((s, r) => s + r.amount, 0);
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -441,53 +485,101 @@ export default function DashboardPage() {
 
   const cashFlowChartData = useMemo(() => {
     const today = new Date();
-    const actualSet = new Set(
-      store.cashFlowHistory.map((d: CashFlowPoint) => d.month),
+    const currentMonth = addMonthStr(today, 0);
+
+    // How far back to generate synthetic data: earliest row startDate, capped at 6 months
+    const minHistoricalMonth = addMonthStr(today, -6);
+    const allStartMonths = [
+      ...store.incomeRows
+        .filter((r) => r.startDate && r.startDate.slice(0, 7) <= currentMonth)
+        .map((r) => r.startDate!.slice(0, 7)),
+      ...store.expenseCategories
+        .filter((r) => r.startDate && r.startDate.slice(0, 7) <= currentMonth)
+        .map((r) => r.startDate!.slice(0, 7)),
+    ];
+    const earliestHistoricalMonth =
+      allStartMonths.length > 0
+        ? [
+            ...allStartMonths.filter((m) => m >= minHistoricalMonth),
+            minHistoricalMonth,
+          ].reduce((a, b) => (a < b ? a : b))
+        : minHistoricalMonth;
+
+    const actualByMonth = new Map(
+      store.cashFlowHistory.map((d: CashFlowPoint) => [d.month, d]),
     );
 
-    const actual = [...store.cashFlowHistory]
-      .sort((a: CashFlowPoint, b: CashFlowPoint) =>
-        a.month.localeCompare(b.month),
-      )
-      .slice(-6)
-      .map((p: CashFlowPoint) => ({
-        month: p.month,
-        label: toMonthLabel(p.month),
-        income: p.income as number | null,
-        expenses: p.expenses as number | null,
-        projIncome: null as number | null,
-        projExpenses: null as number | null,
-        isProjected: false,
-      }));
+    // ── Historical: synthetic wins; stale cashFlowHistory is fallback only ──
+    type ChartPoint = {
+      month: string;
+      label: string;
+      income: number | null;
+      expenses: number | null;
+      projIncome: number | null;
+      projExpenses: number | null;
+      isProjected: boolean;
+    };
 
-    // Bridge: last actual point also anchors the projected line
-    if (actual.length > 0) {
-      const last = actual[actual.length - 1];
+    const points: ChartPoint[] = [];
+    let m = earliestHistoricalMonth;
+    while (m <= currentMonth) {
+      const actual = actualByMonth.get(m);
+      const synthIncome = projectHistoricalAmountOverview(
+        store.incomeRows,
+        m,
+      );
+      const synthExpenses = projectHistoricalAmountOverview(
+        store.expenseCategories,
+        m,
+      );
+      // Synthetic rows always win; only fall back to recorded actuals when
+      // the rows themselves produce nothing (e.g. months before any row exists)
+      const finalIncome =
+        synthIncome > 0 ? synthIncome : (actual?.income ?? 0);
+      const finalExpenses =
+        synthExpenses > 0 ? synthExpenses : (actual?.expenses ?? 0);
+
+      if (actual || finalIncome > 0 || finalExpenses > 0) {
+        points.push({
+          month: m,
+          label: toMonthLabel(m),
+          income: finalIncome,
+          expenses: finalExpenses,
+          projIncome: null,
+          projExpenses: null,
+          isProjected: false,
+        });
+      }
+      m = nextIsoMonthStr(m);
+    }
+
+    // Bridge: last historical point also anchors the projected dashed line
+    if (points.length > 0) {
+      const last = points[points.length - 1];
       last.projIncome = last.income;
       last.projExpenses = last.expenses;
     }
 
-    const projected = Array.from({ length: 6 }, (_, i) => {
-      const month = addMonthStr(today, i);
-      if (actualSet.has(month)) return null;
-      return {
-        month,
-        label: toMonthLabel(month),
-        income: null as number | null,
-        expenses: null as number | null,
-        projIncome: projectMonthlyAmount(store.incomeRows, month) as
-          | number
-          | null,
-        projExpenses: projectMonthlyAmount(store.expenseCategories, month) as
-          | number
-          | null,
-        isProjected: true,
-      };
-    }).filter((p): p is NonNullable<typeof p> => p !== null);
+    // ── Future: 6 months forward projection ──────────────────────────────
+    for (let i = 1; i <= 6; i++) {
+      const futureMonth = addMonthStr(today, i);
+      if (!actualByMonth.has(futureMonth)) {
+        points.push({
+          month: futureMonth,
+          label: toMonthLabel(futureMonth),
+          income: null,
+          expenses: null,
+          projIncome: projectMonthlyAmount(store.incomeRows, futureMonth),
+          projExpenses: projectMonthlyAmount(
+            store.expenseCategories,
+            futureMonth,
+          ),
+          isProjected: true,
+        });
+      }
+    }
 
-    return [...actual, ...projected].sort((a, b) =>
-      a.month.localeCompare(b.month),
-    );
+    return points.sort((a, b) => a.month.localeCompare(b.month));
   }, [store.cashFlowHistory, store.incomeRows, store.expenseCategories]);
 
   const yMax = useMemo(() => {

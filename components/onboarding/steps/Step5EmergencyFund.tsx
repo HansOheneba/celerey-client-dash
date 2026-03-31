@@ -91,7 +91,7 @@ export function Step5EmergencyFund({
             Coverage goal
           </p>
           <p className="text-sm text-slate-500 mt-1">
-            How many months of your basic expenses should this fund cover?
+            How many months of your basic expenses do you think this fund should cover?
           </p>
         </div>
 

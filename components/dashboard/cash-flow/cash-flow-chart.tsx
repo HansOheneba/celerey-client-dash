@@ -8,6 +8,7 @@ import {
   ReferenceLine,
   XAxis,
   YAxis,
+  ResponsiveContainer,
 } from "recharts";
 import {
   Card,
@@ -29,25 +30,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   type CashFlowPoint,
+  type RecurringType,
   formatCurrency,
   projectMonthlyAmount,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
 
-// ─── Same colors as overview page ────────────────────────────────────────────
-const INCOME_COLOR = "#1e3a5f"; // deep navy blue
-const EXPENSES_COLOR = "#7eb8e8"; // light blue
+// ─── Colors ───────────────────────────────────────────────────────────────────
+const INCOME_COLOR = "#1e3a5f";
+const EXPENSES_COLOR = "#7eb8e8";
+const SURPLUS_COLOR = "#10b981";
+const DEFICIT_COLOR = "#f43f5e";
 
 const chartConfig = {
   income: { label: "Income", color: INCOME_COLOR },
   expenses: { label: "Expenses", color: EXPENSES_COLOR },
 } satisfies ChartConfig;
 
-// ─── Enriched point type ──────────────────────────────────────────────────────
 type EnrichedPoint = CashFlowPoint & { isProjected?: boolean; label: string };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function addMonths(base: Date, offset: number): string {
   const d = new Date(base.getFullYear(), base.getMonth() + offset, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -60,7 +69,56 @@ function toLabel(isoMonth: string): string {
   });
 }
 
-// ─── Custom Tooltip ───────────────────────────────────────────────────────────
+/** Advance an ISO month string by one month (e.g. "2026-03" → "2026-04"). */
+function nextIsoMonth(m: string): string {
+  const [y, mon] = m.split("-").map(Number);
+  // mon is 1-indexed; new Date(y, mon-1, 1) = that month; +1 offset advances by one month
+  return addMonths(new Date(y, mon - 1, 1), 1);
+}
+
+/**
+ * Like `projectMonthlyAmount` but ONLY counts rows that carry an explicit
+ * `startDate` that falls on or before `isoMonth`.  Used to build synthetic
+ * historical data — rows with no startDate are ignored (we don't know when
+ * they started).
+ */
+function projectHistoricalMonthlyAmount(
+  rows: Array<{
+    amount: number;
+    isRecurring?: boolean;
+    recurringType?: RecurringType;
+    recurringMonths?: number;
+    startDate?: string;
+  }>,
+  isoMonth: string,
+): number {
+  return rows
+    .filter((row) => {
+      const isOngoing =
+        row.recurringType !== "one-time" && row.isRecurring !== false;
+
+      // No startDate + ongoing forever: treat as always active (matches
+      // projectMonthlyAmount which includes these in all future months too)
+      if (!row.startDate) return isOngoing;
+
+      const startMonth = row.startDate.slice(0, 7);
+      if (isoMonth < startMonth) return false;
+
+      if (!row.isRecurring || row.recurringType === "one-time") {
+        return startMonth === isoMonth;
+      }
+      if (row.recurringType === "months" && row.recurringMonths != null) {
+        const [sy, sm] = startMonth.split("-").map(Number);
+        const [py, pm] = isoMonth.split("-").map(Number);
+        const diff = (py - sy) * 12 + (pm - sm);
+        return diff >= 0 && diff < row.recurringMonths;
+      }
+      return true; // "forever" with an explicit startDate
+    })
+    .reduce((s, r) => s + r.amount, 0);
+}
+
+// ─── Tooltip ──────────────────────────────────────────────────────────────────
 function CashFlowTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
 
@@ -77,6 +135,11 @@ function CashFlowTooltip({ active, payload, label }: any) {
   const isProjected: boolean =
     payload.some((p: any) => p.dataKey === "projIncome" && p.value != null) &&
     !payload.some((p: any) => p.dataKey === "income" && p.value != null);
+
+  const surplus =
+    incomeValue != null && expensesValue != null
+      ? incomeValue - expensesValue
+      : null;
 
   return (
     <div className="rounded-lg border bg-background shadow-md px-3 py-2.5 text-xs space-y-1.5 min-w-[160px]">
@@ -97,9 +160,7 @@ function CashFlowTooltip({ active, payload, label }: any) {
             />
             <span className="text-muted-foreground">Income</span>
           </div>
-          <span className="font-medium text-foreground">
-            {formatCurrency(incomeValue)}
-          </span>
+          <span className="font-medium">{formatCurrency(incomeValue)}</span>
         </div>
       )}
       {expensesValue != null && (
@@ -111,8 +172,20 @@ function CashFlowTooltip({ active, payload, label }: any) {
             />
             <span className="text-muted-foreground">Expenses</span>
           </div>
-          <span className="font-medium text-foreground">
-            {formatCurrency(expensesValue)}
+          <span className="font-medium">{formatCurrency(expensesValue)}</span>
+        </div>
+      )}
+      {surplus != null && (
+        <div className="flex items-center justify-between gap-4 border-t pt-1.5 mt-1">
+          <span className="text-muted-foreground">
+            {surplus >= 0 ? "Surplus" : "Deficit"}
+          </span>
+          <span
+            className="font-semibold"
+            style={{ color: surplus >= 0 ? SURPLUS_COLOR : DEFICIT_COLOR }}
+          >
+            {surplus >= 0 ? "+" : ""}
+            {formatCurrency(surplus)}
           </span>
         </div>
       )}
@@ -120,6 +193,88 @@ function CashFlowTooltip({ active, payload, label }: any) {
   );
 }
 
+// ─── New-user snapshot banner ─────────────────────────────────────────────────
+function NewUserBanner({
+  monthlyIncome,
+  monthlyExpenses,
+  preferredCurrency,
+}: {
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  preferredCurrency?: string;
+}) {
+  const surplus = monthlyIncome - monthlyExpenses;
+  const isPositive = surplus >= 0;
+  const annualSavings = surplus * 12;
+  const savingsRate =
+    monthlyIncome > 0
+      ? Math.round((Math.max(surplus, 0) / monthlyIncome) * 100)
+      : 0;
+
+  const SurplusIcon = isPositive ? TrendingUp : TrendingDown;
+
+  return (
+    <div className="grid grid-cols-3 gap-3 mb-4">
+      {/* Monthly surplus / deficit */}
+      <div
+        className="col-span-1 rounded-xl p-3.5 flex flex-col gap-1"
+        style={{
+          background: isPositive
+            ? "rgba(16,185,129,0.07)"
+            : "rgba(244,63,94,0.07)",
+        }}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+          Monthly {isPositive ? "surplus" : "deficit"}
+        </p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <SurplusIcon
+            className="h-4 w-4 shrink-0"
+            style={{ color: isPositive ? SURPLUS_COLOR : DEFICIT_COLOR }}
+          />
+          <p
+            className="text-xl font-semibold tabular-nums"
+            style={{ color: isPositive ? SURPLUS_COLOR : DEFICIT_COLOR }}
+          >
+            {isPositive ? "+" : ""}
+            {formatCurrency(surplus)}
+          </p>
+        </div>
+        <p className="text-[11px] text-slate-400">
+          {savingsRate}% savings rate
+        </p>
+      </div>
+
+      {/* Projected annual savings */}
+      <div className="col-span-1 rounded-xl bg-slate-50 p-3.5 flex flex-col gap-1">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+          12-month projection
+        </p>
+        <p className="text-xl font-semibold tabular-nums text-slate-800 mt-0.5">
+          {formatCurrency(Math.max(annualSavings, 0))}
+        </p>
+        <p className="text-[11px] text-slate-400">
+          {isPositive ? "saved if you keep this up" : "review your expenses"}
+        </p>
+      </div>
+
+      {/* Data notice */}
+      <div className="col-span-1 rounded-xl bg-slate-50 p-3.5 flex flex-col gap-1">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+          Trend data
+        </p>
+        <div className="flex items-start gap-1.5 mt-0.5">
+          <Info className="h-3.5 w-3.5 text-slate-300 mt-0.5 shrink-0" />
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            Chart below shows your projected flow. Actuals build up over time.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 interface CashFlowChartProps {
   data: CashFlowPoint[];
   title?: string;
@@ -133,52 +288,140 @@ export function CashFlowChart({
   description = "Cash flow over time",
   className,
 }: CashFlowChartProps) {
-  const [timeRange, setTimeRange] = React.useState("12m");
-
   const incomeRows = useFinancialStore((s) => s.incomeRows);
   const expenseCategories = useFinancialStore((s) => s.expenseCategories);
 
-  // ── Build merged actual + projected dataset ──────────────────────────────
+  // "New user" = no recorded actual history yet
+  const isNewUser = data.length === 0;
+
+  // "This year" is the default — shows the full calendar year with solid actuals + dashed future
+  const [timeRange, setTimeRange] = React.useState<string>("this-year");
+
+  // Projected monthly totals for banner
+  const projectedIncome = React.useMemo(
+    () => projectMonthlyAmount(incomeRows, addMonths(new Date(), 0)),
+    [incomeRows],
+  );
+  const projectedExpenses = React.useMemo(
+    () => projectMonthlyAmount(expenseCategories, addMonths(new Date(), 0)),
+    [expenseCategories],
+  );
+
+  // ── Build merged dataset ────────────────────────────────────────────────
   const mergedData = React.useMemo<EnrichedPoint[]>(() => {
     const today = new Date();
-    const actualSet = new Set(data.map((d) => d.month));
+    const currentMonth = addMonths(today, 0);
 
-    const actual: EnrichedPoint[] = [...data]
-      .sort((a, b) => a.month.localeCompare(b.month))
-      .map((p) => ({ ...p, isProjected: false, label: toLabel(p.month) }));
-
-    const projected: EnrichedPoint[] = Array.from({ length: 12 }, (_, i) => {
-      const month = addMonths(today, i);
-      return {
-        month,
-        income: projectMonthlyAmount(incomeRows, month),
-        expenses: projectMonthlyAmount(expenseCategories, month),
-        isProjected: true,
-        label: toLabel(month),
-      };
-    }).filter((p) => !actualSet.has(p.month));
-
-    return [...actual, ...projected].sort((a, b) =>
-      a.month.localeCompare(b.month),
+    // How far back we're willing to generate synthetic data (cap at 24 months)
+    const minHistoricalMonth = addMonths(
+      new Date(today.getFullYear(), today.getMonth() - 24, 1),
+      0,
     );
+
+    // Find the earliest explicit startDate across all configured rows
+    const allStartMonths = [
+      ...incomeRows
+        .filter((r) => r.startDate && r.startDate.slice(0, 7) <= currentMonth)
+        .map((r) => r.startDate!.slice(0, 7)),
+      ...expenseCategories
+        .filter((r) => r.startDate && r.startDate.slice(0, 7) <= currentMonth)
+        .map((r) => r.startDate!.slice(0, 7)),
+    ];
+
+    const earliestHistoricalMonth =
+      allStartMonths.length > 0
+        ? allStartMonths.reduce((a, b) => (a < b ? a : b)) > minHistoricalMonth
+          ? allStartMonths.reduce((a, b) => (a < b ? a : b))
+          : minHistoricalMonth
+        : currentMonth;
+
+    const actualByMonth = new Map(data.map((d) => [d.month, d]));
+    const points: EnrichedPoint[] = [];
+
+    // ── Historical: synthetic from configured rows, cashFlowHistory as fallback ──
+    // Synthetic (row-based) always wins when it exists — cashFlowHistory
+    // snapshots are stale by definition (they predate any row edits the user
+    // makes, especially for the current month which may not be over yet).
+    // Only fall back to cashFlowHistory actuals for months that have zero
+    // synthetic coverage (i.e. no rows start on or before that month).
+    let m = earliestHistoricalMonth;
+    while (m <= currentMonth) {
+      const actual = actualByMonth.get(m);
+      const synthIncome = projectHistoricalMonthlyAmount(incomeRows, m);
+      const synthExpenses = projectHistoricalMonthlyAmount(
+        expenseCategories,
+        m,
+      );
+
+      // Prefer synthetic; fall back to actual only when rows give us nothing
+      const finalIncome = synthIncome > 0 ? synthIncome : (actual?.income ?? 0);
+      const finalExpenses =
+        synthExpenses > 0 ? synthExpenses : (actual?.expenses ?? 0);
+
+      if (actual || finalIncome > 0 || finalExpenses > 0) {
+        points.push({
+          month: m,
+          income: finalIncome,
+          expenses: finalExpenses,
+          // Keep recorded surplus only when we're using actual data
+          surplus:
+            synthIncome === 0 && synthExpenses === 0
+              ? actual?.surplus
+              : undefined,
+          isProjected: false,
+          label: toLabel(m),
+        });
+      }
+      m = nextIsoMonth(m);
+    }
+
+    // ── Future: forward projection for the next 12 months ────────────────
+    for (let i = 1; i <= 12; i++) {
+      const futureMonth = addMonths(today, i);
+      if (!actualByMonth.has(futureMonth)) {
+        points.push({
+          month: futureMonth,
+          income: projectMonthlyAmount(incomeRows, futureMonth),
+          expenses: projectMonthlyAmount(expenseCategories, futureMonth),
+          isProjected: true,
+          label: toLabel(futureMonth),
+        });
+      }
+    }
+
+    return points.sort((a, b) => a.month.localeCompare(b.month));
   }, [data, incomeRows, expenseCategories]);
 
-  // ── Filter by time range ─────────────────────────────────────────────────
+  // ── Historical months (non-projected) — used for range availability ────
+  const historicalMonths = React.useMemo(
+    () => mergedData.filter((p) => !p.isProjected),
+    [mergedData],
+  );
+
+  // ── Filter by time range ────────────────────────────────────────────────
   const filteredData = React.useMemo<EnrichedPoint[]>(() => {
-    if (timeRange === "12m-forward") {
-      return mergedData.filter((p) => p.isProjected);
-    }
     const historical = mergedData.filter((p) => !p.isProjected);
-    const projected = mergedData.filter((p) => p.isProjected);
-    const sliced =
-      timeRange === "3m"
-        ? historical.slice(-3)
-        : timeRange === "6m"
-          ? historical.slice(-6)
-          : historical.slice(-12);
-    return [...sliced, ...projected].sort((a, b) =>
-      a.month.localeCompare(b.month),
-    );
+    const future = mergedData.filter((p) => p.isProjected);
+
+    if (timeRange === "this-year") {
+      // Show the full calendar year: past months solid, future months dashed
+      const year = new Date().getFullYear();
+      const yearStart = `${year}-01`;
+      const yearEnd = `${year}-12`;
+      return mergedData.filter(
+        (p) => p.month >= yearStart && p.month <= yearEnd,
+      );
+    }
+
+    if (timeRange === "12m-forward") {
+      // Anchor on the last real/synthetic point so the dashed line starts
+      // from the right value instead of floating in mid-air
+      return [...historical.slice(-1), ...future];
+    }
+
+    // Historical views: ONLY historical/synthetic data — no future projection
+    const n = timeRange === "3m" ? 3 : timeRange === "6m" ? 6 : 12;
+    return historical.slice(-n);
   }, [mergedData, timeRange]);
 
   const todayMonthLabel = React.useMemo(
@@ -194,8 +437,8 @@ export function CashFlowChart({
     return Math.ceil((max * 1.2) / 1000) * 1000 || 10000;
   }, [filteredData]);
 
-  // ── Chart data with split actual / projected keys ────────────────────────
   const chartData = React.useMemo(() => {
+    const hasFutureProjected = filteredData.some((p) => p.isProjected);
     const lastActualIdx = filteredData.reduce<number>(
       (last, p, i) => (!p.isProjected ? i : last),
       -1,
@@ -205,12 +448,56 @@ export function CashFlowChart({
       month: p.month,
       income: p.isProjected ? null : p.income,
       expenses: p.isProjected ? null : p.expenses,
-      projIncome: p.isProjected || i === lastActualIdx ? p.income : null,
-      projExpenses: p.isProjected || i === lastActualIdx ? p.expenses : null,
+      // Only bridge solid→dashed when there are actual future projected points
+      projIncome:
+        p.isProjected || (hasFutureProjected && i === lastActualIdx)
+          ? p.income
+          : null,
+      projExpenses:
+        p.isProjected || (hasFutureProjected && i === lastActualIdx)
+          ? p.expenses
+          : null,
     }));
   }, [filteredData]);
 
-  // ── Empty state ──────────────────────────────────────────────────────────
+  // ── Range availability ────────────────────────────────────────────────────
+  const earliestLabel =
+    historicalMonths.length > 0 ? historicalMonths[0].label : null;
+  const ranges: {
+    value: string;
+    label: string;
+    disabled: boolean;
+    reason: string;
+  }[] = [
+    { value: "this-year", label: "This year", disabled: false, reason: "" },
+    {
+      value: "3m",
+      label: "3m",
+      disabled: historicalMonths.length < 2,
+      reason: `No cash flow going back 3 months${
+        earliestLabel ? ` — earliest entry: ${earliestLabel}` : ""
+      }`,
+    },
+    {
+      value: "6m",
+      label: "6m",
+      disabled: historicalMonths.length < 4,
+      reason: `No cash flow going back 6 months${
+        earliestLabel ? ` — earliest entry: ${earliestLabel}` : ""
+      }`,
+    },
+    {
+      value: "12m",
+      label: "12m",
+      disabled: historicalMonths.length < 7,
+      reason: `No cash flow going back 12 months${
+        earliestLabel ? ` — earliest entry: ${earliestLabel}` : ""
+      }`,
+    },
+    { value: "12m-forward", label: "12m →", disabled: false, reason: "" },
+  ];
+
+  // ── Empty state ─────────────────────────────────────────────────────────
   if (
     incomeRows.length === 0 &&
     expenseCategories.length === 0 &&
@@ -237,34 +524,63 @@ export function CashFlowChart({
       <CardHeader className="flex items-center gap-2 space-y-0 py-5 sm:flex-row">
         <div className="grid flex-1 gap-1">
           <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+          <CardDescription>
+            {isNewUser
+              ? "Based on your setup — actuals will appear as months go by"
+              : description}
+          </CardDescription>
         </div>
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger
-            className="hidden w-44 rounded-lg sm:ml-auto sm:flex"
-            aria-label="Select time range"
-          >
-            <SelectValue placeholder="Last 12 months" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl">
-            <SelectItem value="12m" className="rounded-lg">
-              Last 12 months
-            </SelectItem>
-            <SelectItem value="6m" className="rounded-lg">
-              Last 6 months
-            </SelectItem>
-            <SelectItem value="3m" className="rounded-lg">
-              Last 3 months
-            </SelectItem>
-            <SelectItem value="12m-forward" className="rounded-lg">
-              12m forward
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        <TooltipProvider>
+          <div className="hidden sm:ml-auto sm:flex items-center rounded-lg border bg-muted/40 p-0.5 gap-0.5">
+            {ranges.map(({ value, label, disabled, reason }) =>
+              disabled ? (
+                <Tooltip key={value}>
+                  <TooltipTrigger asChild>
+                    {/* span wrapper needed — disabled buttons can't fire pointer events */}
+                    <span className="inline-flex">
+                      <button
+                        disabled
+                        className="px-3 py-1.5 text-xs rounded-md text-muted-foreground/40 cursor-not-allowed select-none"
+                      >
+                        {label}
+                      </button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="max-w-52 text-center"
+                  >
+                    {reason}
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <button
+                  key={value}
+                  onClick={() => setTimeRange(value)}
+                  className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+                    timeRange === value
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ),
+            )}
+          </div>
+        </TooltipProvider>
       </CardHeader>
 
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        {/* Inline legend */}
+      <CardContent className="px-2 pt-2 sm:px-6 sm:pt-4">
+        {/* New-user snapshot banner */}
+        {isNewUser && (
+          <NewUserBanner
+            monthlyIncome={projectedIncome}
+            monthlyExpenses={projectedExpenses}
+          />
+        )}
+
+        {/* Legend */}
         <div className="flex items-center gap-4 mb-3 px-1 flex-wrap">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span
@@ -299,7 +615,7 @@ export function CashFlowChart({
 
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-[250px] w-full"
+          className="aspect-auto h-[220px] w-full"
         >
           <LineChart data={chartData} margin={{ left: 12, right: 12 }}>
             <CartesianGrid
@@ -319,13 +635,12 @@ export function CashFlowChart({
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value: number) => formatCurrency(value)}
+              tickFormatter={(v: number) => formatCurrency(v)}
               width={80}
               domain={[0, yMax]}
               className="text-xs text-muted-foreground"
             />
             <ChartTooltip cursor={false} content={<CashFlowTooltip />} />
-            {/* Today reference line */}
             <ReferenceLine
               x={todayMonthLabel}
               stroke={INCOME_COLOR}
@@ -339,10 +654,9 @@ export function CashFlowChart({
                 fill: "var(--muted-foreground)",
               }}
             />
-            {/* Actual data lines */}
             <Line
               dataKey="income"
-              type="monotone"
+              type="linear"
               stroke={INCOME_COLOR}
               strokeWidth={2}
               dot={false}
@@ -350,16 +664,15 @@ export function CashFlowChart({
             />
             <Line
               dataKey="expenses"
-              type="monotone"
+              type="linear"
               stroke={EXPENSES_COLOR}
               strokeWidth={2}
               dot={false}
               connectNulls={false}
             />
-            {/* Projected lines — dashed */}
             <Line
               dataKey="projIncome"
-              type="monotone"
+              type="linear"
               stroke={INCOME_COLOR}
               strokeWidth={2}
               strokeDasharray="4 3"
@@ -370,7 +683,7 @@ export function CashFlowChart({
             />
             <Line
               dataKey="projExpenses"
-              type="monotone"
+              type="linear"
               stroke={EXPENSES_COLOR}
               strokeWidth={2}
               strokeDasharray="4 3"

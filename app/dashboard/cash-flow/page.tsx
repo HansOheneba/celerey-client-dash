@@ -167,6 +167,18 @@ function burnRate(expenses: number, income: number): number {
   return Math.min((expenses / income) * 100, 100);
 }
 
+function getCurrencySymbol(currency: string): string {
+  return (
+    new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    })
+      .formatToParts(0)
+      .find((p) => p.type === "currency")?.value ?? currency
+  );
+}
+
 // ─── Insight Engine ────────────────────────────────────────────────────────
 
 function deriveInsights(
@@ -386,6 +398,8 @@ function EnhancedRowDialog({
   onSubmit,
 }: EnhancedRowDialogProps) {
   const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const userCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
+  const currencySymbol = getCurrencySymbol(userCurrency);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -421,7 +435,7 @@ function EnhancedRowDialog({
               <Label htmlFor="row-amount">Monthly amount</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  $
+                  {currencySymbol}
                 </span>
                 <Input
                   id="row-amount"
@@ -489,103 +503,81 @@ function EnhancedRowDialog({
           <Separator />
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5 cursor-pointer">
-                <Repeat2 className="h-3.5 w-3.5 text-muted-foreground" />
-                Recurring entry
-              </Label>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={draft.isRecurring}
-                onClick={() =>
-                  setDraft((d) => ({ ...d, isRecurring: !d.isRecurring }))
-                }
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${draft.isRecurring ? "bg-primary" : "bg-muted"}`}
-              >
-                <span
-                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${draft.isRecurring ? "translate-x-4" : "translate-x-1"}`}
-                />
-              </button>
+            <Label className="flex items-center gap-1.5">
+              <Repeat2 className="h-3.5 w-3.5 text-muted-foreground" />
+              Frequency
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["forever", "months", "one-time"] as RecurringType[]).map(
+                (opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() =>
+                      setDraft((d) => ({ ...d, recurringType: opt }))
+                    }
+                    className={`rounded-md border px-2 py-2 text-xs font-medium transition-colors ${
+                      draft.recurringType === opt
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-muted bg-background text-muted-foreground hover:border-foreground/30"
+                    }`}
+                  >
+                    {opt === "forever"
+                      ? "Ongoing"
+                      : opt === "months"
+                        ? "Fixed period"
+                        : "One-time"}
+                  </button>
+                ),
+              )}
             </div>
 
-            <AnimatePresence>
-              {draft.isRecurring && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="space-y-3 pt-1">
-                    <p className="text-xs text-muted-foreground">
-                      How long does this repeat?
-                    </p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(
-                        ["forever", "months", "one-time"] as RecurringType[]
-                      ).map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() =>
-                            setDraft((d) => ({ ...d, recurringType: opt }))
-                          }
-                          className={`rounded-md border px-2 py-2 text-xs font-medium transition-colors ${draft.recurringType === opt ? "border-primary bg-primary/10 text-primary" : "border-muted bg-background text-muted-foreground hover:border-foreground/30"}`}
-                        >
-                          {opt === "forever"
-                            ? "Ongoing"
-                            : opt === "months"
-                              ? "Fixed period"
-                              : "One-time"}
-                        </button>
-                      ))}
-                    </div>
+            {draft.recurringType === "months" && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2"
+              >
+                <Input
+                  type="number"
+                  min="1"
+                  max="120"
+                  placeholder="6"
+                  className="w-24"
+                  value={draft.recurringMonths}
+                  onChange={(e) =>
+                    setDraft((d) => ({
+                      ...d,
+                      recurringMonths: e.target.value,
+                    }))
+                  }
+                />
+                <span className="text-sm text-muted-foreground">
+                  months from start date
+                </span>
+              </motion.div>
+            )}
 
-                    {draft.recurringType === "months" && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-2"
-                      >
-                        <Input
-                          type="number"
-                          min="1"
-                          max="120"
-                          placeholder="6"
-                          className="w-24"
-                          value={draft.recurringMonths}
-                          onChange={(e) =>
-                            setDraft((d) => ({
-                              ...d,
-                              recurringMonths: e.target.value,
-                            }))
-                          }
-                        />
-                        <span className="text-sm text-muted-foreground">
-                          months from start date
-                        </span>
-                      </motion.div>
-                    )}
-
-                    <div
-                      className={`rounded-md px-3 py-2 text-xs ${draft.recurringType === "forever" ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300" : draft.recurringType === "months" ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300" : "bg-muted text-muted-foreground"}`}
-                    >
-                      {draft.recurringType === "forever" &&
-                        "✓ This will auto-populate every month going forward."}
-                      {draft.recurringType === "months" &&
-                        draft.recurringMonths &&
-                        `✓ Will repeat for ${draft.recurringMonths} months from start date.`}
-                      {draft.recurringType === "months" &&
-                        !draft.recurringMonths &&
-                        "Enter the number of months above."}
-                      {draft.recurringType === "one-time" &&
-                        "This will only appear in the selected month."}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div
+              className={`rounded-md px-3 py-2 text-xs ${
+                draft.recurringType === "forever"
+                  ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
+                  : draft.recurringType === "months"
+                    ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300"
+                    : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {draft.recurringType === "forever" &&
+                "✓ This will auto-populate every month going forward."}
+              {draft.recurringType === "months" &&
+                draft.recurringMonths &&
+                `✓ Will repeat for ${draft.recurringMonths} months from start date.`}
+              {draft.recurringType === "months" &&
+                !draft.recurringMonths &&
+                "Enter the number of months above."}
+              {draft.recurringType === "one-time" &&
+                "This will only appear in the selected month."}
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -768,18 +760,15 @@ export default function CashFlowPage() {
   const storeEmergencyFund = useFinancialStore((s) => s.emergencyFund);
   const storeCashFlowHistory = useFinancialStore((s) => s.cashFlowHistory);
 
-  const [income, setIncome] = React.useState<CashFlowRow[]>(
-    () => useFinancialStore.getState().incomeRows,
+  const income = useFinancialStore((s) => s.incomeRows);
+  const expenses = useFinancialStore((s) => s.expenseCategories);
+  const settings = React.useMemo<CashFlowSettings>(
+    () => ({
+      emergencyFundMonths: storeEmergencyFund.targetMonths,
+      currentCashBalance: storeEmergencyFund.currentCashBalance,
+    }),
+    [storeEmergencyFund],
   );
-  const [expenses, setExpenses] = React.useState<ExpenseCategory[]>(
-    () => useFinancialStore.getState().expenseCategories,
-  );
-  const [settings, setSettings] = React.useState<CashFlowSettings>(() => ({
-    emergencyFundMonths:
-      useFinancialStore.getState().emergencyFund.targetMonths,
-    currentCashBalance:
-      useFinancialStore.getState().emergencyFund.currentCashBalance,
-  }));
 
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [rowDialogOpen, setRowDialogOpen] = React.useState(false);
@@ -992,14 +981,21 @@ export default function CashFlowPage() {
     setRowDialogOpen(true);
   }
 
-  function openEdit(type: EditMode, row: MoneyRow) {
+  function openEdit(type: EditMode, row: CashFlowRow | ExpenseCategory) {
     setRowDialogType(type);
     setRowDialogMode("edit");
     setEditingId(row.id);
+    // Legacy rows with isRecurring=false had no recurringType — map them to "one-time"
+    const resolvedRecurringType: RecurringType =
+      row.recurringType ?? (row.isRecurring === false ? "one-time" : "forever");
     setRowDraft({
       ...defaultDraft,
       name: row.name,
       amount: String(row.amount),
+      isRecurring: resolvedRecurringType !== "one-time",
+      recurringType: resolvedRecurringType,
+      recurringMonths: row.recurringMonths ? String(row.recurringMonths) : "",
+      startDate: row.startDate ?? new Date().toISOString().split("T")[0],
     });
     setRowDialogOpen(true);
   }
@@ -1013,11 +1009,9 @@ export default function CashFlowPage() {
     if (!deleteTarget) return;
     if (deleteTarget.type === "income") {
       const updated = income.filter((x) => x.id !== deleteTarget.row.id);
-      setIncome(updated);
       useFinancialStore.getState().setIncome(updated);
     } else {
       const updated = expenses.filter((x) => x.id !== deleteTarget.row.id);
-      setExpenses(updated);
       useFinancialStore.getState().setExpenses(updated);
     }
     setDeleteOpen(false);
@@ -1036,12 +1030,18 @@ export default function CashFlowPage() {
         id: rowId,
         name: rowDraft.name.trim(),
         amount: Math.round(amountNum),
+        isRecurring: rowDraft.recurringType !== "one-time",
+        recurringType: rowDraft.recurringType,
+        recurringMonths:
+          rowDraft.recurringType === "months" && rowDraft.recurringMonths
+            ? Number(rowDraft.recurringMonths)
+            : undefined,
+        startDate: rowDraft.startDate || undefined,
       };
       const updated =
         rowDialogMode === "edit"
           ? income.map((r) => (r.id === newRow.id ? newRow : r))
           : [newRow, ...income];
-      setIncome(updated);
       useFinancialStore.getState().setIncome(updated);
     } else {
       const newRow: ExpenseCategory = {
@@ -1049,12 +1049,18 @@ export default function CashFlowPage() {
         name: rowDraft.name.trim(),
         amount: Math.round(amountNum),
         essential: false,
+        isRecurring: rowDraft.recurringType !== "one-time",
+        recurringType: rowDraft.recurringType,
+        recurringMonths:
+          rowDraft.recurringType === "months" && rowDraft.recurringMonths
+            ? Number(rowDraft.recurringMonths)
+            : undefined,
+        startDate: rowDraft.startDate || undefined,
       };
       const updated =
         rowDialogMode === "edit"
           ? expenses.map((r) => (r.id === newRow.id ? newRow : r))
           : [newRow, ...expenses];
-      setExpenses(updated);
       useFinancialStore.getState().setExpenses(updated);
     }
 
@@ -1393,9 +1399,8 @@ export default function CashFlowPage() {
         onOpenChange={setSettingsOpen}
         settings={settings}
         setSettings={(s) => {
-          setSettings(s);
           useFinancialStore.getState().setEmergencyFund({
-            ...useFinancialStore.getState().emergencyFund,
+            ...storeEmergencyFund,
             targetMonths: s.emergencyFundMonths,
             currentCashBalance: s.currentCashBalance,
             updatedAt: new Date().toISOString(),

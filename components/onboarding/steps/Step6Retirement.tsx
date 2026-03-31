@@ -76,40 +76,36 @@ export function Step6Retirement({
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="max-w-xl">
-        <h1 className="text-3xl font-semibold text-slate-900 leading-tight">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
           Plan your retirement
         </h1>
-        <p className="mt-3 text-slate-500">
-          Share a few estimates so we can project your future and guide your
-          savings. You can always refine these later.
+        <p className="mt-1.5 text-slate-500 text-sm">
+          A few estimates help us project your future. You can refine these
+          anytime.
         </p>
       </div>
 
-      {/* Section 1 */}
-      <div className="space-y-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-            When and lifestyle
-          </p>
-          <p className="text-sm text-slate-500 mt-1">
-            Tell us when you want to retire and the income you would like to
-            have
-          </p>
-        </div>
+      {/* ── Section 1: When & Lifestyle ── */}
+      <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-5 shadow-sm space-y-4">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+          When &amp; lifestyle
+        </p>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3">
           {/* Retirement timing */}
-          <div className="space-y-2">
-            <Label>Retirement target</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-600">
+              {isSolo ? "Target retirement age" : "Target retirement year"}
+            </Label>
             {isSolo ? (
               <Input
                 type="number"
                 min={18}
                 max={100}
-                placeholder="Age e.g. 60"
+                placeholder="e.g. 60"
                 {...register("retirement_age", { valueAsNumber: true })}
               />
             ) : (
@@ -117,27 +113,23 @@ export function Step6Retirement({
                 type="number"
                 min={new Date().getFullYear()}
                 max={2100}
-                placeholder="Year e.g. 2055"
-                {...register("retirement_target_year", {
-                  valueAsNumber: true,
-                })}
+                placeholder="e.g. 2055"
+                {...register("retirement_target_year", { valueAsNumber: true })}
               />
             )}
-            {errors.retirement_age && (
+            {(errors.retirement_age || errors.retirement_target_year) && (
               <p className="text-xs text-red-500">
-                {errors.retirement_age.message}
-              </p>
-            )}
-            {errors.retirement_target_year && (
-              <p className="text-xs text-red-500">
-                {errors.retirement_target_year.message}
+                {errors.retirement_age?.message ??
+                  errors.retirement_target_year?.message}
               </p>
             )}
           </div>
 
           {/* Desired income */}
-          <div className="space-y-2">
-            <Label>Desired monthly income</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-600">
+              Desired monthly income
+            </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
                 {getCurrencyPrefix(preferredCurrency)}
@@ -145,7 +137,7 @@ export function Step6Retirement({
               <CurrencyNumberInputField
                 control={control}
                 name="desired_monthly_income"
-                placeholder="3000"
+                placeholder="3 000"
                 className="pl-12"
               />
             </div>
@@ -158,20 +150,17 @@ export function Step6Retirement({
         </div>
       </div>
 
-      {/* Section 2 */}
-      <div className="space-y-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-            Your contributions
-          </p>
-          <p className="text-sm text-slate-500 mt-1">
-            Let us know how much you are currently setting aside
-          </p>
-        </div>
+      {/* ── Section 2: Contributions ── */}
+      <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-5 shadow-sm space-y-4">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+          Your contributions
+        </p>
 
-        {/* Monthly savings */}
-        <div className="space-y-2">
-          <Label>Monthly retirement savings</Label>
+        {/* Monthly savings — full width, feels primary */}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-slate-600">
+            Monthly retirement savings
+          </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
               {getCurrencyPrefix(preferredCurrency)}
@@ -191,14 +180,14 @@ export function Step6Retirement({
         </div>
       </div>
 
-      {/* CTA */}
-      <div className="flex gap-3">
+      {/* Navigation */}
+      <div className="flex gap-3 pt-1">
         {onBack && (
           <Button
             type="button"
             variant="outline"
             onClick={onBack}
-            className="flex-1 gap-1 h-12 text-base rounded-xl"
+            className="flex-1 gap-1 h-11 rounded-xl"
           >
             <ChevronLeft className="h-4 w-4" />
             Back
@@ -207,7 +196,7 @@ export function Step6Retirement({
         <Button
           type="button"
           onClick={handleSubmit(onSubmit)}
-          className="flex-1 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl"
+          className="flex-1 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-11 rounded-xl"
         >
           Continue
           <ArrowRight className="h-4 w-4" />

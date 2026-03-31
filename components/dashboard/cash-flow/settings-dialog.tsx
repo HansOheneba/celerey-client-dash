@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useFinancialStore } from "@/store/financialStore";
 
 export type CashFlowSettings = {
   emergencyFundMonths: number;
@@ -28,6 +29,15 @@ export function SettingsDialog({
   settings: CashFlowSettings;
   setSettings: (s: CashFlowSettings) => void;
 }) {
+  const userCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
+  const currencySymbol = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: userCurrency,
+    maximumFractionDigits: 0,
+  })
+    .formatToParts(0)
+    .find((p) => p.type === "currency")?.value ?? userCurrency;
+
   const [draft, setDraft] = React.useState<{
     emergencyFundMonths: string;
     currentCashBalance: string;
@@ -74,7 +84,7 @@ export function SettingsDialog({
             <Label htmlFor="ccb">Current cash savings</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                $
+                {currencySymbol}
               </span>
               <Input
                 id="ccb"

@@ -100,48 +100,53 @@ function EditIncomePopover({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-80" align="end" sideOffset={8}>
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           <p className="text-sm font-semibold text-slate-800">
             Edit income source
           </p>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Income type</Label>
-            <Select
-              defaultValue={income.category}
-              onValueChange={(v) => setValue("category", v)}
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {INCOME_CATEGORIES.map((c) => {
-                  const isTaken =
-                    c !== "Other" &&
-                    c !== income.category &&
-                    takenCategories.includes(c);
-                  return (
-                    <SelectItem key={c} value={c} disabled={isTaken}>
-                      {c}
-                      {isTaken && (
-                        <span className="ml-2 text-xs text-slate-400">
-                          (added)
-                        </span>
-                      )}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+
+          {/* Type + Name on same row */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Income type</Label>
+              <Select
+                defaultValue={income.category}
+                onValueChange={(v) => setValue("category", v)}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INCOME_CATEGORIES.map((c) => {
+                    const isTaken =
+                      c !== "Other" &&
+                      c !== income.category &&
+                      takenCategories.includes(c);
+                    return (
+                      <SelectItem key={c} value={c} disabled={isTaken}>
+                        {c}
+                        {isTaken && (
+                          <span className="ml-2 text-xs text-slate-400">
+                            (added)
+                          </span>
+                        )}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Income name</Label>
+              <Input
+                className="h-8 text-sm"
+                placeholder="e.g. Main job"
+                {...register("name")}
+              />
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Income name</Label>
-            <Input
-              className="h-8 text-sm"
-              placeholder="e.g. Main job salary"
-              {...register("name")}
-            />
-          </div>
-          <div className="space-y-1.5">
+
+          <div className="space-y-1">
             <Label className="text-xs">Monthly amount</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
@@ -154,6 +159,7 @@ function EditIncomePopover({
               />
             </div>
           </div>
+
           <div className="flex items-center gap-2">
             <Switch
               checked={isRecurring}
@@ -161,6 +167,7 @@ function EditIncomePopover({
             />
             <span className="text-sm text-slate-600">Monthly recurring</span>
           </div>
+
           <Button
             type="button"
             size="sm"
@@ -198,10 +205,10 @@ function IncomeAccordionItem({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: -8 }}
+      initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8, height: 0 }}
-      transition={{ duration: 0.2 }}
+      exit={{ opacity: 0, y: -6, height: 0 }}
+      transition={{ duration: 0.18 }}
       className="overflow-hidden rounded-xl border border-slate-100 bg-white"
     >
       {/* Header row */}
@@ -215,17 +222,17 @@ function IncomeAccordionItem({
         >
           {income.category}
         </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-slate-800 truncate">
-            {income.name}
-          </p>
-        </div>
+        <p className="flex-1 min-w-0 text-sm font-medium text-slate-800 truncate">
+          {income.name}
+        </p>
         <p className="text-sm font-semibold text-slate-900 tabular-nums shrink-0">
           {formatCurrencyAmount(income.amount_monthly, preferredCurrency)}
           <span className="text-xs text-slate-400 font-normal">/mo</span>
         </p>
         <ChevronDown
-          className={`h-4 w-4 text-slate-400 transition-transform shrink-0 ${expanded ? "rotate-180" : ""}`}
+          className={`h-4 w-4 text-slate-400 transition-transform shrink-0 ${
+            expanded ? "rotate-180" : ""
+          }`}
         />
       </button>
 
@@ -236,10 +243,10 @@ function IncomeAccordionItem({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 pt-1 border-t border-slate-50 flex items-center justify-between">
+            <div className="px-4 pb-3 pt-1 border-t border-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {income.is_recurring && (
                   <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -274,7 +281,6 @@ function IncomeAccordionItem({
 /* ─── Main Step ─────────────────────────────────────────────────── */
 export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
   const [incomes, setIncomes] = useState<IncomeData[]>(defaultValues);
-  // Show form by default if no incomes yet, hide after first save
   const [showForm, setShowForm] = useState(defaultValues.length === 0);
   const store = useOnboardingStore();
   const preferredCurrency = store.identity?.preferred_currency || "USD";
@@ -303,7 +309,6 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
   const selectedCategory = watch("category");
   const watchedValues = watch();
 
-  // Enabled as soon as all required fields are filled
   const canSaveIncome = Boolean(
     watchedValues.category &&
     watchedValues.name?.trim() &&
@@ -325,7 +330,6 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
       { ...data, amount_monthly: data.amount_monthly as number },
     ]);
     reset({ name: "", amount_monthly: 0, category: "", is_recurring: true });
-    // Hide form after saving
     setShowForm(false);
   }
 
@@ -336,7 +340,6 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
   function removeIncome(i: number) {
     setIncomes((prev) => {
       const next = prev.filter((_, idx) => idx !== i);
-      // Reopen form automatically if all removed
       if (next.length === 0) setShowForm(true);
       return next;
     });
@@ -346,47 +349,43 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
     setIncomes((prev) => prev.map((inc, idx) => (idx === i ? updated : inc)));
   }
 
-  function handleContinue() {
-    onComplete(incomes);
-  }
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
           Your monthly income
         </h1>
-        <p className="mt-2 text-slate-500 text-sm sm:text-base">
+        <p className="mt-1.5 text-slate-500 text-sm">
           Add all your income sources so we can build a realistic financial
           plan.
         </p>
       </div>
 
-      {/* Total card — always visible, animates as incomes change */}
-      <div className="rounded-2xl bg-[#151339] text-white p-5 flex items-center justify-between">
+      {/* Total card */}
+      <div className="rounded-2xl bg-[#151339] text-white px-5 py-4 flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium text-white/60 uppercase tracking-widest">
+          <p className="text-[11px] font-medium text-white/50 uppercase tracking-widest">
             Total monthly income
           </p>
           <motion.p
             key={totalMonthlyIncome}
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-semibold mt-1 tabular-nums"
+            className="text-2xl font-semibold mt-0.5 tabular-nums"
           >
             {formatCurrencyAmount(totalMonthlyIncome, preferredCurrency)}
           </motion.p>
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
-          <TrendingUp className="h-5 w-5 text-white/80" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10">
+          <TrendingUp className="h-4.5 w-4.5 text-white/70" />
         </div>
       </div>
 
       {/* Saved income list */}
       {incomes.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
             Sources ({incomes.length})
           </p>
           <AnimatePresence>
@@ -403,12 +402,11 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
             ))}
           </AnimatePresence>
 
-          {/* Add another — only shown when form is hidden */}
           {!showForm && (
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm text-slate-500 hover:border-[#151339] hover:text-[#151339] transition-colors"
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 py-2.5 text-sm text-slate-400 hover:border-[#151339] hover:text-[#151339] transition-colors"
             >
               <Plus className="h-4 w-4" />
               Add another income source
@@ -419,57 +417,61 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
 
       {/* Add income form */}
       {showForm && (
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm space-y-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+        <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-5 shadow-sm space-y-4">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
             {incomes.length === 0
               ? "Add your first income source"
               : "Add another income source"}
           </p>
 
-          {/* Category */}
-          <div className="space-y-1.5">
-            <Label>Income type</Label>
-            <Select
-              value={selectedCategory}
-              onValueChange={handleCategoryChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {INCOME_CATEGORIES.map((c) => {
-                  const isTaken = c !== "Other" && takenCategories.includes(c);
-                  return (
-                    <SelectItem key={c} value={c} disabled={isTaken}>
-                      {c}
-                      {isTaken && (
-                        <span className="ml-2 text-xs text-slate-400">
-                          (already added)
-                        </span>
-                      )}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-            {errors.category && (
-              <p className="text-xs text-red-500">{errors.category.message}</p>
-            )}
-          </div>
-
-          {/* Name */}
-          <div className="space-y-1.5">
-            <Label>Income name</Label>
-            <Input placeholder="e.g. Main job salary" {...register("name")} />
-            {errors.name && (
-              <p className="text-xs text-red-500">{errors.name.message}</p>
-            )}
-          </div>
-
-          {/* Amount + recurring */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* ── Row 1: Type + Name side by side ── */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Monthly amount</Label>
+              <Label className="text-xs text-slate-600">Income type</Label>
+              <Select
+                value={selectedCategory}
+                onValueChange={handleCategoryChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INCOME_CATEGORIES.map((c) => {
+                    const isTaken =
+                      c !== "Other" && takenCategories.includes(c);
+                    return (
+                      <SelectItem key={c} value={c} disabled={isTaken}>
+                        {c}
+                        {isTaken && (
+                          <span className="ml-2 text-xs text-slate-400">
+                            (added)
+                          </span>
+                        )}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {errors.category && (
+                <p className="text-xs text-red-500">
+                  {errors.category.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-600">Income name</Label>
+              <Input placeholder="e.g. Main job salary" {...register("name")} />
+              {errors.name && (
+                <p className="text-xs text-red-500">{errors.name.message}</p>
+              )}
+            </div>
+          </div>
+
+          {/* ── Row 2: Amount + Recurring toggle ── */}
+          <div className="grid grid-cols-2 gap-3 items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-600">Monthly amount</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
                   {getCurrencyPrefix(preferredCurrency)}
@@ -486,25 +488,22 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
                 </p>
               )}
             </div>
-            <div className="flex items-end pb-1">
-              <div className="flex items-center gap-3">
-                <Switch
-                  checked={isRecurring}
-                  onCheckedChange={(v) => setValue("is_recurring", v)}
-                />
-                <span className="text-sm text-slate-600">
-                  Monthly recurring
-                </span>
-              </div>
+
+            <div className="flex items-center gap-2.5 pb-0.5">
+              <Switch
+                checked={isRecurring}
+                onCheckedChange={(v) => setValue("is_recurring", v)}
+              />
+              <span className="text-sm text-slate-600">Monthly recurring</span>
             </div>
           </div>
 
-          {/* Save income — primary CTA while form is open */}
+          {/* Save CTA */}
           <Button
             type="button"
             onClick={handleSubmit(addIncome)}
             disabled={!canSaveIncome}
-            className="w-full h-11 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
+            className="w-full h-10 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl text-sm"
           >
             <Plus className="h-4 w-4" />
             Save income source
@@ -513,21 +512,21 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
       )}
 
       {/* Navigation */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 pt-1">
         {onBack && (
           <Button
             type="button"
             variant="outline"
             onClick={onBack}
-            className="flex-1 gap-1 h-12 rounded-xl"
+            className="flex-1 gap-1 h-11 rounded-xl"
           >
             <ChevronLeft className="h-4 w-4" /> Back
           </Button>
         )}
         <Button
-          onClick={handleContinue}
+          onClick={() => onComplete(incomes)}
           disabled={incomes.length === 0}
-          className="flex-1 h-12 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
+          className="flex-1 h-11 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
         >
           Continue <ArrowRight className="h-4 w-4" />
         </Button>

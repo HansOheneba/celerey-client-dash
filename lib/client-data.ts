@@ -302,6 +302,8 @@ export function projectMonthlyAmount(
         const diff = (py - sy) * 12 + (pm - sm);
         return diff >= 0 && diff < row.recurringMonths;
       }
+      // "forever" recurring: don't project before the row's own start date
+      if (row.startDate && isoMonth < row.startDate.slice(0, 7)) return false;
       return true;
     })
     .reduce((s, r) => s + r.amount, 0);

@@ -68,7 +68,7 @@ export function Step8Complete({
       </motion.div>
 
       {/* Stats */}
-      <motion.div
+      {/* <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.4 }}
@@ -85,7 +85,7 @@ export function Step8Complete({
             <p className="text-xs text-slate-500 mt-1">{s.label}</p>
           </div>
         ))}
-      </motion.div>
+      </motion.div> */}
 
       {/* CTA */}
       <motion.div
