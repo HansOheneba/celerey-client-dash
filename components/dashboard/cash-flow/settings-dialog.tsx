@@ -30,13 +30,14 @@ export function SettingsDialog({
   setSettings: (s: CashFlowSettings) => void;
 }) {
   const userCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
-  const currencySymbol = new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: userCurrency,
-    maximumFractionDigits: 0,
-  })
-    .formatToParts(0)
-    .find((p) => p.type === "currency")?.value ?? userCurrency;
+  const currencySymbol =
+    new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: userCurrency,
+      maximumFractionDigits: 0,
+    })
+      .formatToParts(0)
+      .find((p) => p.type === "currency")?.value ?? userCurrency;
 
   const [draft, setDraft] = React.useState<{
     emergencyFundMonths: string;

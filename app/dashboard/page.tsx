@@ -524,18 +524,14 @@ export default function DashboardPage() {
     let m = earliestHistoricalMonth;
     while (m <= currentMonth) {
       const actual = actualByMonth.get(m);
-      const synthIncome = projectHistoricalAmountOverview(
-        store.incomeRows,
-        m,
-      );
+      const synthIncome = projectHistoricalAmountOverview(store.incomeRows, m);
       const synthExpenses = projectHistoricalAmountOverview(
         store.expenseCategories,
         m,
       );
       // Synthetic rows always win; only fall back to recorded actuals when
       // the rows themselves produce nothing (e.g. months before any row exists)
-      const finalIncome =
-        synthIncome > 0 ? synthIncome : (actual?.income ?? 0);
+      const finalIncome = synthIncome > 0 ? synthIncome : (actual?.income ?? 0);
       const finalExpenses =
         synthExpenses > 0 ? synthExpenses : (actual?.expenses ?? 0);
 
