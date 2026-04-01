@@ -17,19 +17,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { GoalMetrics, SectionFreshness } from "@/lib/client-data";
+import { formatCurrency } from "@/lib/client-data";
 import { DataFreshnessBadge } from "./DataFreshnessBadge";
 
 interface GoalsSectionProps {
   goals: GoalMetrics[];
   freshness: SectionFreshness[];
-}
-
-function fmtUSD(n: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
 }
 
 function GoalRow({ goal }: { goal: GoalMetrics }) {
@@ -41,7 +34,7 @@ function GoalRow({ goal }: { goal: GoalMetrics }) {
         <div>
           <p className="text-sm font-medium">{goal.title}</p>
           <p className="text-xs text-muted-foreground">
-            {fmtUSD(goal.current)} of {fmtUSD(goal.target)}
+            {formatCurrency(goal.current)} of {formatCurrency(goal.target)}
             {goal.yearsRemaining > 0 && ` - ${goal.yearsRemaining}y remaining`}
           </p>
         </div>
@@ -97,7 +90,7 @@ function GoalRow({ goal }: { goal: GoalMetrics }) {
       {!goal.completed && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{pct.toFixed(0)}% complete</span>
-          <span>{fmtUSD(goal.requiredMonthly)} / mo needed</span>
+          <span>{formatCurrency(goal.requiredMonthly)} / mo needed</span>
         </div>
       )}
       {goal.completed && goal.completedDate && (

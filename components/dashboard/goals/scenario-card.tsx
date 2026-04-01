@@ -1,7 +1,12 @@
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Scenario, ScenarioKey } from "./types";
+import { Scenario, ScenarioId } from "./types";
 
 export function ScenarioCard({
   scenarios,
@@ -9,13 +14,13 @@ export function ScenarioCard({
   setActiveScenario,
 }: {
   scenarios: Scenario[];
-  activeScenario: ScenarioKey | null;
-  setActiveScenario: (key: ScenarioKey | null) => void;
+  activeScenario: ScenarioId | null;
+  setActiveScenario: (key: ScenarioId | null) => void;
 }) {
   return (
     <DashCard className="mt-6">
       <CardHeader>
-        <CardTitle className="text-base">AI Scenario Modeling</CardTitle>
+        <CardTitle className="text-base">Celerey Scenario Modeling</CardTitle>
         <p className="text-sm text-muted-foreground">
           See how life changes could affect your goals.
         </p>
@@ -23,17 +28,17 @@ export function ScenarioCard({
 
       <CardContent className="flex flex-wrap gap-2">
         {scenarios.map((s) => {
-          const isActive = s.key === activeScenario;
+          const isActive = s.id === activeScenario;
           return (
             <Button
-              key={s.key}
+              key={s.id}
               type="button"
               variant={isActive ? "default" : "secondary"}
               className={cn(
                 "rounded-full",
                 isActive ? "" : "bg-muted/60 text-foreground hover:bg-muted",
               )}
-              onClick={() => setActiveScenario(isActive ? null : s.key)}
+              onClick={() => setActiveScenario(isActive ? null : s.id)}
             >
               {s.label}
             </Button>

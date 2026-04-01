@@ -680,7 +680,7 @@ export function getUserAge(user: User = mockUser): number {
 // ASSET HOLDINGS & VALUATIONS
 // ============================================================================
 
-export type ValuationMethod = "manual" | "market";
+export type ValuationMethod = "manual" | "market" | "auto_calculated";
 
 export type AssetType =
   | "stock"
@@ -707,21 +707,33 @@ export type AssetHolding = {
   holding_id: string;
   user_id: string;
   asset_type: AssetType;
+  /** Derived server-side — never set by the client. */
   valuation_method: ValuationMethod;
-  /** Face value for bonds; fallback cost basis for other types. */
-  initial_value: number;
+  /**
+   * Unified cost basis:
+   * - stocks / etf / crypto / mutual_fund: total amount paid
+   * - bonds: face (par) value
+   * - cash: opening principal balance
+   * - alternative / other: total amount invested
+   */
+  cost_basis: number;
   initial_value_date: string;
   symbol?: string;
   name: string;
   quantity?: number;
-  /** What the user actually paid / put in — the cost basis. */
-  amount_invested?: number;
-  /** Manually entered current market / account value. */
+  /**
+   * Current market / account value.
+   * - "market": computed from live price × quantity
+   * - "auto_calculated": computed server-side (bond accrual / cash APY)
+   * - "manual": user-supplied; stale when last_updated is > 30 days ago
+   */
   current_value?: number;
-  /** Annual interest rate % — bonds, fixed deposits, T-bills. */
+  /** Annual interest rate % — bonds and interest-bearing cash. */
   coupon_rate?: number;
-  /** ISO date string — bonds, fixed deposits. */
+  /** ISO date string — bonds. */
   maturity_date?: string;
+  /** ISO timestamp — present for manual holdings; used for stale-data nudge. */
+  last_updated?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -754,7 +766,7 @@ export function currentValue(
   // Prefer explicitly entered current value
   if (holding.current_value != null) return holding.current_value;
   const latest = latestValuation(holding.holding_id, valuations);
-  return latest ? latest.value : holding.initial_value;
+  return latest ? latest.value : holding.cost_basis;
 }
 
 export function gainLoss(
@@ -762,7 +774,7 @@ export function gainLoss(
   valuations: AssetValuation[],
 ): { amount: number; pct: number } {
   const cv = currentValue(holding, valuations);
-  const cost = holding.amount_invested ?? holding.initial_value;
+  const cost = holding.cost_basis;
   const amount = cv - cost;
   const pct = cost > 0 ? (amount / cost) * 100 : 0;
   return { amount, pct };
@@ -772,8 +784,10 @@ export function assetTypeLabel(type: AssetType): string {
   return ASSET_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
 }
 
-export function supportsMarket(type: AssetType): boolean {
-  return ["stock", "etf", "crypto"].includes(type);
+export function supportsMarket(type: AssetType, symbol?: string): boolean {
+  if (["stock", "etf", "crypto"].includes(type)) return true;
+  if (type === "mutual_fund") return !!symbol;
+  return false;
 }
 
 export type SymbolInfo = { symbol: string; name: string; assetType: AssetType };
@@ -893,12 +907,11 @@ export const mockHoldings: AssetHolding[] = [
     user_id: "u-1",
     asset_type: "stock",
     valuation_method: "market",
-    initial_value: 30000,
+    cost_basis: 30000,
     initial_value_date: "2024-01-15",
     symbol: "AAPL",
     name: "Apple Inc.",
     quantity: 200,
-    amount_invested: 30000,
     is_active: true,
     created_at: _assetNow,
     updated_at: _assetNow,
@@ -908,26 +921,24 @@ export const mockHoldings: AssetHolding[] = [
     user_id: "u-1",
     asset_type: "etf",
     valuation_method: "market",
-    initial_value: 200000,
+    cost_basis: 200000,
     initial_value_date: "2023-06-01",
     symbol: "VOO",
     name: "Vanguard S&P 500 ETF",
     quantity: 500,
-    amount_invested: 200000,
     is_active: true,
     created_at: _assetNow,
     updated_at: _assetNow,
   },
   {
+    // Bond: cost_basis = face value; current_value computed server-side via accrual
     holding_id: "h-3",
     user_id: "u-1",
     asset_type: "bond",
-    valuation_method: "manual",
-    initial_value: 312500,
+    valuation_method: "auto_calculated",
+    cost_basis: 312500,
     initial_value_date: "2022-11-01",
     name: "Government Bond Portfolio",
-    amount_invested: 300000,
-    current_value: 320000,
     coupon_rate: 4.5,
     maturity_date: "2030-11-01",
     is_active: true,
@@ -935,29 +946,30 @@ export const mockHoldings: AssetHolding[] = [
     updated_at: _assetNow,
   },
   {
+    // Cash with APY: cost_basis = principal; current_value auto-accrued server-side
     holding_id: "h-4",
     user_id: "u-1",
     asset_type: "cash",
-    valuation_method: "manual",
-    initial_value: 125000,
+    valuation_method: "auto_calculated",
+    cost_basis: 125000,
     initial_value_date: "2025-01-01",
     name: "High-Yield Savings",
-    current_value: 128000,
     coupon_rate: 4.2,
     is_active: true,
     created_at: _assetNow,
     updated_at: _assetNow,
   },
   {
+    // Alternative: manual — last_updated set >30 days ago to trigger stale badge
     holding_id: "h-5",
     user_id: "u-1",
     asset_type: "alternative",
     valuation_method: "manual",
-    initial_value: 50000,
+    cost_basis: 50000,
     initial_value_date: "2024-03-10",
     name: "Private Equity Fund",
-    amount_invested: 50000,
     current_value: 62500,
+    last_updated: "2025-12-01T00:00:00Z",
     is_active: true,
     created_at: _assetNow,
     updated_at: _assetNow,
@@ -967,12 +979,11 @@ export const mockHoldings: AssetHolding[] = [
     user_id: "u-1",
     asset_type: "crypto",
     valuation_method: "market",
-    initial_value: 30000,
+    cost_basis: 30000,
     initial_value_date: "2024-08-01",
     symbol: "BTC",
     name: "Bitcoin",
     quantity: 0.45,
-    amount_invested: 30000,
     is_active: true,
     created_at: _assetNow,
     updated_at: _assetNow,
@@ -1972,26 +1983,66 @@ export function getRetirementProjectionInputs() {
 // GOALS DATA
 // ============================================================================
 
+export type GoalCategory =
+  | "emergency"
+  | "retirement"
+  | "housing"
+  | "education"
+  | "travel"
+  | "vehicle"
+  | "business"
+  | "other";
+
+export const GOAL_CATEGORY_OPTIONS: { value: GoalCategory; label: string }[] = [
+  { value: "emergency", label: "Emergency Fund" },
+  { value: "retirement", label: "Retirement" },
+  { value: "housing", label: "Housing" },
+  { value: "education", label: "Education" },
+  { value: "travel", label: "Travel" },
+  { value: "vehicle", label: "Vehicle" },
+  { value: "business", label: "Business" },
+  { value: "other", label: "Other" },
+];
+
 export type Goal = {
   id: string;
+  userId?: string;
   title: string;
+  category: GoalCategory;
+  priority: number;
+  description?: string;
   yearsRemaining: number;
   current: number;
   target: number;
   completed: boolean;
   completedDate?: string;
+  targetDate?: string;
+  /** Backend-computed: monthly contribution needed to reach the goal */
+  monthlyContributionNeeded: number;
+  /** Backend-computed: probability of achieving the goal (0-100) */
+  probability: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type GoalsMeta = {
+  total: number;
+  totalMonthlyNeeded: number;
+  totalCurrentSaved: number;
 };
 
 export type Scenario = {
-  key:
-    | "salaryIncrease"
-    | "marketDownturn"
-    | "earlyRetirement"
-    | "propertyPurchase";
+  id: string;
   label: string;
+  monthlyReturnRate: number;
+  inflationRate: number;
   description: string;
-  monthlyMultiplier: number;
-  probabilityDelta: number;
+};
+
+export type ApiError = {
+  code: string;
+  message: string;
+  details?: { field: string; message: string }[];
 };
 
 export const goalsData = {
@@ -1999,105 +2050,152 @@ export const goalsData = {
     {
       id: "vac",
       title: "Vacation Home",
+      category: "housing" as GoalCategory,
+      priority: 1,
+      description: "Purchase a vacation property for family retreats.",
       yearsRemaining: 4,
       current: 340000,
       target: 850000,
       completed: false,
+      targetDate: "2030-03-31",
+      monthlyContributionNeeded: 10417,
+      probability: 82,
     },
     {
       id: "edu",
       title: "Children Education",
+      category: "education" as GoalCategory,
+      priority: 2,
+      description: "College and university fund for the children.",
       yearsRemaining: 12,
       current: 180000,
       target: 400000,
       completed: false,
+      targetDate: "2038-03-31",
+      monthlyContributionNeeded: 1528,
+      probability: 91,
     },
     {
       id: "biz",
       title: "Business Venture",
+      category: "business" as GoalCategory,
+      priority: 3,
+      description: "Seed capital for launching a new business.",
       yearsRemaining: 2,
       current: 175000,
       target: 250000,
       completed: false,
+      targetDate: "2028-03-31",
+      monthlyContributionNeeded: 3125,
+      probability: 76,
     },
     {
       id: "car",
       title: "Dream Car Purchase",
+      category: "vehicle" as GoalCategory,
+      priority: 4,
+      description: "Fund for purchasing a dream car outright.",
       yearsRemaining: 1,
       current: 85000,
       target: 120000,
       completed: false,
+      targetDate: "2027-03-31",
+      monthlyContributionNeeded: 2917,
+      probability: 68,
     },
     {
       id: "wedding",
       title: "Daughter's Wedding Fund",
+      category: "other" as GoalCategory,
+      priority: 5,
+      description: "Special fund for daughter's future wedding.",
       yearsRemaining: 5,
       current: 65000,
       target: 100000,
       completed: false,
+      targetDate: "2031-03-31",
+      monthlyContributionNeeded: 583,
+      probability: 88,
     },
     {
       id: "emergency",
       title: "Emergency Fund",
+      category: "emergency" as GoalCategory,
+      priority: 6,
       yearsRemaining: 0,
       current: 85000,
       target: 85000,
       completed: true,
       completedDate: "December 2025",
+      monthlyContributionNeeded: 0,
+      probability: 100,
     },
     {
       id: "debt",
       title: "Credit Card Debt Elimination",
+      category: "other" as GoalCategory,
+      priority: 7,
       yearsRemaining: 0,
       current: 35000,
       target: 35000,
       completed: true,
       completedDate: "August 2024",
+      monthlyContributionNeeded: 0,
+      probability: 100,
     },
     {
       id: "renovation",
       title: "Home Renovation",
+      category: "housing" as GoalCategory,
+      priority: 8,
       yearsRemaining: 0,
       current: 120000,
       target: 120000,
       completed: true,
       completedDate: "March 2025",
+      monthlyContributionNeeded: 0,
+      probability: 100,
     },
   ] as Goal[],
   scenarios: [
     {
-      key: "salaryIncrease" as const,
+      id: "scenario-1",
       label: "Salary Increase",
       description:
         "Monthly contribution pressure reduces; probability improves slightly.",
-      monthlyMultiplier: 0.85,
-      probabilityDelta: 4,
+      monthlyReturnRate: 0.006,
+      inflationRate: 0.025,
     },
     {
-      key: "marketDownturn" as const,
+      id: "scenario-2",
       label: "Market Downturn",
       description:
         "More contribution required to stay on track; probability drops.",
-      monthlyMultiplier: 1.15,
-      probabilityDelta: -8,
+      monthlyReturnRate: 0.002,
+      inflationRate: 0.04,
     },
     {
-      key: "earlyRetirement" as const,
+      id: "scenario-3",
       label: "Early Retirement",
       description:
         "Shorter runway; contribution required increases; probability reduces.",
-      monthlyMultiplier: 1.25,
-      probabilityDelta: -10,
+      monthlyReturnRate: 0.005,
+      inflationRate: 0.03,
     },
     {
-      key: "propertyPurchase" as const,
+      id: "scenario-4",
       label: "Property Purchase",
       description:
         "Liquidity impact; contribution requirement increases slightly.",
-      monthlyMultiplier: 1.1,
-      probabilityDelta: -5,
+      monthlyReturnRate: 0.0055,
+      inflationRate: 0.03,
     },
   ] as Scenario[],
+  meta: {
+    total: 8,
+    totalMonthlyNeeded: 18570,
+    totalCurrentSaved: 1085000,
+  } as GoalsMeta,
 };
 
 // ============================================================================

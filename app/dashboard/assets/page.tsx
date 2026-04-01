@@ -138,9 +138,8 @@ interface HoldingDraft {
   asset_type: AssetType;
   symbol: string;
   quantity: string;
-  amount_invested: string;
+  cost_basis: string;
   current_value: string;
-  face_value: string;
   coupon_rate: string;
   maturity_date: string;
   purchase_date: string;
@@ -152,9 +151,8 @@ const defaultDraft: HoldingDraft = {
   asset_type: "stock",
   symbol: "",
   quantity: "",
-  amount_invested: "",
+  cost_basis: "",
   current_value: "",
-  face_value: "",
   coupon_rate: "",
   maturity_date: "",
   purchase_date: "",
@@ -198,10 +196,25 @@ function useLivePrices(holdings: AssetHolding[]) {
       if (!forceRefresh) {
         const cached = readPriceCache();
         if (cached) {
-          setPrices(cached.prices);
-          setLastUpdated(new Date(cached.fetchedAt));
-          setFromCache(true);
-          return;
+          // Only use cache if every active crypto holding with a known symbol
+          // already has a price entry — bypasses cache for newly added holdings
+          const cryptoIds = holdings
+            .filter(
+              (h) =>
+                h.is_active &&
+                h.asset_type === "crypto" &&
+                h.symbol &&
+                COINGECKO_ID_MAP[h.symbol],
+            )
+            .map((h) => h.holding_id);
+          const allCached = cryptoIds.every((id) => id in cached.prices);
+          if (allCached) {
+            setPrices(cached.prices);
+            setLastUpdated(new Date(cached.fetchedAt));
+            setFromCache(true);
+            return;
+          }
+          // Some holdings are missing — fall through to fresh fetch
         }
       }
 
@@ -290,8 +303,7 @@ function getLiveGainLoss(
   livePrices: LivePrices,
 ): { amount: number; pct: number } {
   const cv = getLiveValue(holding, valuations, livePrices);
-  // Cost basis is amount_invested if set, otherwise fall back to initial_value
-  const cost = holding.amount_invested ?? holding.initial_value;
+  const cost = holding.cost_basis;
   const amount = cv - cost;
   const pct = cost > 0 ? (amount / cost) * 100 : 0;
   return { amount, pct };
@@ -323,6 +335,39 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ─── Input helpers ───────────────────────────────────────────────────────────────
+
+/** Format a raw string as a number with thousand-separator commas while typing. */
+function formatNumericInput(val: string): string {
+  const clean = val.replace(/[^0-9.]/g, "");
+  const dot = clean.indexOf(".");
+  if (dot === -1) return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const integer = clean.slice(0, dot).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${integer}.${clean.slice(dot + 1)}`;
+}
+
+/** Strip commas and parse to number before saving. */
+function parseNumericInput(val: string): number {
+  return Number(val.replace(/,/g, "")) || 0;
+}
+
+/** Derive the currency symbol (e.g. "$", "£", "₵") from an ISO currency code. */
+function getCurrencySymbol(currency: string): string {
+  try {
+    return (
+      new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 0,
+      })
+        .formatToParts(0)
+        .find((p) => p.type === "currency")?.value ?? currency
+    );
+  } catch {
+    return currency;
+  }
+}
+
 // ─── Add / Edit Dialog ─────────────────────────────────────────────────────────
 
 function AddHoldingDialog({
@@ -336,6 +381,9 @@ function AddHoldingDialog({
   onSave: (h: AssetHolding, val?: AssetValuation) => void;
   editHolding?: AssetHolding | null;
 }) {
+  const userCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
+  const currencySymbol = getCurrencySymbol(userCurrency);
+
   const [draft, setDraft] = React.useState<HoldingDraft>(defaultDraft);
 
   React.useEffect(() => {
@@ -346,16 +394,12 @@ function AddHoldingDialog({
         asset_type: editHolding.asset_type,
         symbol: editHolding.symbol ?? "",
         quantity: editHolding.quantity ? String(editHolding.quantity) : "",
-        amount_invested: editHolding.amount_invested
-          ? String(editHolding.amount_invested)
+        cost_basis: editHolding.cost_basis
+          ? formatNumericInput(String(editHolding.cost_basis))
           : "",
         current_value: editHolding.current_value
-          ? String(editHolding.current_value)
+          ? formatNumericInput(String(editHolding.current_value))
           : "",
-        face_value:
-          editHolding.asset_type === "bond"
-            ? String(editHolding.initial_value)
-            : "",
         coupon_rate: editHolding.coupon_rate
           ? String(editHolding.coupon_rate)
           : "",
@@ -368,10 +412,17 @@ function AddHoldingDialog({
     }
   }, [open, editHolding]);
 
-  const isMarket = supportsMarket(draft.asset_type);
+  // market = stock/etf/crypto always; mutual_fund only when symbol provided
+  const isMarket = supportsMarket(draft.asset_type, draft.symbol);
+  // show the symbol input for market-always types AND mutual_fund (where it's optional)
+  const showSymbolInput =
+    ["stock", "etf", "crypto"].includes(draft.asset_type) ||
+    draft.asset_type === "mutual_fund";
   const isBond = draft.asset_type === "bond";
   const isCash = draft.asset_type === "cash";
   const isMutual = draft.asset_type === "mutual_fund";
+  // mutual fund manual: no symbol provided
+  const isMutualManual = isMutual && !draft.symbol;
   const isManual =
     draft.asset_type === "alternative" || draft.asset_type === "other";
 
@@ -390,46 +441,53 @@ function AddHoldingDialog({
     const now = new Date().toISOString();
     const id = editHolding?.holding_id ?? `h-${Date.now()}`;
 
-    const amountInvested = Number(draft.amount_invested) || undefined;
-    const currentVal = Number(draft.current_value) || undefined;
-    const faceValue = Number(draft.face_value) || 0;
+    const costBasis =
+      parseNumericInput(draft.cost_basis) ||
+      parseNumericInput(draft.current_value) ||
+      0;
+    const currentVal = parseNumericInput(draft.current_value) || undefined;
     const couponRate = Number(draft.coupon_rate) || undefined;
 
-    // Compute initial_value (legacy fallback):
-    // bonds → face value | cash → current balance | others → amount invested
-    const legacyInitialValue = isBond
-      ? faceValue
-      : isCash
-        ? Number(draft.current_value) || 0
-        : Number(draft.amount_invested) || Number(draft.current_value) || 0;
+    // Derive valuation_method server-side equivalent
+    let valuationMethod: ValuationMethod;
+    if (["stock", "etf", "crypto"].includes(draft.asset_type)) {
+      valuationMethod = "market";
+    } else if (draft.asset_type === "mutual_fund") {
+      valuationMethod = draft.symbol ? "market" : "manual";
+    } else if (draft.asset_type === "bond") {
+      valuationMethod = "auto_calculated";
+    } else if (draft.asset_type === "cash") {
+      valuationMethod = couponRate ? "auto_calculated" : "manual";
+    } else {
+      valuationMethod = "manual";
+    }
 
     const holding: AssetHolding = {
       holding_id: id,
       user_id: "u-1",
       asset_type: draft.asset_type,
-      valuation_method: isMarket ? "market" : "manual",
-      initial_value: legacyInitialValue,
+      valuation_method: valuationMethod,
+      cost_basis: costBasis,
       initial_value_date: draft.purchase_date || now.slice(0, 10),
       symbol: draft.symbol || undefined,
       name: draft.name || draft.symbol || "Unnamed",
       quantity: draft.quantity ? Number(draft.quantity) : undefined,
-      amount_invested: amountInvested,
-      current_value: isCash || isMutual || isManual ? currentVal : undefined,
+      // current_value: server computes for auto_calculated; user-supplied for manual
+      current_value: valuationMethod === "manual" ? currentVal : undefined,
       coupon_rate: couponRate,
       maturity_date: draft.maturity_date || undefined,
+      last_updated: valuationMethod === "manual" ? now : undefined,
       is_active: true,
       created_at: editHolding?.created_at ?? now,
       updated_at: now,
     };
 
     let valuation: AssetValuation | undefined;
-    if (!isMarket && (draft.current_value || draft.face_value)) {
-      const valValue =
-        Number(draft.current_value) || Number(draft.face_value) || 0;
+    if (valuationMethod === "manual" && draft.current_value) {
       valuation = {
         valuation_id: `val-${Date.now()}`,
         holding_id: id,
-        value: valValue,
+        value: Number(draft.current_value),
         as_of: draft.purchase_date || now.slice(0, 10),
         source: "manual",
         created_at: now,
@@ -471,9 +529,6 @@ function AddHoldingDialog({
                     setDraft((d) => ({
                       ...d,
                       asset_type: opt.value,
-                      valuation_method: supportsMarket(opt.value)
-                        ? "market"
-                        : "manual",
                       symbol: "",
                     }))
                   }
@@ -495,12 +550,24 @@ function AddHoldingDialog({
 
           <Separator />
 
-          {/* Symbol (market assets only: stock, ETF, crypto) */}
-          {isMarket && (
+          {/* Symbol (stock, ETF, crypto always; mutual_fund optional) */}
+          {showSymbolInput && (
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Ticker / Symbol</Label>
+              <Label className="text-xs font-semibold">
+                Ticker / Symbol
+                {isMutual && (
+                  <span className="font-normal text-muted-foreground">
+                    {" "}
+                    — optional (enables live NAV pricing)
+                  </span>
+                )}
+              </Label>
               <Input
-                placeholder="e.g. AAPL, BTC, VOO"
+                placeholder={
+                  isMutual
+                    ? "e.g. VFIAX (leave blank for manual)"
+                    : "e.g. AAPL, BTC, VOO"
+                }
                 value={draft.symbol}
                 onChange={(e) => handleSymbolChange(e.target.value)}
                 className="uppercase font-mono"
@@ -524,8 +591,9 @@ function AddHoldingDialog({
                   icon={faBroadcastTower}
                   className="h-2.5 w-2.5"
                 />
-                Crypto prices update live from 3rd party sources. Stocks require
-                manual update for now.
+                {isMutual
+                  ? "With a symbol, NAV is fetched automatically. Without one, you enter the value manually."
+                  : "Crypto prices update live. Stocks & ETFs require manual update for now."}
               </p>
             </div>
           )}
@@ -550,7 +618,7 @@ function AddHoldingDialog({
             />
           </div>
 
-          {/* ── Stock / ETF / Crypto: quantity + amount invested ── */}
+          {/* ── Stock / ETF / Crypto / Mutual Fund with symbol: quantity + cost_basis ── */}
           {isMarket && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -575,17 +643,18 @@ function AddHoldingDialog({
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    $
+                    {currencySymbol}
                   </span>
                   <Input
-                    type="number"
-                    placeholder="0.00"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0"
                     className="pl-6"
-                    value={draft.amount_invested}
+                    value={draft.cost_basis}
                     onChange={(e) =>
                       setDraft((d) => ({
                         ...d,
-                        amount_invested: e.target.value,
+                        cost_basis: formatNumericInput(e.target.value),
                       }))
                     }
                   />
@@ -597,8 +666,8 @@ function AddHoldingDialog({
             </div>
           )}
 
-          {/* ── Mutual fund: amount invested + current value ── */}
-          {isMutual && (
+          {/* ── Mutual fund without symbol: cost_basis + current value (manual) ── */}
+          {isMutualManual && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">
@@ -606,17 +675,18 @@ function AddHoldingDialog({
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    $
+                    {currencySymbol}
                   </span>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="0"
                     className="pl-6"
-                    value={draft.amount_invested}
+                    value={draft.cost_basis}
                     onChange={(e) =>
                       setDraft((d) => ({
                         ...d,
-                        amount_invested: e.target.value,
+                        cost_basis: formatNumericInput(e.target.value),
                       }))
                     }
                   />
@@ -628,17 +698,18 @@ function AddHoldingDialog({
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    $
+                    {currencySymbol}
                   </span>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="0"
                     className="pl-6"
                     value={draft.current_value}
                     onChange={(e) =>
                       setDraft((d) => ({
                         ...d,
-                        current_value: e.target.value,
+                        current_value: formatNumericInput(e.target.value),
                       }))
                     }
                   />
@@ -650,7 +721,7 @@ function AddHoldingDialog({
             </div>
           )}
 
-          {/* ── Bond: face value + coupon + maturity + amount invested ── */}
+          {/* ── Bond: face value (cost_basis) + coupon + maturity ── */}
           {isBond && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -660,25 +731,29 @@ function AddHoldingDialog({
                   </Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                      $
+                      {currencySymbol}
                     </span>
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="100,000"
                       className="pl-6"
-                      value={draft.face_value}
+                      value={draft.cost_basis}
                       onChange={(e) =>
-                        setDraft((d) => ({ ...d, face_value: e.target.value }))
+                        setDraft((d) => ({
+                          ...d,
+                          cost_basis: formatNumericInput(e.target.value),
+                        }))
                       }
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Principal paid back at maturity.
+                    Principal paid back at maturity. Used as cost basis.
                   </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">
-                    Annual interest rate (%)
+                    Annual coupon rate (%)
                   </Label>
                   <Input
                     type="number"
@@ -688,82 +763,59 @@ function AddHoldingDialog({
                       setDraft((d) => ({ ...d, coupon_rate: e.target.value }))
                     }
                   />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Maturity date</Label>
-                  <Input
-                    type="date"
-                    value={draft.maturity_date}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        maturity_date: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">
-                    How much did you invest?
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                      $
-                    </span>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      className="pl-6"
-                      value={draft.amount_invested}
-                      onChange={(e) =>
-                        setDraft((d) => ({
-                          ...d,
-                          amount_invested: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
                   <p className="text-xs text-muted-foreground">
-                    What you actually paid (may differ from face value).
+                    Current value auto-calculated server-side.
                   </p>
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Maturity date</Label>
+                <Input
+                  type="date"
+                  value={draft.maturity_date}
+                  onChange={(e) =>
+                    setDraft((d) => ({
+                      ...d,
+                      maturity_date: e.target.value,
+                    }))
+                  }
+                />
               </div>
             </div>
           )}
 
-          {/* ── Cash: balance + optional interest rate ── */}
+          {/* ── Cash: principal (cost_basis) + optional APY ── */}
           {isCash && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">
-                  What is it worth today?
+                  Opening balance / principal
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    $
+                    {currencySymbol}
                   </span>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="25,000"
                     className="pl-6"
-                    value={draft.current_value}
+                    value={draft.cost_basis}
                     onChange={(e) =>
                       setDraft((d) => ({
                         ...d,
-                        current_value: e.target.value,
+                        cost_basis: formatNumericInput(e.target.value),
                       }))
                     }
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Current account balance.
+                  Your starting balance / cost basis.
                 </p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">
-                  Interest rate (%)
+                  APY / interest rate (%)
                   <span className="font-normal text-muted-foreground">
                     {" "}
                     — optional
@@ -778,13 +830,39 @@ function AddHoldingDialog({
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  For savings or fixed-deposit accounts.
+                  With a rate, current value is auto-calculated. Without one,
+                  enter it manually below.
                 </p>
               </div>
+              {!draft.coupon_rate && (
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-xs font-semibold">
+                    Current balance (manual)
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      {currencySymbol}
+                    </span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="25,000"
+                      className="pl-6"
+                      value={draft.current_value}
+                      onChange={(e) =>
+                        setDraft((d) => ({
+                          ...d,
+                          current_value: formatNumericInput(e.target.value),
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* ── Alternative / Other: amount invested + current value ── */}
+          {/* ── Alternative / Other: cost_basis + current value ── */}
           {isManual && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -793,17 +871,18 @@ function AddHoldingDialog({
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    $
+                    {currencySymbol}
                   </span>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="0"
                     className="pl-6"
-                    value={draft.amount_invested}
+                    value={draft.cost_basis}
                     onChange={(e) =>
                       setDraft((d) => ({
                         ...d,
-                        amount_invested: e.target.value,
+                        cost_basis: formatNumericInput(e.target.value),
                       }))
                     }
                   />
@@ -815,17 +894,18 @@ function AddHoldingDialog({
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    $
+                    {currencySymbol}
                   </span>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="0"
                     className="pl-6"
                     value={draft.current_value}
                     onChange={(e) =>
                       setDraft((d) => ({
                         ...d,
-                        current_value: e.target.value,
+                        current_value: formatNumericInput(e.target.value),
                       }))
                     }
                   />
@@ -995,6 +1075,18 @@ function HoldingRow({
   const pct = totalPortfolio > 0 ? (value / totalPortfolio) * 100 : 0;
   const hasLivePrice = livePrices[holding.holding_id] != null;
 
+  // Stale-data nudge: manual holdings not updated in >30 days
+  const daysSinceUpdate = holding.last_updated
+    ? Math.floor(
+        (Date.now() - new Date(holding.last_updated).getTime()) /
+          (1000 * 60 * 60 * 24),
+      )
+    : null;
+  const showStaleWarning =
+    holding.valuation_method === "manual" &&
+    daysSinceUpdate !== null &&
+    daysSinceUpdate > 30;
+
   return (
     <motion.div
       layout
@@ -1045,6 +1137,19 @@ function HoldingRow({
                 Live
               </Badge>
             )}
+            {holding.valuation_method === "auto_calculated" && (
+              <Badge
+                variant="outline"
+                className="text-xs gap-1 py-0 shrink-0"
+                style={{
+                  color: "#2563eb",
+                  borderColor: "#bfdbfe",
+                  backgroundColor: "#eff6ff",
+                }}
+              >
+                Auto-calc
+              </Badge>
+            )}
             {holding.valuation_method === "manual" && (
               <Badge
                 variant="outline"
@@ -1056,6 +1161,23 @@ function HoldingRow({
                 }}
               >
                 Manual
+              </Badge>
+            )}
+            {showStaleWarning && (
+              <Badge
+                variant="outline"
+                className="text-xs gap-1 py-0 shrink-0"
+                style={{
+                  color: "#ef4444",
+                  borderColor: "#fecaca",
+                  backgroundColor: "#fff1f2",
+                }}
+              >
+                <FontAwesomeIcon
+                  icon={faTriangleExclamation}
+                  className="h-2 w-2"
+                />
+                Updated {daysSinceUpdate}d ago
               </Badge>
             )}
           </div>
@@ -1074,20 +1196,28 @@ function HoldingRow({
 
         {/* Gain / loss */}
         <div className="hidden sm:flex flex-col items-end shrink-0 w-24">
-          <span
-            className="text-xs font-medium"
-            style={{ color: gl.amount >= 0 ? "#10b981" : "#ef4444" }}
-          >
-            {gl.amount >= 0 ? "+" : ""}
-            {formatCurrency(gl.amount)}
-          </span>
-          <span
-            className="text-xs"
-            style={{ color: gl.pct >= 0 ? "#10b981" : "#ef4444" }}
-          >
-            {gl.pct >= 0 ? "+" : ""}
-            {gl.pct.toFixed(2)}%
-          </span>
+          {hasLivePrice || holding.current_value != null ? (
+            <>
+              <span
+                className="text-xs font-medium"
+                style={{ color: gl.amount >= 0 ? "#10b981" : "#ef4444" }}
+              >
+                {gl.amount >= 0 ? "+" : ""}
+                {formatCurrency(gl.amount)}
+              </span>
+              <span
+                className="text-xs"
+                style={{ color: gl.pct >= 0 ? "#10b981" : "#ef4444" }}
+              >
+                {gl.pct >= 0 ? "+" : ""}
+                {gl.pct.toFixed(2)}%
+              </span>
+            </>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              {holding.valuation_method === "market" ? "Fetching…" : "—"}
+            </span>
+          )}
         </div>
 
         {/* Current value */}
@@ -1125,13 +1255,11 @@ function HoldingRow({
                     </p>
                   </div>
                 )}
-                {holding.amount_invested != null && (
+                {holding.cost_basis > 0 && (
                   <div>
-                    <p className="text-xs text-muted-foreground">
-                      Amount invested
-                    </p>
+                    <p className="text-xs text-muted-foreground">Cost basis</p>
                     <p className="text-sm font-semibold">
-                      {formatCurrency(holding.amount_invested)}
+                      {formatCurrency(holding.cost_basis)}
                     </p>
                   </div>
                 )}
@@ -1193,7 +1321,9 @@ function HoldingRow({
                 <div>
                   <p className="text-xs text-muted-foreground">Valuation</p>
                   <p className="text-sm font-semibold capitalize">
-                    {holding.valuation_method}
+                    {holding.valuation_method === "auto_calculated"
+                      ? "Auto-calculated"
+                      : holding.valuation_method}
                   </p>
                 </div>
               </div>
@@ -1272,6 +1402,8 @@ export default function AssetsPage() {
     (s) => s.portfolioPerformance,
   );
   const storeAccounts = useFinancialStore((s) => s.accounts);
+  const userCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
+  const currencySymbol = getCurrencySymbol(userCurrency);
   const [addOpen, setAddOpen] = React.useState(false);
   const [editHolding, setEditHolding] = React.useState<AssetHolding | null>(
     null,
@@ -1296,11 +1428,7 @@ export default function AssetsPage() {
   );
 
   const totalCostBasis = React.useMemo(
-    () =>
-      holdings.reduce((s, h) => {
-        const cost = h.amount_invested ?? h.initial_value;
-        return s + cost;
-      }, 0),
+    () => holdings.reduce((s, h) => s + h.cost_basis, 0),
     [holdings],
   );
 
@@ -1530,6 +1658,9 @@ export default function AssetsPage() {
           {/* ── Allocation + Performance (only when holdings exist) ── */}
           {holdings.length > 0 && (
             <motion.div
+              key="charts-section"
+              initial="hidden"
+              animate="show"
               variants={mi}
               className="grid grid-cols-1 lg:grid-cols-2 gap-6"
             >
@@ -1616,7 +1747,9 @@ export default function AssetsPage() {
                           axisLine={false}
                           tickMargin={8}
                           tick={{ fontSize: 10 }}
-                          tickFormatter={(v) => `$${(v / 1000000).toFixed(1)}M`}
+                          tickFormatter={(v) =>
+                            `${currencySymbol}${(v / 1000000).toFixed(1)}M`
+                          }
                           width={52}
                         />
                         <Tooltip content={<ChartTooltipContent />} />
@@ -1801,16 +1934,19 @@ export default function AssetsPage() {
                         className="text-xs font-semibold"
                         style={{ color: "#d97706" }}
                       >
-                        Manual valuations need periodic updates
+                        Manual holdings need periodic updates
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Holdings like bonds, private equity, and savings
-                        accounts don't have a live price feed — they show the
-                        last value you entered. Update them when you receive
-                        your statements to keep your portfolio value accurate.
                         Holdings marked{" "}
-                        <span className="font-medium">Manual</span> are
-                        affected.
+                        <span className="font-medium">Manual</span> (private
+                        equity, no-symbol mutual funds, static cash) show the
+                        last value you entered. Bonds and interest-bearing
+                        savings are{" "}
+                        <span className="font-medium">Auto-calculated</span>{" "}
+                        server-side and don&apos;t need manual updates. Update
+                        manual holdings when you receive your latest statement.
+                        A red badge appears when a value is more than 30 days
+                        old.
                       </p>
                     </div>
                   </div>

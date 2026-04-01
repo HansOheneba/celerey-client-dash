@@ -34,15 +34,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCurrency, userCurrency, type Goal } from "@/lib/client-data";
+import {
+  formatCurrency,
+  GOAL_CATEGORY_OPTIONS,
+  type Goal,
+  type GoalCategory,
+} from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 
 type GoalForm = {
   title: string;
+  category: GoalCategory;
+  description: string;
   target: string;
   current: string;
   timelineValue: string;
   timelineUnit: "months" | "years";
+  targetDate: string;
 };
 
 type ContributionForm = {
@@ -114,16 +122,20 @@ export default function EditGoalPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const goalId = params?.id ?? "goal_123"; // fallback for dev
+  const activeCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
 
   // ---- Load existing goal (replace with real fetch) ----
   const [isLoading, setIsLoading] = React.useState(true);
 
   const [form, setForm] = React.useState<GoalForm>({
     title: "",
+    category: "other",
+    description: "",
     target: "",
     current: "",
     timelineValue: "",
     timelineUnit: "years",
+    targetDate: "",
   });
 
   const [originalCurrent, setOriginalCurrent] = React.useState(0);
@@ -163,8 +175,12 @@ export default function EditGoalPage() {
       // Demo seed
       const seed = {
         title: "Emergency fund",
+        category: "emergency" as GoalCategory,
+        priority: 1,
+        description: "Six months of living expenses as a safety net.",
         target: 500000,
         current: 120000,
+        targetDate: "2031-03-31",
         timeline: { value: 5, unit: "years" as const },
         log: [
           {
@@ -195,10 +211,13 @@ export default function EditGoalPage() {
 
       setForm({
         title: seed.title,
+        category: seed.category,
+        description: seed.description,
         target: currency(seed.target),
         current: currency(seed.current),
         timelineValue: String(seed.timeline.value),
         timelineUnit: seed.timeline.unit,
+        targetDate: seed.targetDate,
       });
 
       setOriginalCurrent(seed.current);
@@ -373,17 +392,32 @@ export default function EditGoalPage() {
     setIsSaving(true);
 
     try {
+      const now = new Date().toISOString();
       const updatedGoal: Goal = {
         id: goalId,
         title: form.title.trim(),
+        category: form.category,
+        priority:
+          useFinancialStore.getState().goals.find((g) => g.id === goalId)
+            ?.priority ?? 1,
+        description: form.description.trim() || undefined,
         target: toNumber(form.target),
         current: toNumber(form.current),
         yearsRemaining,
+        // completed is backend-owned — keep from existing store record
         completed: toNumber(form.current) >= toNumber(form.target),
+        targetDate: form.targetDate || undefined,
+        // Preserve backend-computed values from existing record, fall back to local estimate
+        monthlyContributionNeeded:
+          useFinancialStore.getState().goals.find((g) => g.id === goalId)
+            ?.monthlyContributionNeeded ?? requiredPerMonth,
+        probability:
+          useFinancialStore.getState().goals.find((g) => g.id === goalId)
+            ?.probability ?? 50,
+        updatedAt: now,
       };
 
-      useFinancialStore.getState().removeGoal(goalId);
-      useFinancialStore.getState().addGoal(updatedGoal);
+      useFinancialStore.getState().updateGoal(updatedGoal);
 
       router.push("/dashboard/goals");
     } finally {
@@ -502,6 +536,45 @@ export default function EditGoalPage() {
                 />
               </div>
 
+              {/* Category */}
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  value={form.category}
+                  onValueChange={(v) => update("category", v as GoalCategory)}
+                >
+                  <SelectTrigger id="category" className="w-full">
+                    <SelectValue placeholder="Pick a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GOAL_CATEGORY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description">
+                  Description{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </Label>
+                <Textarea
+                  id="description"
+                  placeholder="What is this goal for? Add any context that may help."
+                  value={form.description}
+                  onChange={(e) => update("description", e.target.value)}
+                  maxLength={300}
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground text-right">
+                  {form.description.length}/300
+                </p>
+              </div>
+
               <Separator />
 
               {/* Amounts */}
@@ -510,7 +583,7 @@ export default function EditGoalPage() {
                   <Label htmlFor="current">Current amount</Label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                      {userCurrency}
+                      {activeCurrency}
                     </div>
                     <Input
                       id="current"
@@ -534,7 +607,7 @@ export default function EditGoalPage() {
                   <Label htmlFor="target">Target amount</Label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                      {userCurrency}
+                      {activeCurrency}
                     </div>
                     <Input
                       id="target"
@@ -674,6 +747,20 @@ export default function EditGoalPage() {
                     How long you’re giving yourself to hit the target.
                   </p>
                 </div>
+              </div>
+
+              {/* Target date */}
+              <div className="space-y-2">
+                <Label htmlFor="targetDate">Target date</Label>
+                <Input
+                  id="targetDate"
+                  type="date"
+                  value={form.targetDate}
+                  onChange={(e) => update("targetDate", e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  The specific date you want to reach your goal by.
+                </p>
               </div>
 
               <Separator />
@@ -818,7 +905,7 @@ export default function EditGoalPage() {
                       <div className="space-y-3 pt-2">
                         <div className="space-y-2">
                           <Label htmlFor="contrib-amount">
-                            Amount ({userCurrency})
+                            Amount ({activeCurrency})
                           </Label>
                           <Input
                             id="contrib-amount"

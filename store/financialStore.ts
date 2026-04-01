@@ -197,6 +197,7 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
   addInsurancePolicy: (policy: InsurancePolicy) => void;
   removeInsurancePolicy: (policyId: string) => void;
   addGoal: (goal: Goal) => void;
+  updateGoal: (goal: Goal) => void;
   removeGoal: (id: string) => void;
   addCashFlowPoint: (point: CashFlowPoint) => void;
   setWill: (will: WillInfo) => void;
@@ -231,6 +232,7 @@ type FinancialData = Omit<
   | "addInsurancePolicy"
   | "removeInsurancePolicy"
   | "addGoal"
+  | "updateGoal"
   | "removeGoal"
   | "addCashFlowPoint"
   | "setWill"
@@ -411,6 +413,18 @@ export const useFinancialStore = create<FinancialState>()(
           };
         }),
 
+      updateGoal: (goal) =>
+        set((s) => {
+          const goals = s.goals.map((g) => (g.id === goal.id ? goal : g));
+          return {
+            goals,
+            profileCompletionScore: computeProfileCompletionScore({
+              ...s,
+              goals,
+            }),
+          };
+        }),
+
       removeGoal: (id) =>
         set((s) => {
           const goals = s.goals.filter((g) => g.id !== id);
@@ -571,19 +585,30 @@ export const useFinancialStore = create<FinancialState>()(
 
         // --- Goals ---
         const msPerYear = 1000 * 60 * 60 * 24 * 365.25;
-        const mappedGoals: Goal[] = goals.map((g) => ({
-          id: uid(),
-          title: g.title,
-          target: Number(g.target_amount) || 0,
-          current: 0,
-          yearsRemaining: Math.max(
+        const mappedGoals: Goal[] = goals.map((g, idx) => {
+          const targetDate = g.target_date
+            ? new Date(g.target_date).toISOString().split("T")[0]
+            : undefined;
+          const yearsRemaining = Math.max(
             0,
             Math.round(
               (new Date(g.target_date).getTime() - Date.now()) / msPerYear,
             ),
-          ),
-          completed: false,
-        }));
+          );
+          return {
+            id: uid(),
+            title: g.title,
+            category: "other" as const,
+            priority: idx + 1,
+            target: Number(g.target_amount) || 0,
+            current: 0,
+            yearsRemaining,
+            completed: false,
+            targetDate,
+            monthlyContributionNeeded: 0,
+            probability: 50,
+          };
+        });
 
         // --- Retirement config ---
         let retirementConfig: RetirementConfig = { ...DEFAULT_RETIREMENT };

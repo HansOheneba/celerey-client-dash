@@ -10,11 +10,12 @@ import { GoalFilterTabs } from "@/components/dashboard/goals/goal-filter-tabs";
 import { GoalCard } from "@/components/dashboard/goals/goal-card";
 import { ScenarioCard } from "@/components/dashboard/goals/scenario-card";
 import { DeleteGoalDialog } from "@/components/dashboard/goals/delete-goal-dialog";
+import { PriorityDialog } from "@/components/dashboard/goals/priority-dialog";
 import { enrichGoalsWithCalculations } from "@/components/dashboard/goals/utils";
 import type {
   Goal,
   Scenario,
-  ScenarioKey,
+  ScenarioId,
   EnrichedGoal,
   FilterType,
 } from "@/components/dashboard/goals/types";
@@ -25,7 +26,9 @@ export default function GoalsDashboard() {
   const router = useRouter();
   const storeGoals = useFinancialStore((s) => s.goals);
 
-  const [goals, setGoals] = React.useState<Goal[]>(storeGoals);
+  const [goals, setGoals] = React.useState<Goal[]>(() =>
+    [...storeGoals].sort((a, b) => a.priority - b.priority),
+  );
   const [filter, setFilter] = React.useState<FilterType>("active");
 
   // Enrich goals with calculated values based on cash flow
@@ -40,12 +43,13 @@ export default function GoalsDashboard() {
     return enrichedGoals.filter((g) => g.completed);
   }, [enrichedGoals, filter]);
 
-  const [activeScenario, setActiveScenario] =
-    React.useState<ScenarioKey | null>(null);
+  const [activeScenario, setActiveScenario] = React.useState<ScenarioId | null>(
+    null,
+  );
 
   const scenario = React.useMemo<Scenario | null>(() => {
     if (!activeScenario) return null;
-    return SCENARIOS.find((s) => s.key === activeScenario) ?? null;
+    return SCENARIOS.find((s) => s.id === activeScenario) ?? null;
   }, [activeScenario]);
 
   // delete confirm dialog state
@@ -53,6 +57,9 @@ export default function GoalsDashboard() {
   const [pendingDelete, setPendingDelete] = React.useState<EnrichedGoal | null>(
     null,
   );
+
+  // priority dialog state
+  const [priorityOpen, setPriorityOpen] = React.useState(false);
 
   const goToAddGoal = (): void => {
     router.push("/dashboard/goals/new");
@@ -80,11 +87,21 @@ export default function GoalsDashboard() {
     setDeleteOpen(false);
   };
 
+  const handlePrioritySave = (reordered: Goal[]) => {
+    setGoals(reordered);
+    const store = useFinancialStore.getState();
+    reordered.forEach((g) => store.updateGoal(g));
+  };
+
   return (
     <div className="min-h-screen from-background to-muted/20">
       <div className="mx-auto w-full px-4 py-8 md:px-6">
         {/* Header */}
-        <GoalHeader onAddGoal={goToAddGoal} />
+        <GoalHeader
+          onAddGoal={goToAddGoal}
+          onEditPriority={() => setPriorityOpen(true)}
+          hasPrioritizableGoals={goals.length > 1}
+        />
 
         {/* Filter Tabs */}
         <GoalFilterTabs
@@ -113,6 +130,14 @@ export default function GoalsDashboard() {
           setActiveScenario={setActiveScenario}
         />
       </div>
+
+      {/* Priority Dialog */}
+      <PriorityDialog
+        open={priorityOpen}
+        onOpenChange={setPriorityOpen}
+        goals={goals}
+        onSave={handlePrioritySave}
+      />
 
       {/* Delete Confirmation */}
       <DeleteGoalDialog
