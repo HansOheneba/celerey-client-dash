@@ -60,7 +60,7 @@ const nav = [
     icon: faScaleUnbalanced,
   },
   { label: "Retirement", href: "/dashboard/retirement", icon: faUmbrellaBeach },
-  { label: "Legacy", href: "/dashboard/legacy", icon: faScroll },
+  // { label: "Legacy", href: "/dashboard/legacy", icon: faScroll },
   { label: "Celerey Insights", href: "/dashboard/ai", icon: faBrain },
   { label: "Concierge", href: "/dashboard/concierge", icon: faBellConcierge },
 ];

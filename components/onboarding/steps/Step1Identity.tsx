@@ -285,20 +285,23 @@ export function Step1Identity({
           {/* DOB + Phone — DOB only for solo */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {isSolo && (
-              <DatePickerField
-                control={control}
-                name="date_of_birth"
-                placeholder="Select date of birth"
-                fromYear={1930}
-                toYear={new Date().getFullYear() - 16}
-                disabled={{
-                  after: new Date(
-                    new Date().getFullYear() - 16,
-                    new Date().getMonth(),
-                    new Date().getDate(),
-                  ),
-                }}
-              />
+              <div className="flex flex-col gap-2">
+                <Label>Date of Birth</Label>
+                <DatePickerField
+                  control={control}
+                  name="date_of_birth"
+                  placeholder="Select date of birth"
+                  fromYear={1930}
+                  toYear={new Date().getFullYear() - 16}
+                  disabled={{
+                    after: new Date(
+                      new Date().getFullYear() - 16,
+                      new Date().getMonth(),
+                      new Date().getDate(),
+                    ),
+                  }}
+                />
+              </div>
             )}
 
             {/* Phone — dial code + number */}
@@ -581,7 +584,7 @@ export function Step1Identity({
         </Button>
       </div>
       {!canContinue && (
-        <p className="text-sm text-red-500">
+        <p className="text-sm">
           Please fill in all required fields before continuing.
         </p>
       )}

@@ -581,6 +581,8 @@ export const useFinancialStore = create<FinancialState>()(
           id: uid(),
           name: inc.name,
           amount: Number(inc.amount_monthly) || 0,
+          isRecurring: inc.is_recurring,
+          recurringType: inc.is_recurring ? ("forever" as const) : ("one-time" as const),
         }));
 
         // --- Goals ---

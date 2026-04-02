@@ -111,8 +111,13 @@ const SERVICES: ServiceCard[] = [
 ];
 
 export default function ConciergePage() {
+  const [selectedId, setSelectedId] = React.useState<string>(
+    SERVICES[0]?.serviceId || "",
+  );
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<ConciergeService | null>(null);
+
+  const selectedService = SERVICES.find((s) => s.serviceId === selectedId);
 
   function openInquiry(service: ServiceCard) {
     const picked: ConciergeService = {
@@ -129,233 +134,172 @@ export default function ConciergePage() {
     const picked: ConciergeService = {
       id: "custom",
       title: "Custom request",
-      subtitle:
-        "Share the outcome you need support with and we will confirm fit, scope, and next steps.",
+      subtitle: "Share what you need and we’ll confirm scope and next steps.",
     };
 
     setSelected(picked);
     setDialogOpen(true);
   }
 
-  async function handleSubmit(payload: {
-    service: ConciergeService;
-    fullName: string;
-    email: string;
-    phone: string;
-    preferredContact: "WhatsApp" | "Email" | "Phone call";
-    timeframe: "ASAP" | "This week" | "This month" | "Flexible";
-    country: string;
-    goal: string;
-    context: string;
-    custom?: { topic: string };
-  }) {
+  async function handleSubmit(payload: any) {
     console.log("Service inquiry submitted:", payload);
   }
 
   return (
     <div className="w-full">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        {/* Main content */}
+      <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+        {/* LEFT PANEL (LIST) */}
+        <div className="rounded-2xl border border-black/10 bg-white p-3">
+          <p className="px-3 pb-3 text-sm font-semibold text-neutral-900">
+            Advisory services
+          </p>
+
+          <div className="space-y-1">
+            {SERVICES.map((service) => {
+              const isActive = service.serviceId === selectedId;
+
+              return (
+                <button
+                  key={service.serviceId}
+                  onClick={() => setSelectedId(service.serviceId)}
+                  className={`w-full rounded-xl px-3 py-3 text-left transition ${
+                    isActive ? "bg-[#1a1856]/5" : "hover:bg-neutral-50"
+                  }`}
+                >
+                  <p className="text-xs text-neutral-500">{service.number}</p>
+                  <p className="text-sm font-medium text-neutral-900">
+                    {service.title}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-600 line-clamp-2">
+                    {service.audience}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* CUSTOM REQUEST */}
+          <div className="mt-3 border-t pt-3">
+            <Button
+              variant="outline"
+              className="w-full rounded-full"
+              onClick={openCustomInquiry}
+            >
+              Custom request
+            </Button>
+          </div>
+        </div>
+
+        {/* RIGHT PANEL (DETAIL) */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          key={selectedService?.serviceId}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="overflow-hidden rounded-[22px] border border-black/10 bg-white"
+          transition={{ duration: 0.3 }}
+          className="flex flex-col gap-4"
         >
-          {/* <div className="border-b border-black/10 px-5 py-5 sm:px-6 sm:py-6">
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-neutral-500">
-              Concierge
-            </p>
-            <h1 className="mt-2 text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
-              Advisory services
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
-              Select a service to submit a request for specialist advisory
-              support. Each engagement is structured around your context,
-              objectives, and the written outcome you need.
-            </p>
-          </div> */}
+          {/* MAIN CARD */}
+          <div className="rounded-2xl border border-black/10 bg-white p-6">
+            {!selectedService ? (
+              <p className="text-sm text-neutral-500">
+                Select a service to view details
+              </p>
+            ) : (
+              <div className="space-y-6">
+                {/* HEADER */}
+                <div>
+                  <p className="text-xs text-neutral-500">
+                    {selectedService.number}
+                  </p>
+                  <h2 className="text-xl font-semibold text-neutral-900">
+                    {selectedService.title}
+                  </h2>
+                  <p className="mt-2 text-sm text-neutral-600 max-w-xl">
+                    {selectedService.audience}
+                  </p>
+                </div>
 
-          <div className="divide-y divide-black/10">
-            {SERVICES.map((service, idx) => (
-              <motion.div
-                key={service.serviceId}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.35,
-                  ease: "easeOut",
-                  delay: idx * 0.04,
-                }}
-              >
-                <div className="px-5 py-5 sm:px-6 sm:py-6 hover:bg-black/[0.02]">
-                  <div className="flex flex-col gap-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0 max-w-4xl">
-                        <div className="flex items-center gap-3">
-                          <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-[#1a1856]/6 px-2 text-xs font-semibold text-[#1a1856] ring-1 ring-[#1a1856]/10">
-                            {service.number}
-                          </span>
-                          <p className="text-lg font-semibold tracking-tight text-neutral-900">
-                            {service.title}
-                          </p>
-                        </div>
+                {/* DESCRIPTION */}
+                <p className="text-sm leading-6 text-neutral-700 max-w-2xl">
+                  {selectedService.description}
+                </p>
 
-                        <p className="mt-3 text-sm font-medium text-neutral-800">
-                          {service.audience}
-                        </p>
-
-                        <p className="mt-3 text-sm leading-6 text-neutral-600">
-                          {service.description}
-                        </p>
-                      </div>
-
-                      <div className="flex shrink-0 items-start justify-end">
-                        <Button
-                          type="button"
-                          className="h-10 rounded-full bg-[#1a1856] px-4 text-white hover:bg-[#1a1856]/90"
-                          onClick={() => openInquiry(service)}
-                        >
-                          Request service
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                      <div className="rounded-2xl border border-black/10 bg-neutral-50 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                          Focus areas
-                        </p>
-
-                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          {service.focusAreas.map((item) => (
-                            <div
-                              key={item}
-                              className="flex items-start gap-2 text-sm leading-6 text-neutral-700"
-                            >
-                              <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-[#b07d3d]" />
-                              <span>{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-black/10 bg-white p-4">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                            Deliverable
-                          </p>
-                          <p className="mt-2 text-sm leading-6 text-neutral-800">
-                            {service.deliverable}
-                          </p>
-                        </div>
-
-                        <div className="mt-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                            Advisor
-                          </p>
-                          <p className="mt-2 text-sm leading-6 text-neutral-800">
-                            {service.advisorType}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                {/* FOCUS */}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Focus areas
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedService.focusAreas.map((item) => (
+                      <span
+                        key={item}
+                        className="rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-700"
+                      >
+                        {item}
+                      </span>
+                    ))}
                   </div>
                 </div>
-              </motion.div>
-            ))}
 
-            <div className="px-5 py-5 sm:px-6 sm:py-6">
-              <div className="flex flex-col gap-4 rounded-2xl border border-dashed border-black/15 bg-neutral-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="max-w-2xl">
-                  <p className="text-sm font-semibold text-neutral-900">
-                    Custom request
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-neutral-600">
-                    For needs that do not fit neatly into one category, share
-                    the outcome you are working toward and we will confirm the
-                    right advisory path.
-                  </p>
+                {/* META */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs text-neutral-500">Deliverable</p>
+                    <p className="text-sm text-neutral-800">
+                      {selectedService.deliverable}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-neutral-500">Advisor</p>
+                    <p className="text-sm text-neutral-800">
+                      {selectedService.advisorType}
+                    </p>
+                  </div>
                 </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 rounded-full border-black/10 px-4 text-[#1a1856] hover:bg-[#1a1856]/5"
-                  onClick={openCustomInquiry}
-                >
-                  Create request
-                </Button>
+                {/* CTA */}
+                <div className="pt-2">
+                  <Button
+                    className="rounded-full bg-[#1a1856] text-white hover:bg-[#1a1856]/90"
+                    onClick={() => openInquiry(selectedService)}
+                  >
+                    Request service
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* LOWER GRID (fills space nicely) */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* WHAT YOU GET */}
+            <div className="rounded-2xl border border-black/10 bg-neutral-50 p-5">
+              <p className="text-xs tracking-[0.2em] text-neutral-500">
+                WHAT YOU RECEIVE
+              </p>
+              <p className="mt-2 text-sm leading-6 text-neutral-700">
+                Each engagement leads to a clear written outcome — an opinion,
+                structured plan, allocation recommendation, or advisory report
+                tailored to your situation.
+              </p>
+            </div>
+
+            {/* HOW IT WORKS */}
+            <div className="rounded-2xl border border-black/10 bg-neutral-50 p-5">
+              <p className="text-xs tracking-[0.2em] text-neutral-500">
+                HOW IT WORKS
+              </p>
+
+              <div className="mt-3 space-y-3 text-sm text-neutral-700">
+                <p>1. Choose a service</p>
+                <p>2. Share your context</p>
+                <p>3. We confirm scope & next steps</p>
               </div>
             </div>
           </div>
         </motion.div>
-
-        {/* Side panel */}
-        <motion.aside
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: "easeOut", delay: 0.05 }}
-          className="h-fit rounded-[22px] border border-black/10 bg-white p-5 sm:p-6"
-        >
-          <p className="text-sm font-semibold text-neutral-900">How it works</p>
-
-          <div className="mt-4 space-y-4">
-            {[
-              {
-                n: "1",
-                t: "Choose a service",
-                d: "Select the advisory service that best matches the decision, structure, or review you need.",
-              },
-              {
-                n: "2",
-                t: "Share your context",
-                d: "Add your timeline, goals, and any relevant background so we can assess fit properly.",
-              },
-              {
-                n: "3",
-                t: "Confirm scope",
-                d: "We review the request, confirm the right specialist, and outline next steps before work begins.",
-              },
-            ].map((item) => (
-              <div key={item.n} className="flex gap-3">
-                <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#b07d3d]/10 text-[11px] font-semibold text-[#b07d3d] ring-1 ring-[#b07d3d]/25">
-                  {item.n}
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-neutral-900">
-                    {item.t}
-                  </p>
-                  <p className="mt-0.5 text-sm leading-6 text-neutral-600">
-                    {item.d}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-black/10 bg-neutral-50 p-4">
-            <p className="text-xs tracking-[0.2em] text-neutral-500">
-              WHAT YOU RECEIVE
-            </p>
-            <p className="mt-2 text-sm leading-6 text-neutral-700">
-              Each service is designed to lead to a written advisory outcome,
-              such as an opinion, plan, report, allocation recommendation, or
-              structural guidance.
-            </p>
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-black/10 bg-neutral-50 p-4">
-            <p className="text-xs tracking-[0.2em] text-neutral-500">
-              RESPONSE NOTE
-            </p>
-            <p className="mt-2 text-sm leading-6 text-neutral-700">
-              After a request is submitted, we send a confirmatory email and may
-              request further context before confirming scope.
-            </p>
-          </div>
-        </motion.aside>
       </div>
 
       <ServiceInquiryDialog

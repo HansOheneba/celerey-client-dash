@@ -288,7 +288,7 @@ export function projectMonthlyAmount(
 ): number {
   return rows
     .filter((row) => {
-      if (!row.isRecurring || row.recurringType === "one-time") {
+      if (row.isRecurring === false || row.recurringType === "one-time") {
         if (!row.startDate) return false;
         return row.startDate.slice(0, 7) === isoMonth;
       }

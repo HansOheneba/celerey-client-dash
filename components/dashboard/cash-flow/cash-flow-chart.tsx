@@ -328,12 +328,15 @@ export function CashFlowChart({
         .map((r) => r.startDate!.slice(0, 7)),
     ];
 
+    // When no rows have an explicit startDate (e.g. seeded from onboarding),
+    // fall back to Jan 1 of the current year so «This year» shows all 12 months.
+    const currentYearStart = `${today.getFullYear()}-01`;
     const earliestHistoricalMonth =
       allStartMonths.length > 0
         ? allStartMonths.reduce((a, b) => (a < b ? a : b)) > minHistoricalMonth
           ? allStartMonths.reduce((a, b) => (a < b ? a : b))
           : minHistoricalMonth
-        : currentMonth;
+        : currentYearStart;
 
     const actualByMonth = new Map(data.map((d) => [d.month, d]));
     const points: EnrichedPoint[] = [];
