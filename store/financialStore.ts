@@ -193,6 +193,7 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
   setEmergencyFund: (config: EmergencyFundConfig) => void;
   setHoldings: (holdings: AssetHolding[]) => void;
   addProperty: (property: Property) => void;
+  updateProperty: (property: Property) => void;
   removeProperty: (id: string) => void;
   addInsurancePolicy: (policy: InsurancePolicy) => void;
   removeInsurancePolicy: (policyId: string) => void;
@@ -228,6 +229,7 @@ type FinancialData = Omit<
   | "setEmergencyFund"
   | "setHoldings"
   | "addProperty"
+  | "updateProperty"
   | "removeProperty"
   | "addInsurancePolicy"
   | "removeInsurancePolicy"
@@ -358,6 +360,17 @@ export const useFinancialStore = create<FinancialState>()(
       addProperty: (property) =>
         set((s) => {
           const propertyAssets = [...s.propertyAssets, property];
+          return {
+            propertyAssets,
+            profileCompletionScore: computeProfileCompletionScore(s),
+          };
+        }),
+
+      updateProperty: (property) =>
+        set((s) => {
+          const propertyAssets = s.propertyAssets.map((p) =>
+            p.property_id === property.property_id ? property : p,
+          );
           return {
             propertyAssets,
             profileCompletionScore: computeProfileCompletionScore(s),

@@ -69,24 +69,22 @@ import {
   formatCurrency,
   totalInsurancePremium,
   totalInsuranceCoverage,
+  propertyInsuranceTypeLabel,
+  isInsuranceExpiringSoon,
+  isInsuranceExpired,
   type InsurancePolicy,
   type InsuranceCategory,
   type Property,
+  type PropertyInsurance,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 
-function isPropertyPolicy(
-  policy: InsurancePolicy,
-  properties: Property[],
-): boolean {
-  // Catch by policy number match in properties data
-  const matchesByNumber = properties.some((prop) =>
-    prop.insurance.some((ins) => ins.policy_number === policy.policy_number),
-  );
-  // Also catch any home category policy
-  const isHomeCategory = policy.category === "home";
+// ─── Asset-linked entry type ──────────────────────────────────────────────────
 
-  return matchesByNumber || isHomeCategory;
+interface PropertyLinkedEntry {
+  entryId: string;
+  property: Property;
+  policy: PropertyInsurance;
 }
 
 // ─── Brand color ──────────────────────────────────────────────────────────────
@@ -504,16 +502,13 @@ function PolicyCard({
   policy,
   onEdit,
   onDeactivate,
-  onGoToProperties,
 }: {
   policy: InsurancePolicy;
   onEdit: () => void;
   onDeactivate: () => void;
-  onGoToProperties: () => void;
 }) {
   const [expanded, setExpanded] = React.useState(false);
   const renewal = getRenewalStatus(policy.renewal_date);
-  const storeProperties = useFinancialStore((s) => s.propertyAssets);
 
   return (
     <motion.div
@@ -671,61 +666,246 @@ function PolicyCard({
               )}
 
               <div className="flex items-center gap-2 justify-end pt-1">
-                {isPropertyPolicy(policy, storeProperties) ? (
-                  <div className="flex items-center gap-3 w-full">
-                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-1">
-                      <FontAwesomeIcon
-                        icon={faHouse}
-                        className="h-3 w-3"
-                        style={{ color: PRIMARY }}
-                      />
-                      This policy is attached to a property. Edit or remove it
-                      from the Properties tab.
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs gap-1.5 shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onGoToProperties();
-                      }}
-                    >
-                      Go to Properties
-                      <FontAwesomeIcon
-                        icon={faArrowUpRightFromSquare}
-                        className="h-3 w-3"
-                      />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs gap-1.5"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit();
-                      }}
-                    >
-                      <FontAwesomeIcon icon={faPencil} className="h-3 w-3" />{" "}
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs gap-1.5 text-red-500 hover:text-red-600 hover:bg-red-50"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeactivate();
-                      }}
-                    >
-                      <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />{" "}
-                      Remove
-                    </Button>
-                  </>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs gap-1.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                >
+                  <FontAwesomeIcon icon={faPencil} className="h-3 w-3" />{" "}
+                  Edit
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs gap-1.5 text-red-500 hover:text-red-600 hover:bg-red-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeactivate();
+                  }}
+                >
+                  <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />{" "}
+                  Remove
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ─── Property-linked policy card (read-only, redirects to property edit) ─────
+
+function PropertyPolicyCard({
+  entry,
+  onGoToProperty,
+}: {
+  entry: PropertyLinkedEntry;
+  onGoToProperty: () => void;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+  const { policy, property } = entry;
+
+  const expired = isInsuranceExpired(policy);
+  const expiringSoon = isInsuranceExpiringSoon(policy) && !expired;
+  const daysToExpiry = Math.ceil(
+    (new Date(policy.expiry_date).getTime() - Date.now()) /
+      (1000 * 60 * 60 * 24),
+  );
+
+  const expiryTone: "expired" | "urgent" | "soon" | "ok" =
+    expired
+      ? "expired"
+      : daysToExpiry <= 30
+        ? "urgent"
+        : daysToExpiry <= 60
+          ? "soon"
+          : "ok";
+
+  const expiryStyles = {
+    expired: "text-red-600 border-red-200 bg-red-50",
+    urgent: "text-red-600 border-red-200 bg-red-50",
+    soon: "text-amber-600 border-amber-200 bg-amber-50",
+    ok: "text-emerald-600 border-emerald-200 bg-emerald-50",
+  };
+  const expiryIcons = {
+    expired: faCircleExclamation,
+    urgent: faTriangleExclamation,
+    soon: faCalendarDays,
+    ok: faCircleCheck,
+  };
+  const expiryLabel =
+    expired ? "Expired" : `${daysToExpiry}d left`;
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="border rounded-lg overflow-hidden bg-muted/30"
+    >
+      {/* Header row */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer select-none"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <div
+          className="p-2 rounded-lg shrink-0"
+          style={{ backgroundColor: `${PRIMARY}0d` }}
+        >
+          <FontAwesomeIcon
+            icon={faHouse}
+            className="h-3.5 w-3.5"
+            style={{ color: PRIMARY }}
+          />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-semibold truncate">
+              {policy.provider}{" "}
+              <span className="font-normal text-muted-foreground">
+                — {propertyInsuranceTypeLabel(policy.insurance_type)}
+              </span>
+            </p>
+            <Badge
+              variant="outline"
+              className="text-[10px] py-0 gap-1 shrink-0 text-muted-foreground border-muted-foreground/30 bg-background"
+            >
+              <FontAwesomeIcon icon={faHouse} className="h-2.5 w-2.5" />
+              Managed via Property
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground truncate">
+            {property.name} · {property.city}
+          </p>
+        </div>
+
+        <div className="hidden sm:block shrink-0">
+          <Badge
+            variant="outline"
+            className={`text-xs gap-1 py-0 ${expiryStyles[expiryTone]}`}
+          >
+            <FontAwesomeIcon
+              icon={expiryIcons[expiryTone]}
+              className="h-2.5 w-2.5"
+            />
+            {expiryLabel}
+          </Badge>
+        </div>
+
+        <div className="text-right shrink-0 hidden md:block w-24">
+          <p className="text-xs text-muted-foreground">Coverage</p>
+          <p className="text-sm font-semibold tabular-nums">
+            {formatCurrency(policy.coverage_amount)}
+          </p>
+        </div>
+
+        <div className="text-right shrink-0 w-20">
+          <p className="text-xs text-muted-foreground">Premium</p>
+          <p className="text-sm font-semibold tabular-nums">
+            {formatCurrency(Math.round(policy.annual_premium / 12))}/mo
+          </p>
+        </div>
+
+        <FontAwesomeIcon
+          icon={expanded ? faChevronUp : faChevronDown}
+          className="h-3 w-3 text-muted-foreground shrink-0"
+        />
+      </div>
+
+      {/* Expanded detail */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 pt-3 border-t bg-muted/10 space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Policy number</p>
+                  <p className="text-sm font-medium font-mono">
+                    {policy.policy_number || "Not set"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Deductible</p>
+                  <p className="text-sm font-semibold">
+                    {formatCurrency(policy.deductible)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Annual premium</p>
+                  <p className="text-sm font-semibold">
+                    {formatCurrency(policy.annual_premium)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Expiry date</p>
+                  <p
+                    className={`text-sm font-semibold ${expired ? "text-red-600" : expiringSoon ? "text-amber-600" : ""}`}
+                  >
+                    {new Date(policy.expiry_date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Insurance type</p>
+                  <p className="text-sm font-semibold capitalize">
+                    {propertyInsuranceTypeLabel(policy.insurance_type)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Property</p>
+                  <p className="text-sm font-semibold truncate">
+                    {property.name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  <p className="text-sm font-semibold">
+                    {property.city}, {property.country}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1 justify-between">
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-1">
+                  <FontAwesomeIcon
+                    icon={faHouse}
+                    className="h-3 w-3"
+                    style={{ color: PRIMARY }}
+                  />
+                  This policy is managed on the property. To edit or remove it,
+                  go to the property.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs gap-1.5 shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onGoToProperty();
+                  }}
+                >
+                  Edit in Properties
+                  <FontAwesomeIcon
+                    icon={faArrowRight}
+                    className="h-3 w-3"
+                  />
+                </Button>
               </div>
             </div>
           </motion.div>
@@ -760,57 +940,21 @@ export default function InsurancePage() {
     [storeIncomeRows],
   );
 
-  // Summary metrics from selector
-  const summary = React.useMemo(
-    () => selectInsuranceSummary(policies, monthlyIncome),
-    [policies, monthlyIncome],
-  );
+  // ── Property-linked entries (source of truth is on the property) ──────────
 
-  // Coverage spend breakdown by category
-  const spendByCategory = React.useMemo(() => {
-    const map = new Map<InsuranceCategory, number>();
-    policies.forEach((p) => {
-      map.set(p.category, (map.get(p.category) ?? 0) + p.premium_monthly);
-    });
-    return [...map.entries()]
-      .map(([cat, monthly]) => ({
-        category: cat,
-        label: insuranceCategoryLabel(cat),
-        monthly,
-        annual: monthly * 12,
-        pct:
-          summary.totalMonthlyPremium > 0
-            ? (monthly / summary.totalMonthlyPremium) * 100
-            : 0,
-      }))
-      .sort((a, b) => b.monthly - a.monthly);
-  }, [policies, summary.totalMonthlyPremium]);
+  const propertyEntries = React.useMemo<PropertyLinkedEntry[]>(() => {
+    return storeProperties
+      .filter((p) => p.is_active)
+      .flatMap((prop) =>
+        prop.insurance.map((ins, idx) => ({
+          entryId: `${prop.property_id}-ins-${idx}`,
+          property: prop,
+          policy: ins,
+        })),
+      );
+  }, [storeProperties]);
 
-  // Categories the user has covered
-  const coveredCategories = React.useMemo(
-    () => new Set(policies.map((p) => p.category)),
-    [policies],
-  );
-
-  // Missing recommended categories
-  const missingCategories = RECOMMENDED_CATEGORIES.filter(
-    (c) => !coveredCategories.has(c),
-  );
-
-  // Policies sorted by renewal urgency
-  const urgentPolicies = React.useMemo(
-    () =>
-      [...policies]
-        .filter((p) => getRenewalStatus(p.renewal_date).days <= 60)
-        .sort(
-          (a, b) =>
-            getRenewalStatus(a.renewal_date).days -
-            getRenewalStatus(b.renewal_date).days,
-        ),
-    [policies],
-  );
-
-  // Property insurance totals from store properties
+  // Property summary (for insights and bottom panel)
   const propertyInsuranceSummary = React.useMemo(() => {
     const activeProps = storeProperties.filter((p) => p.is_active);
     const totalAnnual = activeProps.reduce(
@@ -831,17 +975,156 @@ export default function InsurancePage() {
     };
   }, [storeProperties]);
 
-  // Filtered policy list
+  // ── Standalone summary from selector ─────────────────────────────────────
+
+  const standaloneSummary = React.useMemo(
+    () => selectInsuranceSummary(policies, monthlyIncome),
+    [policies, monthlyIncome],
+  );
+
+  // ── Combined summary (standalone + property-linked) ───────────────────────
+
+  const combinedSummary = React.useMemo(() => {
+    const propMonthly = propertyEntries.reduce(
+      (s, e) => s + e.policy.annual_premium / 12,
+      0,
+    );
+    const propCoverage = propertyEntries.reduce(
+      (s, e) => s + e.policy.coverage_amount,
+      0,
+    );
+    const propExpired = propertyEntries.filter((e) =>
+      isInsuranceExpired(e.policy),
+    ).length;
+    const propExpiringSoon = propertyEntries.filter(
+      (e) => isInsuranceExpiringSoon(e.policy) && !isInsuranceExpired(e.policy),
+    ).length;
+    const annualIncome = monthlyIncome * 12;
+    const totalMonthlyPremium =
+      standaloneSummary.totalMonthlyPremium + propMonthly;
+    const totalAnnualPremium = totalMonthlyPremium * 12;
+    const premiumToIncomeRatioPct =
+      annualIncome > 0
+        ? Math.round((totalAnnualPremium / annualIncome) * 1000) / 10
+        : 0;
+    return {
+      ...standaloneSummary,
+      totalMonthlyPremium,
+      totalAnnualPremium,
+      totalCoverage: standaloneSummary.totalCoverage + propCoverage,
+      totalPolicies: standaloneSummary.totalPolicies + propertyEntries.length,
+      expiredCount: standaloneSummary.expiredCount + propExpired,
+      expiringSoonCount:
+        standaloneSummary.expiringSoonCount + propExpiringSoon,
+      premiumToIncomeRatioPct,
+    };
+  }, [standaloneSummary, propertyEntries, monthlyIncome]);
+
+  // ── Coverage spend breakdown by category (including property as "home") ───
+
+  const spendByCategory = React.useMemo(() => {
+    const map = new Map<InsuranceCategory, number>();
+    policies.forEach((p) => {
+      map.set(p.category, (map.get(p.category) ?? 0) + p.premium_monthly);
+    });
+    // Property insurance rolls up under "home"
+    const propMonthly = propertyEntries.reduce(
+      (s, e) => s + e.policy.annual_premium / 12,
+      0,
+    );
+    if (propMonthly > 0) {
+      map.set("home", (map.get("home") ?? 0) + propMonthly);
+    }
+    return [...map.entries()]
+      .map(([cat, monthly]) => ({
+        category: cat,
+        label: insuranceCategoryLabel(cat),
+        monthly,
+        annual: monthly * 12,
+        pct:
+          combinedSummary.totalMonthlyPremium > 0
+            ? (monthly / combinedSummary.totalMonthlyPremium) * 100
+            : 0,
+      }))
+      .sort((a, b) => b.monthly - a.monthly);
+  }, [policies, propertyEntries, combinedSummary.totalMonthlyPremium]);
+
+  // ── Categories covered (including property as "home") ────────────────────
+
+  const coveredCategories = React.useMemo(
+    () =>
+      new Set<InsuranceCategory>([
+        ...policies.map((p) => p.category),
+        ...(propertyEntries.length > 0
+          ? (["home"] as InsuranceCategory[])
+          : []),
+      ]),
+    [policies, propertyEntries],
+  );
+
+  // Missing recommended categories
+  const missingCategories = RECOMMENDED_CATEGORIES.filter(
+    (c) => !coveredCategories.has(c),
+  );
+
+  // ── Urgent standalone policies ────────────────────────────────────────────
+
+  const urgentPolicies = React.useMemo(
+    () =>
+      [...policies]
+        .filter((p) => getRenewalStatus(p.renewal_date).days <= 60)
+        .sort(
+          (a, b) =>
+            getRenewalStatus(a.renewal_date).days -
+            getRenewalStatus(b.renewal_date).days,
+        ),
+    [policies],
+  );
+
+  // ── Urgent property-linked entries ────────────────────────────────────────
+
+  const urgentPropertyEntries = React.useMemo(
+    () =>
+      propertyEntries
+        .filter((e) => {
+          const days = Math.ceil(
+            (new Date(e.policy.expiry_date).getTime() - Date.now()) /
+              (1000 * 60 * 60 * 24),
+          );
+          return days <= 60;
+        })
+        .sort((a, b) => {
+          const da = Math.ceil(
+            (new Date(a.policy.expiry_date).getTime() - Date.now()) /
+              (1000 * 60 * 60 * 24),
+          );
+          const db = Math.ceil(
+            (new Date(b.policy.expiry_date).getTime() - Date.now()) /
+              (1000 * 60 * 60 * 24),
+          );
+          return da - db;
+        }),
+    [propertyEntries],
+  );
+
+  // ── Filtered policy lists ─────────────────────────────────────────────────
+
   const filteredPolicies = React.useMemo(() => {
     if (filterCat === "all") return policies;
     return policies.filter((p) => p.category === filterCat);
   }, [policies, filterCat]);
 
-  // Present categories for filter pills
-  const presentCategories = React.useMemo(
-    () => [...new Set(policies.map((p) => p.category))],
-    [policies],
-  );
+  const filteredPropertyEntries = React.useMemo(() => {
+    if (filterCat === "all" || filterCat === "home") return propertyEntries;
+    return [];
+  }, [propertyEntries, filterCat]);
+
+  // Present categories for filter pills (include "home" if property entries exist)
+  const presentCategories = React.useMemo(() => {
+    const cats = new Set<InsuranceCategory>(policies.map((p) => p.category));
+    if (propertyEntries.length > 0) cats.add("home");
+    return [...cats];
+  }, [policies, propertyEntries]);
 
   // Insights
   const insights = React.useMemo(() => {
@@ -897,24 +1180,24 @@ export default function InsurancePage() {
       });
     }
 
-    if (summary.premiumToIncomeRatioPct > 15) {
+    if (combinedSummary.premiumToIncomeRatioPct > 15) {
       list.push({
         tone: "warning",
         icon: faCoins,
         title: "High insurance spend",
-        body: `Insurance premiums represent ${summary.premiumToIncomeRatioPct.toFixed(1)}% of your annual income. The typical recommended range is 10 to 15%. Consider reviewing your coverage levels for overlap or over-insurance.`,
+        body: `Insurance premiums represent ${combinedSummary.premiumToIncomeRatioPct.toFixed(1)}% of your annual income. The typical recommended range is 10 to 15%. Consider reviewing your coverage levels for overlap or over-insurance.`,
       });
-    } else if (summary.premiumToIncomeRatioPct > 0) {
+    } else if (combinedSummary.premiumToIncomeRatioPct > 0) {
       list.push({
         tone: "good",
         icon: faCircleCheck,
         title: "Insurance spend is reasonable",
-        body: `At ${summary.premiumToIncomeRatioPct.toFixed(1)}% of income, your insurance premiums are within the recommended 10 to 15% range. You are well protected without overpaying.`,
+        body: `At ${combinedSummary.premiumToIncomeRatioPct.toFixed(1)}% of income, your insurance premiums are within the recommended 10 to 15% range. You are well protected without overpaying.`,
       });
     }
 
     return list.slice(0, 4);
-  }, [policies, missingCategories, propertyInsuranceSummary, summary]);
+  }, [policies, missingCategories, propertyInsuranceSummary, combinedSummary]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -941,36 +1224,36 @@ export default function InsurancePage() {
   const kpiItems = [
     {
       label: "Monthly premium",
-      value: formatCurrency(summary.totalMonthlyPremium),
-      subline: `${formatCurrency(summary.totalAnnualPremium)} per year`,
+      value: formatCurrency(combinedSummary.totalMonthlyPremium),
+      subline: `${formatCurrency(combinedSummary.totalAnnualPremium)} per year`,
       tone: "neutral" as const,
     },
     {
       label: "Total coverage",
-      value: formatCurrency(summary.totalCoverage),
-      subline: `Across ${summary.totalPolicies} active ${summary.totalPolicies === 1 ? "policy" : "policies"}`,
+      value: formatCurrency(combinedSummary.totalCoverage),
+      subline: `Across ${combinedSummary.totalPolicies} active ${combinedSummary.totalPolicies === 1 ? "policy" : "policies"}`,
       tone: "neutral" as const,
     },
     {
       label: "Premium to income",
-      value: `${summary.premiumToIncomeRatioPct.toFixed(1)}%`,
+      value: `${combinedSummary.premiumToIncomeRatioPct.toFixed(1)}%`,
       subline: "Target: under 15% of income",
       tone:
-        summary.premiumToIncomeRatioPct <= 15
+        combinedSummary.premiumToIncomeRatioPct <= 15
           ? ("good" as const)
           : ("warning" as const),
     },
     {
       label: "Renewals due",
-      value: `${summary.expiringSoonCount + summary.expiredCount}`,
+      value: `${combinedSummary.expiringSoonCount + combinedSummary.expiredCount}`,
       subline:
-        summary.expiredCount > 0
-          ? `${summary.expiredCount} expired, ${summary.expiringSoonCount} expiring soon`
-          : `${summary.expiringSoonCount} expiring within 60 days`,
+        combinedSummary.expiredCount > 0
+          ? `${combinedSummary.expiredCount} expired, ${combinedSummary.expiringSoonCount} expiring soon`
+          : `${combinedSummary.expiringSoonCount} expiring within 60 days`,
       tone:
-        summary.expiredCount > 0
+        combinedSummary.expiredCount > 0
           ? ("danger" as const)
-          : summary.expiringSoonCount > 0
+          : combinedSummary.expiringSoonCount > 0
             ? ("warning" as const)
             : ("good" as const),
     },
@@ -1035,7 +1318,7 @@ export default function InsurancePage() {
           </motion.div>
 
           {/* ── Renewal alerts ── */}
-          {urgentPolicies.length > 0 && (
+          {(urgentPolicies.length > 0 || urgentPropertyEntries.length > 0) && (
             <motion.div variants={mi}>
               <SectionLabel>Renewal alerts</SectionLabel>
               <div className="space-y-2">
@@ -1080,21 +1363,73 @@ export default function InsurancePage() {
                         size="sm"
                         className="text-xs gap-1 shrink-0"
                         onClick={() => {
-                          if (isPropertyPolicy(policy, storeProperties)) {
-                            router.push("/dashboard/properties");
-                          } else {
-                            setEditPolicy(policy);
-                            setDialogOpen(true);
-                          }
+                          setEditPolicy(policy);
+                          setDialogOpen(true);
                         }}
                       >
                         <FontAwesomeIcon
                           icon={faRotateRight}
                           className="h-3 w-3"
                         />
-                        {isPropertyPolicy(policy, storeProperties)
-                          ? "Go to Properties"
-                          : "Review"}
+                        Review
+                      </Button>
+                    </motion.div>
+                  );
+                })}
+                {urgentPropertyEntries.map((entry) => {
+                  const isExpired = isInsuranceExpired(entry.policy);
+                  return (
+                    <motion.div
+                      key={entry.entryId}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className={`flex items-center justify-between gap-4 rounded-lg border px-4 py-3 ${
+                        isExpired
+                          ? "border-red-200 bg-red-50"
+                          : "border-amber-200 bg-amber-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <FontAwesomeIcon
+                          icon={
+                            isExpired
+                              ? faCircleExclamation
+                              : faTriangleExclamation
+                          }
+                          className={`h-4 w-4 shrink-0 ${isExpired ? "text-red-500" : "text-amber-500"}`}
+                        />
+                        <div>
+                          <p
+                            className={`text-xs font-semibold ${isExpired ? "text-red-700" : "text-amber-700"}`}
+                          >
+                            {entry.policy.provider} —{" "}
+                            {propertyInsuranceTypeLabel(
+                              entry.policy.insurance_type,
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {entry.property.name} ·{" "}
+                            {isExpired
+                              ? `Expired ${new Date(entry.policy.expiry_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                              : `Expires ${new Date(entry.policy.expiry_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs gap-1 shrink-0"
+                        onClick={() =>
+                          router.push(
+                            `/dashboard/properties/${entry.property.property_id}/edit?focus=insurance`,
+                          )
+                        }
+                      >
+                        <FontAwesomeIcon
+                          icon={faArrowRight}
+                          className="h-3 w-3"
+                        />
+                        Edit in Properties
                       </Button>
                     </motion.div>
                   );
@@ -1213,7 +1548,7 @@ export default function InsurancePage() {
                       Total
                     </span>
                     <span className="font-bold tabular-nums">
-                      {formatCurrency(summary.totalMonthlyPremium)}/mo
+                      {formatCurrency(combinedSummary.totalMonthlyPremium)}/mo
                     </span>
                   </div>
                 </CardContent>
@@ -1312,7 +1647,7 @@ export default function InsurancePage() {
                     filterCat === "all" ? { backgroundColor: PRIMARY } : {}
                   }
                 >
-                  All ({policies.length})
+                  All ({combinedSummary.totalPolicies})
                 </button>
                 {presentCategories.map((cat) => (
                   <button
@@ -1333,8 +1668,9 @@ export default function InsurancePage() {
               </div>
             </div>
 
-            {filteredPolicies.length === 0 ? (
-              policies.length === 0 ? (
+            {filteredPolicies.length === 0 &&
+            filteredPropertyEntries.length === 0 ? (
+              combinedSummary.totalPolicies === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
                   <div className="p-4 rounded-full bg-muted">
                     <FontAwesomeIcon
@@ -1401,9 +1737,17 @@ export default function InsurancePage() {
                       setDialogOpen(true);
                     }}
                     onDeactivate={() => handleDeactivate(policy.policy_id)}
-                    onGoToProperties={() =>
-                      router.push("/dashboard/properties")
-                    } // add this
+                  />
+                ))}
+                {filteredPropertyEntries.map((entry) => (
+                  <PropertyPolicyCard
+                    key={entry.entryId}
+                    entry={entry}
+                    onGoToProperty={() =>
+                      router.push(
+                        `/dashboard/properties/${entry.property.property_id}/edit?focus=insurance`,
+                      )
+                    }
                   />
                 ))}
               </div>

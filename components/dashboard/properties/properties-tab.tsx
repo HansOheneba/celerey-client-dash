@@ -71,14 +71,8 @@ function PropertyInsuranceSummary({ properties }: { properties: Property[] }) {
           <CardTitle className="text-base">Property Insurance</CardTitle>
         </div>
         <p className="text-xs text-muted-foreground">
-          Coverage across your holdings. Add or edit in the{" "}
-          <Link
-            href="/dashboard/insurance"
-            className="underline underline-offset-2 hover:text-foreground transition-colors"
-          >
-            Insurance tab
-          </Link>
-          .
+          Coverage across your holdings. Add or edit insurance directly on each{" "}
+          property.
         </p>
       </CardHeader>
 
@@ -134,7 +128,7 @@ function PropertyInsuranceSummary({ properties }: { properties: Property[] }) {
                   <span className="font-medium">{prop.name}</span> has no
                   insurance.{" "}
                   <Link
-                    href="/dashboard/insurance"
+                    href={`/dashboard/properties/${prop.property_id}/edit?focus=insurance`}
                     className="underline underline-offset-2"
                   >
                     Add a policy
@@ -158,7 +152,7 @@ function PropertyInsuranceSummary({ properties }: { properties: Property[] }) {
                   })}
                   .{" "}
                   <Link
-                    href="/dashboard/insurance"
+                    href={`/dashboard/properties/${pol.propertyId}/edit?focus=insurance`}
                     className="underline underline-offset-2"
                   >
                     Renew now
@@ -182,7 +176,7 @@ function PropertyInsuranceSummary({ properties }: { properties: Property[] }) {
                   })}
                   .{" "}
                   <Link
-                    href="/dashboard/insurance"
+                    href={`/dashboard/properties/${pol.propertyId}/edit?focus=insurance`}
                     className="underline underline-offset-2"
                   >
                     Review
@@ -260,16 +254,9 @@ function PropertyInsuranceSummary({ properties }: { properties: Property[] }) {
             <p className="text-xs text-muted-foreground mb-2">
               No property insurance recorded.
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs gap-1.5"
-              asChild
-            >
-              <Link href="/dashboard/insurance">
-                <Plus className="h-3 w-3" /> Add insurance
-              </Link>
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              Open a property and click Edit to add a policy.
+            </p>
           </div>
         )}
       </CardContent>

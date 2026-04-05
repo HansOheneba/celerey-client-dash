@@ -51,6 +51,8 @@ export type PropertyFormProps = {
   editingProperty?: Property;
   title?: string;
   subtitle?: string;
+  /** When "insurance", auto-scroll to the insurance section on mount. */
+  focusSection?: string;
 };
 
 // ── Helpers ─────────────────────────────────────────────────────
@@ -83,9 +85,25 @@ export function PropertyForm({
   editingProperty,
   title,
   subtitle,
+  focusSection,
 }: PropertyFormProps) {
   const router = useRouter();
   const isEditing = !!editingProperty;
+
+  const insuranceSectionRef = React.useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to insurance section when navigated with ?focus=insurance
+  React.useEffect(() => {
+    if (focusSection === "insurance" && insuranceSectionRef.current) {
+      const timer = setTimeout(() => {
+        insuranceSectionRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [focusSection]);
 
   const [form, setForm] = React.useState<PropertyFormValues>(() => {
     if (editingProperty) {
@@ -506,10 +524,12 @@ export function PropertyForm({
               <Separator />
 
               {/* Insurance */}
-              <InsuranceSection
-                policies={form.insurance}
-                onChange={(policies) => update("insurance", policies)}
-              />
+              <div ref={insuranceSectionRef} id="insurance-section" className="scroll-mt-6">
+                <InsuranceSection
+                  policies={form.insurance}
+                  onChange={(policies) => update("insurance", policies)}
+                />
+              </div>
 
               <Separator />
 
