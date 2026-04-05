@@ -717,6 +717,10 @@ export type AssetHolding = {
    * - alternative / other: total amount invested
    */
   cost_basis: number;
+  /** Legacy alias for cost_basis kept for client-side compatibility. */
+  initial_value?: number;
+  /** Total amount the user paid / invested (used for non-market holdings). */
+  amount_invested?: number;
   initial_value_date: string;
   symbol?: string;
   name: string;
@@ -1122,7 +1126,11 @@ export type Property = {
   country: string;
   city: string;
   purchase_date: string;
+  /** What the user originally paid for the property. */
+  purchase_price?: number | null;
   market_value: number;
+  /** When true the user has indicated they are unsure of the current market value. */
+  value_uncertain?: boolean;
   mortgage_balance: number;
   additional_liens?: Lien[];
   is_primary: boolean;
@@ -2037,6 +2045,8 @@ export type Scenario = {
   monthlyReturnRate: number;
   inflationRate: number;
   description: string;
+  /** Multiplier applied to monthly surplus/contributions for scenario modelling. */
+  monthlyMultiplier?: number;
 };
 
 export type ApiError = {
@@ -2852,7 +2862,7 @@ export function selectGoalMetricsForScenario(
   scenario: Scenario,
 ): GoalMetrics[] {
   const adjustedSurplus =
-    selectCashFlowMetrics(data).monthlySurplus * scenario.monthlyMultiplier;
+    selectCashFlowMetrics(data).monthlySurplus * (scenario.monthlyMultiplier ?? 1);
   return goals.map((goal) => {
     const progressPct =
       goal.target > 0 ? (goal.current / goal.target) * 100 : 100;
@@ -2864,7 +2874,7 @@ export function selectGoalMetricsForScenario(
           assumedAnnualReturnPct,
           goal.yearsRemaining,
         );
-    const adjustedRequired = required * scenario.monthlyMultiplier;
+    const adjustedRequired = required * (scenario.monthlyMultiplier ?? 1);
     return {
       id: goal.id,
       title: goal.title,

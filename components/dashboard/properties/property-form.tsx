@@ -39,7 +39,9 @@ export type PropertyFormValues = {
   country: string;
   city: string;
   purchaseDate: string;
+  purchasePrice: string;
   marketValue: string;
+  valueUncertain: boolean;
   mortgageBalance: string;
   isPrimary: boolean;
   insurance: PropertyInsurance[];
@@ -93,9 +95,13 @@ export function PropertyForm({
         country: editingProperty.country,
         city: editingProperty.city,
         purchaseDate: editingProperty.purchase_date,
+        purchasePrice: editingProperty.purchase_price
+          ? formatNumberWithCommas(editingProperty.purchase_price.toString())
+          : "",
         marketValue: formatNumberWithCommas(
           editingProperty.market_value.toString(),
         ),
+        valueUncertain: editingProperty.value_uncertain ?? false,
         mortgageBalance: formatNumberWithCommas(
           editingProperty.mortgage_balance.toString(),
         ),
@@ -109,7 +115,9 @@ export function PropertyForm({
       country: "",
       city: "",
       purchaseDate: "",
+      purchasePrice: "",
       marketValue: "",
+      valueUncertain: false,
       mortgageBalance: "",
       isPrimary: false,
       insurance: [],
@@ -127,13 +135,14 @@ export function PropertyForm({
   }
 
   function handleMoneyInput(
-    key: "marketValue" | "mortgageBalance",
+    key: "purchasePrice" | "marketValue" | "mortgageBalance",
     value: string,
   ): void {
     update(key, formatNumberWithCommas(value));
   }
 
-  // ── Derived values ──────────────────────────────────────────
+  // ── Derived values ──────────────────────────────────────────────────────────
+  const purchasePriceNum = toNumber(form.purchasePrice);
   const marketValueNum = toNumber(form.marketValue);
   const mortgageNum = toNumber(form.mortgageBalance);
   const equity = marketValueNum - mortgageNum;
@@ -191,7 +200,7 @@ export function PropertyForm({
     form.name.trim().length > 0 &&
     form.country.length > 0 &&
     form.city.trim().length > 0 &&
-    marketValueNum > 0 &&
+    (form.valueUncertain || marketValueNum > 0) &&
     form.purchaseDate.length > 0;
 
   // ── Submit ──────────────────────────────────────────────────
@@ -210,7 +219,9 @@ export function PropertyForm({
         country: form.country,
         city: form.city.trim(),
         purchase_date: form.purchaseDate,
+        purchase_price: purchasePriceNum > 0 ? purchasePriceNum : null,
         market_value: marketValueNum,
+        value_uncertain: form.valueUncertain,
         mortgage_balance: mortgageNum,
         is_primary: form.isPrimary,
         is_active: true,
@@ -371,7 +382,37 @@ export function PropertyForm({
               {/* Financials */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="market-value">Market value</Label>
+                  <Label htmlFor="purchase-price">Purchase price</Label>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                      $
+                    </div>
+                    <Input
+                      id="purchase-price"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="600,000"
+                      value={form.purchasePrice}
+                      onChange={(e) =>
+                        handleMoneyInput("purchasePrice", e.target.value)
+                      }
+                      className="pl-7"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    What you originally paid for this property.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="market-value">
+                    Current market value
+                    {form.valueUncertain && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        (optional — uncertain)
+                      </span>
+                    )}
+                  </Label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
                       $
@@ -386,14 +427,29 @@ export function PropertyForm({
                         handleMoneyInput("marketValue", e.target.value)
                       }
                       className="pl-7"
-                      required
+                      disabled={form.valueUncertain}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Current estimated market value.
-                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Switch
+                      id="value-uncertain"
+                      checked={form.valueUncertain}
+                      onCheckedChange={(checked) => {
+                        update("valueUncertain", checked);
+                        if (checked) update("marketValue", "");
+                      }}
+                    />
+                    <Label
+                      htmlFor="value-uncertain"
+                      className="text-xs font-normal text-muted-foreground cursor-pointer"
+                    >
+                      I&apos;m not sure of the current value
+                    </Label>
+                  </div>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="mortgage">Mortgage balance</Label>
                   <div className="relative">

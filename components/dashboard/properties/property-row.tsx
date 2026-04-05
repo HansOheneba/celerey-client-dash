@@ -36,6 +36,18 @@ export function PropertyRow({ property }: { property: Property }) {
       ? "expiring"
       : "ok";
 
+  const hasPurchasePrice =
+    property.purchase_price != null && property.purchase_price > 0;
+  const hasMarketValue = property.market_value > 0;
+  const gainLoss =
+    hasPurchasePrice && hasMarketValue
+      ? property.market_value - property.purchase_price!
+      : null;
+  const gainLossPct =
+    gainLoss !== null && hasPurchasePrice
+      ? (gainLoss / property.purchase_price!) * 100
+      : null;
+
   return (
     <DashCard>
       <CardContent className="p-5">
@@ -76,12 +88,56 @@ export function PropertyRow({ property }: { property: Property }) {
 
           {/* Right: stats */}
           <div className="grid grid-cols-2 gap-4 md:grid-cols-5 md:gap-6">
+            {hasPurchasePrice && (
+              <div>
+                <div className="text-xs text-muted-foreground">Bought For</div>
+                <div className="text-sm font-semibold tabular-nums">
+                  {formatCurrency(property.purchase_price!)}
+                </div>
+              </div>
+            )}
+
             <div>
               <div className="text-xs text-muted-foreground">Market Value</div>
-              <div className="text-sm font-semibold tabular-nums">
-                {formatCurrency(property.market_value)}
-              </div>
+              {property.value_uncertain ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-semibold tabular-nums text-muted-foreground">
+                    —
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-normal border-amber-400/50 text-amber-600 dark:text-amber-400"
+                  >
+                    Uncertain
+                  </Badge>
+                </div>
+              ) : (
+                <div className="text-sm font-semibold tabular-nums">
+                  {formatCurrency(property.market_value)}
+                </div>
+              )}
             </div>
+
+            {gainLoss !== null && (
+              <div>
+                <div className="text-xs text-muted-foreground">Gain / Loss</div>
+                <div
+                  className={cn(
+                    "text-sm font-semibold tabular-nums",
+                    gainLoss >= 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400",
+                  )}
+                >
+                  {gainLoss >= 0 ? "+" : ""}
+                  {formatCurrency(gainLoss)}
+                  <span className="ml-1 text-xs font-normal opacity-70">
+                    ({gainLossPct! >= 0 ? "+" : ""}
+                    {gainLossPct!.toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div>
               <div className="text-xs text-muted-foreground">Mortgage</div>

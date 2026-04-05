@@ -107,7 +107,9 @@ export function HoldingForm({
           : "",
         faceValue:
           editingHolding.asset_type === "bond"
-            ? formatNumberWithCommas(editingHolding.initial_value.toString())
+            ? formatNumberWithCommas(
+                (editingHolding.initial_value ?? editingHolding.cost_basis).toString(),
+              )
             : "",
         couponRate: editingHolding.coupon_rate?.toString() ?? "",
         maturityDate: editingHolding.maturity_date ?? "",
@@ -360,6 +362,7 @@ export function HoldingForm({
         name: form.name.trim(),
         asset_type: form.assetType,
         valuation_method: isMarket ? "market" : "manual",
+        cost_basis: legacyInitialValue,
         initial_value: legacyInitialValue,
         initial_value_date: form.purchaseDate || now.slice(0, 10),
         symbol: form.symbol.trim() || undefined,
