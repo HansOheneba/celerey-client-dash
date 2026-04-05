@@ -108,7 +108,9 @@ export function HoldingForm({
         faceValue:
           editingHolding.asset_type === "bond"
             ? formatNumberWithCommas(
-                (editingHolding.initial_value ?? editingHolding.cost_basis).toString(),
+                (
+                  editingHolding.initial_value ?? editingHolding.cost_basis
+                ).toString(),
               )
             : "",
         couponRate: editingHolding.coupon_rate?.toString() ?? "",

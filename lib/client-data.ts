@@ -2862,7 +2862,8 @@ export function selectGoalMetricsForScenario(
   scenario: Scenario,
 ): GoalMetrics[] {
   const adjustedSurplus =
-    selectCashFlowMetrics(data).monthlySurplus * (scenario.monthlyMultiplier ?? 1);
+    selectCashFlowMetrics(data).monthlySurplus *
+    (scenario.monthlyMultiplier ?? 1);
   return goals.map((goal) => {
     const progressPct =
       goal.target > 0 ? (goal.current / goal.target) * 100 : 100;
