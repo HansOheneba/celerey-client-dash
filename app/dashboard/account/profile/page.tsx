@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Building2 } from "lucide-react";
 import { useFinancialStore } from "@/store/financialStore";
 import { getUserFullName, getUserAge, mockUser } from "@/lib/client-data";
 
@@ -63,6 +64,7 @@ export default function ProfilePage() {
   const isSolo = mode === "solo";
   const isFamily = mode === "family";
   const fullName = getUserFullName(user);
+  const isEnterprise = user.user_type === "enterprise";
 
   // ── Personal / Household Information ──────────────────────────────────────
   const personalFields: ProfileField[] = [
@@ -131,6 +133,27 @@ export default function ProfilePage() {
     },
   ];
 
+  // ── Enterprise ────────────────────────────────────────────────────────────
+  const enterpriseFields: ProfileField[] = isEnterprise
+    ? [
+        { label: "Company", value: user.enterprise_info?.company_name ?? "" },
+        { label: "Company ID", value: user.enterprise_info?.company_id ?? "" },
+        {
+          label: "Seat Granted",
+          value: user.enterprise_info?.seat_granted_at
+            ? format(
+                new Date(user.enterprise_info.seat_granted_at),
+                "dd MMM yyyy",
+              )
+            : "",
+        },
+        {
+          label: "Provisioned By",
+          value: user.enterprise_info?.seat_granted_by ?? "",
+        },
+      ]
+    : [];
+
   // ── Financial Profile ──────────────────────────────────────────────────────
   const financialFields: ProfileField[] = [
     { label: "Risk Profile", value: riskLabel(user.risk_profile) },
@@ -167,6 +190,12 @@ export default function ProfilePage() {
             <Badge variant="outline" className="text-xs">
               {accountModeLabel(mode)}
             </Badge>
+            {isEnterprise && (
+              <Badge className="text-xs bg-[#1B1856] text-white gap-1">
+                <Building2 className="h-3 w-3" />
+                Enterprise
+              </Badge>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
@@ -180,6 +209,9 @@ export default function ProfilePage() {
       <Section title="Location" fields={locationFields} />
       <Section title="Account Information" fields={accountFields} />
       <Section title="Financial Profile" fields={financialFields} />
+      {isEnterprise && (
+        <Section title="Enterprise Account" fields={enterpriseFields} />
+      )}
     </div>
   );
 }

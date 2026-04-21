@@ -188,6 +188,7 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
   setIncome: (rows: CashFlowRow[]) => void;
   setExpenses: (categories: ExpenseCategory[]) => void;
   addLiability: (liability: Liability) => void;
+  updateLiability: (id: string, patch: Partial<Omit<Liability, "id">>) => void;
   removeLiability: (id: string) => void;
   setRetirement: (config: RetirementConfig) => void;
   setEmergencyFund: (config: EmergencyFundConfig) => void;
@@ -224,6 +225,7 @@ type FinancialData = Omit<
   | "setIncome"
   | "setExpenses"
   | "addLiability"
+  | "updateLiability"
   | "removeLiability"
   | "setRetirement"
   | "setEmergencyFund"
@@ -309,6 +311,22 @@ export const useFinancialStore = create<FinancialState>()(
       addLiability: (liability) =>
         set((s) => {
           const liabilities = [...s.liabilities, liability];
+          return {
+            liabilities,
+            profileCompletionScore: computeProfileCompletionScore({
+              ...s,
+              liabilities,
+            }),
+          };
+        }),
+
+      updateLiability: (id, patch) =>
+        set((s) => {
+          const liabilities = s.liabilities.map((l) =>
+            l.id === id
+              ? { ...l, ...patch, updatedAt: new Date().toISOString() }
+              : l,
+          );
           return {
             liabilities,
             profileCompletionScore: computeProfileCompletionScore({

@@ -11,6 +11,7 @@ interface EmailFormProps {
   mode: AuthMode;
   onModeToggle: () => void;
   isSubmitting: boolean;
+  errorMessage?: string | null;
 }
 
 export function EmailForm({
@@ -18,6 +19,7 @@ export function EmailForm({
   mode,
   onModeToggle,
   isSubmitting,
+  errorMessage,
 }: EmailFormProps) {
   const [email, setEmail] = React.useState("");
 
@@ -38,6 +40,12 @@ export function EmailForm({
           ? "Enter your email to log in to your dashboard."
           : "Enter your email to get into your dashboard."}
       </p>
+
+      {errorMessage ? (
+        <p className="mt-3 text-sm text-destructive" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-3">
         <div className="space-y-2">

@@ -11,11 +11,21 @@ import { EmailForm } from "@/components/login/email-form";
 import { OtpForm } from "@/components/login/otp-form";
 import { CelereyLoader } from "@/components/login/celerey-loader";
 import type { AuthMode, AuthStep } from "@/components/login/types";
-import { setAuth, getSubscription, isOnboarded } from "../lib/client-data";
+import {
+  setAuth,
+  getSubscription,
+  isOnboarded,
+  getUserType,
+} from "../lib/client-data";
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const OTP_MESSAGE_TYPE = "OTPAuthMessage:HTML";
+const OTP_MESSAGE_SUBJECT = "Your Celerey Verification Code";
+const ONBOARDING_TOKEN_KEY = "onboarding_token";
+
+// Requests go to the Next.js proxy route to avoid CORS.
+// next.config.ts rewrites /api/proxy/* → NEXT_PUBLIC_BASE_API_URL/* server-side.
+const GENERATE_OTP_ENDPOINT = "/api/proxy/onboarding.generate-otp";
+const VERIFY_OTP_ENDPOINT = "/api/proxy/onboarding.verify-otp";
 
 export default function Home() {
   const router = useRouter();
@@ -25,45 +35,122 @@ export default function Home() {
   const [email, setEmail] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isNavigating, setIsNavigating] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  /** Email entered - spin the button, then move to OTP step */
+  /** Request OTP for the supplied email; only move forward on success. */
   async function handleEmailSubmit(submittedEmail: string) {
+    setErrorMessage(null);
     setEmail(submittedEmail);
     setIsSubmitting(true);
-    await sleep(800);
-    setIsSubmitting(false);
-    setStep("otp");
+
+    try {
+      const response = await fetch(GENERATE_OTP_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: submittedEmail,
+          messageType: OTP_MESSAGE_TYPE,
+          messageSubject: OTP_MESSAGE_SUBJECT,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as {
+        success?: boolean;
+        message?: string;
+      } | null;
+
+      if (!response.ok || !payload?.success) {
+        throw new Error(
+          payload?.message || "Unable to send verification code.",
+        );
+      }
+
+      setStep("otp");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to send verification code.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  /** OTP entered - spin the button briefly, then full-screen loader while routing */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async function handleOtpVerify(_otp: string) {
+  /** Verify OTP and route into onboarding flow on success. */
+  async function handleOtpVerify(otp: string) {
+    setErrorMessage(null);
     setIsSubmitting(true);
-    await sleep(700);
-    setIsNavigating(true);
+    let verificationSucceeded = false;
 
-    setAuth(email);
+    try {
+      const response = await fetch(VERIFY_OTP_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          otp,
+        }),
+      });
 
-    const sub = getSubscription();
-    const completedOnboarding = isOnboarded();
+      const payload = (await response.json().catch(() => null)) as {
+        success?: boolean;
+        message?: string;
+        data?: { onboarding_token?: string };
+      } | null;
 
-    // New flow: onboarding → choose-plan → dashboard
-    if (!completedOnboarding) {
-      router.push("/onboarding");
-    } else if (sub.status === "none") {
-      router.push("/choose-plan");
-    } else {
-      router.push("/dashboard");
+      const onboardingToken = payload?.data?.onboarding_token;
+
+      if (!response.ok || !payload?.success || !onboardingToken) {
+        throw new Error(payload?.message || "Unable to verify code.");
+      }
+
+      try {
+        window.localStorage.setItem(ONBOARDING_TOKEN_KEY, onboardingToken);
+      } catch {
+        // Ignore storage failures; auth flow can still continue.
+      }
+
+      verificationSucceeded = true;
+      setIsNavigating(true);
+
+      setAuth(email);
+
+      const sub = getSubscription();
+      const completedOnboarding = isOnboarded();
+
+      // New flow: onboarding → choose-plan → dashboard
+      if (!completedOnboarding) {
+        router.push("/onboarding");
+      } else if (getUserType() === "enterprise" || sub.status !== "none") {
+        router.push("/dashboard");
+      } else {
+        router.push("/choose-plan");
+      }
+      // keep loader visible during navigation
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unable to verify code.",
+      );
+    } finally {
+      if (!verificationSucceeded) {
+        setIsSubmitting(false);
+      }
     }
-    // keep loader visible during navigation
   }
 
   /** Go back from OTP to email */
   function handleBack() {
+    setErrorMessage(null);
     setStep("email");
   }
 
   function handleModeToggle() {
+    setErrorMessage(null);
     setMode((currentMode) => (currentMode === "signup" ? "login" : "signup"));
     setStep("email");
     setEmail("");
@@ -97,6 +184,7 @@ export default function Home() {
                   mode={mode}
                   onModeToggle={handleModeToggle}
                   isSubmitting={isSubmitting}
+                  errorMessage={errorMessage}
                 />
               ) : (
                 <OtpForm
@@ -105,6 +193,7 @@ export default function Home() {
                   onVerify={handleOtpVerify}
                   onBack={handleBack}
                   isSubmitting={isSubmitting}
+                  errorMessage={errorMessage}
                 />
               )}
 

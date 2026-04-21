@@ -12,6 +12,15 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_API_URL?.replace(/\/$/, "");
+    return [
+      {
+        source: "/api/proxy/:path*",
+        destination: `${baseUrl}/:path*`,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

@@ -334,7 +334,7 @@ function projectHistoricalAmountOverview(
 export default function DashboardPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
-  const { ready, auth, sub } = useClientGate();
+  const { ready, auth, sub, userType } = useClientGate();
   useMonthlySnapshot();
 
   useEffect(() => {
@@ -343,11 +343,13 @@ export default function DashboardPage() {
       router.replace("/");
       return;
     }
+    // Enterprise users have their subscription covered by their company — skip paywall
+    if (userType === "enterprise") return;
     if (auth.loggedIn && sub.status === "none") {
       router.replace("/choose-plan");
       return;
     }
-  }, [ready, auth, sub.status, router]);
+  }, [ready, auth, sub.status, userType, router]);
 
   function handleUpgradeIntent(): void {
     if (typeof window !== "undefined") {
@@ -361,13 +363,14 @@ export default function DashboardPage() {
   }
 
   const access = useMemo(() => {
-    const has = (k: FeatureKey) => canAccessFeature(sub.status, k);
+    const has = (k: FeatureKey) =>
+      canAccessFeature(sub.status, k, userType === "enterprise");
     return {
       premiumInsights: has("premiumInsights"),
       exportData: has("exportData"),
       advisorChat: has("advisorChat"),
     };
-  }, [sub.status]);
+  }, [sub.status, userType]);
 
   // ── Store ─────────────────────────────────────────────────────────────────
 

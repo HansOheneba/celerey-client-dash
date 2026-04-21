@@ -15,7 +15,7 @@ function EditPropertyContent() {
   // Read ?focus= without useSearchParams to avoid Suspense requirement
   const focusSection =
     typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("focus") ?? undefined
+      ? (new URLSearchParams(window.location.search).get("focus") ?? undefined)
       : undefined;
 
   if (!property) {
@@ -23,7 +23,9 @@ function EditPropertyContent() {
     return null;
   }
 
-  return <PropertyForm editingProperty={property} focusSection={focusSection} />;
+  return (
+    <PropertyForm editingProperty={property} focusSection={focusSection} />
+  );
 }
 
 export default function EditPropertyPage() {

@@ -46,11 +46,17 @@ export type LiabilityType =
 export interface Liability {
   id: string;
   name: string;
+  /** Lender or financial provider (e.g. Barclays, Standard Bank). */
+  lender?: string;
   type: LiabilityType;
   balance: number;
   interestRatePct: number;
   minPaymentMonthly: number;
   dueDay?: number;
+  /** Original principal at origination. */
+  originalLoanAmount?: number;
+  /** Expected full payoff date. */
+  expectedPayoffDate?: string;
   updatedAt: ISODateTimeString;
 }
 
@@ -516,6 +522,27 @@ export function clearSubscription(): void {
   safeRemoveItem(TRIAL_STARTED_AT_KEY);
 }
 
+// ── Enterprise user-type helpers ──────────────────────────────────────────────
+
+const USER_TYPE_KEY = "user_type_v1";
+
+/**
+ * Returns the stored user type. Defaults to "regular".
+ * Used by paywall guards before the Zustand store is hydrated.
+ */
+export function getUserType(): "regular" | "enterprise" {
+  return safeGetItem(USER_TYPE_KEY) === "enterprise" ? "enterprise" : "regular";
+}
+
+/** Persists the user type to localStorage — call after login / profile fetch. */
+export function setUserType(type: "regular" | "enterprise"): void {
+  safeSetItem(USER_TYPE_KEY, type);
+}
+
+export function clearUserType(): void {
+  safeRemoveItem(USER_TYPE_KEY);
+}
+
 const ONBOARDED_KEY = "onboarded_v1";
 
 /** Returns true if the user has completed the onboarding flow. */
@@ -583,7 +610,9 @@ export const trialDisabledFeatures: FeatureKey[] = [
 export function canAccessFeature(
   status: SubscriptionStatus,
   feature: FeatureKey,
+  isEnterprise = false,
 ): boolean {
+  if (isEnterprise) return true;
   if (status === "active") return true;
   if (status === "trialing") return !trialDisabledFeatures.includes(feature);
   return false;
@@ -624,6 +653,15 @@ export type User = {
   risk_profile?: "conservative" | "moderate" | "aggressive";
   dependents?: number;
   bio?: string;
+  /** Present only for enterprise users — populated by the backend on seat provisioning. */
+  enterprise_info?: {
+    company_name: string;
+    company_id: string;
+    /** ISO datetime when the company granted this seat. */
+    seat_granted_at: string;
+    /** Admin or system that provisioned the seat. */
+    seat_granted_by?: string;
+  };
 };
 
 export const mockUser: User = {
@@ -1100,6 +1138,17 @@ export type PropertyInsurance = {
   expiry_date: string;
 };
 
+/** Full mortgage details stored on a property (source of truth for property mortgages). */
+export type PropertyMortgage = {
+  lender: string;
+  balance: number;
+  interest_rate_pct: number;
+  min_payment_monthly: number;
+  due_day?: number;
+  original_loan_amount?: number;
+  expected_payoff_date?: string;
+};
+
 export const COUNTRY_OPTIONS = [
   "USA",
   "UK",
@@ -1132,6 +1181,8 @@ export type Property = {
   /** When true the user has indicated they are unsure of the current market value. */
   value_uncertain?: boolean;
   mortgage_balance: number;
+  /** Full mortgage details — when set, mortgage_balance is kept in sync with mortgage.balance. */
+  mortgage?: PropertyMortgage;
   additional_liens?: Lien[];
   is_primary: boolean;
   is_active: boolean;

@@ -1,0 +1,1222 @@
+{
+  "baseUrl": "/api/v1",
+  "auth": "Bearer token required on all endpoints",
+  "notes": [
+    "Property.mortgage is the source of truth for property mortgages \u2014 read into Liabilities tab as read-only cards",
+    "Property.insurance[] is the source of truth for home/property insurance \u2014 read into Insurance tab as read-only cards",
+    "All IDs are UUIDs. updatedAt / created_at / updated_at are ISO-8601 datetime strings",
+    "currency is a 3-letter ISO 4217 code (e.g. USD, GBP, GHS)",
+    "Enterprise users (user_type = 'enterprise') have their subscription paid by their company \u2014 they bypass the paywall entirely and receive full feature access",
+    "When a user is provisioned as enterprise, set user_type='enterprise' and populate enterprise_info. Also return user_type at the top-level of every /users/:id response so the client can read it before the Zustand store is hydrated"
+  ],
+  "tabs": {
+    "user": {
+      "description": "User profile management. Enterprise users also return enterprise_info.",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/users/:userId",
+          "description": "Get the authenticated user's profile",
+          "requestBody": null,
+          "responseBody": {
+            "user_id": "uuid",
+            "user_type": "regular | enterprise",
+            "first_name": "string | null",
+            "last_name": "string | null",
+            "display_name": "string | null",
+            "email": "string",
+            "phone_number": "string | null",
+            "resident_country": "string",
+            "city": "string | null",
+            "citizenships": [
+              "string"
+            ],
+            "date_of_birth": "YYYY-MM-DD | null",
+            "currency": "string",
+            "preferred_contact": "string | null",
+            "is_active": "boolean",
+            "occupation": "string | null",
+            "marital_status": "single | married | divorced | widowed | null",
+            "account_mode": "solo | partner | family",
+            "risk_profile": "conservative | moderate | aggressive | null",
+            "dependents": "number | null",
+            "bio": "string | null",
+            "enterprise_info": {
+              "note": "Present only when user_type = 'enterprise'",
+              "company_name": "string",
+              "company_id": "uuid",
+              "seat_granted_at": "ISO datetime",
+              "seat_granted_by": "string | null \u2014 admin email or name that provisioned the seat"
+            },
+            "created_at": "ISO datetime",
+            "updated_at": "ISO datetime"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/users/:userId",
+          "description": "Update editable profile fields (enterprise_info is read-only via this endpoint)",
+          "requestBody": {
+            "first_name": "string | optional",
+            "last_name": "string | optional",
+            "display_name": "string | optional",
+            "phone_number": "string | null | optional",
+            "resident_country": "string | optional",
+            "city": "string | null | optional",
+            "citizenships": [
+              "string"
+            ],
+            "date_of_birth": "YYYY-MM-DD | null | optional",
+            "currency": "string | optional",
+            "preferred_contact": "string | null | optional",
+            "occupation": "string | null | optional",
+            "marital_status": "single | married | divorced | widowed | null | optional",
+            "account_mode": "solo | partner | family | optional",
+            "risk_profile": "conservative | moderate | aggressive | null | optional",
+            "dependents": "number | null | optional",
+            "bio": "string | null | optional"
+          },
+          "responseBody": {
+            "user": "updated User object (same shape as GET /users/:userId)"
+          },
+          "notes": [
+            "user_type and enterprise_info cannot be changed via this endpoint",
+            "Set updated_at = now server-side"
+          ]
+        }
+      ]
+    },
+    "enterprise": {
+      "description": "Enterprise company management and seat provisioning. All endpoints under /enterprise/admin require an admin or company-admin role.",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/enterprise/companies",
+          "description": "Register a new enterprise company (Celerey admin only)",
+          "requestBody": {
+            "company_name": "string \u2014 required",
+            "contact_email": "string \u2014 required",
+            "seat_limit": "number \u2014 required \u2014 max number of users this company can provision",
+            "notes": "string | null"
+          },
+          "responseBody": {
+            "company_id": "uuid",
+            "company_name": "string",
+            "contact_email": "string",
+            "seat_limit": "number",
+            "seats_used": 0,
+            "is_active": "boolean",
+            "created_at": "ISO datetime"
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/enterprise/companies/:companyId/seats",
+          "description": "List all provisioned seats for a company",
+          "requestBody": null,
+          "responseBody": {
+            "seats": [
+              {
+                "user_id": "uuid",
+                "email": "string",
+                "display_name": "string | null",
+                "seat_granted_at": "ISO datetime",
+                "seat_granted_by": "string | null",
+                "is_active": "boolean"
+              }
+            ],
+            "seat_limit": "number",
+            "seats_used": "number"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/enterprise/companies/:companyId/seats",
+          "description": "Provision a seat for a user \u2014 grants them enterprise access, bypassing the paywall",
+          "requestBody": {
+            "email": "string \u2014 required \u2014 the user's email address",
+            "display_name": "string | null \u2014 optional pre-filled name shown to the user",
+            "seat_granted_by": "string | null \u2014 admin name or email for audit trail"
+          },
+          "responseBody": {
+            "user_id": "uuid",
+            "email": "string",
+            "user_type": "enterprise",
+            "enterprise_info": {
+              "company_name": "string",
+              "company_id": "uuid",
+              "seat_granted_at": "ISO datetime",
+              "seat_granted_by": "string | null"
+            }
+          },
+          "notes": [
+            "If a user with this email already exists: set user_type = 'enterprise' and populate enterprise_info",
+            "If no user exists yet: pre-create the account or send an invite link \u2014 user completes sign-up through the normal onboarding flow",
+            "Provisioning a seat must NOT redirect the user to /choose-plan after login",
+            "Returns 409 if the company has reached its seat_limit"
+          ]
+        },
+        {
+          "method": "DELETE",
+          "path": "/enterprise/companies/:companyId/seats/:userId",
+          "description": "Revoke a user's enterprise seat \u2014 downgrades them to regular user (subscription status becomes 'none')",
+          "requestBody": null,
+          "responseBody": {
+            "user_id": "uuid",
+            "user_type": "regular",
+            "enterprise_info": null
+          },
+          "notes": [
+            "After revocation the user will hit the paywall on next login",
+            "Set user_type = 'regular' and remove enterprise_info server-side"
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/enterprise/companies/:companyId",
+          "description": "Update company details or seat limit",
+          "requestBody": {
+            "company_name": "string | optional",
+            "contact_email": "string | optional",
+            "seat_limit": "number | optional",
+            "is_active": "boolean | optional"
+          },
+          "responseBody": {
+            "company": "updated company object"
+          }
+        }
+      ]
+    },
+    "assets": {
+      "description": "Asset Holdings \u2014 stocks, ETFs, bonds, crypto, cash, alternatives",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/users/:userId/holdings",
+          "description": "List all active holdings for the user",
+          "requestBody": null,
+          "responseBody": {
+            "holdings": [
+              {
+                "holding_id": "uuid",
+                "user_id": "uuid",
+                "asset_type": "stock | bond | etf | mutual_fund | crypto | cash | alternative | other",
+                "valuation_method": "market | auto_calculated | manual",
+                "name": "string",
+                "symbol": "string | null",
+                "quantity": "number | null",
+                "cost_basis": "number",
+                "current_value": "number | null",
+                "coupon_rate": "number | null \u2014 annual % for bonds and interest-bearing cash",
+                "maturity_date": "YYYY-MM-DD | null \u2014 bonds only",
+                "initial_value_date": "YYYY-MM-DD",
+                "last_updated": "ISO datetime | null \u2014 set when valuation_method is manual",
+                "is_active": "boolean",
+                "created_at": "ISO datetime",
+                "updated_at": "ISO datetime"
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/users/:userId/holdings",
+          "description": "Create a new holding",
+          "requestBody": {
+            "asset_type": "stock | bond | etf | mutual_fund | crypto | cash | alternative | other",
+            "name": "string \u2014 required",
+            "symbol": "string | null \u2014 required for stock, etf, crypto, optional for mutual_fund",
+            "quantity": "number | null \u2014 required for stock, etf, crypto, mutual_fund",
+            "cost_basis": "number \u2014 required",
+            "current_value": "number | null \u2014 required for manual holdings (alternative, other)",
+            "coupon_rate": "number | null \u2014 annual % for bond / cash",
+            "maturity_date": "YYYY-MM-DD | null \u2014 bond only",
+            "initial_value_date": "YYYY-MM-DD \u2014 required"
+          },
+          "responseBody": {
+            "holding": "full AssetHolding object (see GET response schema)"
+          },
+          "notes": [
+            "valuation_method is derived server-side based on asset_type and symbol presence \u2014 never sent by client",
+            "market: stock, etf, crypto (with symbol) \u2014 server fetches live price",
+            "auto_calculated: bond accrual via coupon_rate; cash APY via coupon_rate",
+            "manual: alternative, other, or any type without a live price feed"
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/users/:userId/holdings/:holdingId",
+          "description": "Update a holding (partial update)",
+          "requestBody": {
+            "name": "string | optional",
+            "quantity": "number | optional",
+            "cost_basis": "number | optional",
+            "current_value": "number | optional \u2014 only applicable for manual holdings",
+            "coupon_rate": "number | optional",
+            "maturity_date": "YYYY-MM-DD | optional",
+            "initial_value_date": "YYYY-MM-DD | optional"
+          },
+          "responseBody": {
+            "holding": "updated AssetHolding object"
+          },
+          "notes": [
+            "When current_value is updated on a manual holding, set last_updated = now server-side"
+          ]
+        },
+        {
+          "method": "DELETE",
+          "path": "/users/:userId/holdings/:holdingId",
+          "description": "Soft-delete a holding (set is_active = false)",
+          "requestBody": null,
+          "responseBody": {
+            "holding_id": "uuid",
+            "is_active": false
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/users/:userId/holdings/:holdingId/valuations",
+          "description": "Record a manual valuation snapshot for a holding",
+          "requestBody": {
+            "value": "number \u2014 required",
+            "as_of": "YYYY-MM-DD \u2014 required",
+            "source": "manual | market"
+          },
+          "responseBody": {
+            "valuation_id": "uuid",
+            "holding_id": "uuid",
+            "value": "number",
+            "as_of": "YYYY-MM-DD",
+            "source": "manual | market",
+            "created_at": "ISO datetime"
+          }
+        }
+      ],
+      "livePriceFeeds": {
+        "description": "How the client fetches live asset prices and what the backend should be aware of for server-side valuation.",
+        "currentImplementation": {
+          "crypto": {
+            "provider": "CoinGecko",
+            "plan": "Free public tier \u2014 no API key required",
+            "endpoint": "https://api.coingecko.com/api/v3/simple/price?ids={coin_ids}&vs_currencies=usd",
+            "apiKey": null,
+            "calledFrom": "Client-side only (browser fetch) \u2014 NOT proxied through the Celerey backend",
+            "supportedSymbols": {
+              "BTC": "bitcoin",
+              "ETH": "ethereum",
+              "SOL": "solana",
+              "BNB": "binancecoin",
+              "XRP": "ripple",
+              "ADA": "cardano",
+              "DOGE": "dogecoin",
+              "AVAX": "avalanche-2",
+              "DOT": "polkadot",
+              "MATIC": "matic-network"
+            },
+            "clientCaching": {
+              "localStorage_key": "asset_live_prices_v1",
+              "ttl_hours": 2,
+              "strategy": "On load, check cache first. If cache is fresh AND all active crypto holdings are covered, use cache. Otherwise fetch fresh from CoinGecko. User can also force-refresh manually."
+            },
+            "rateLimitNote": "CoinGecko free tier allows ~30 req/min. The client batches all crypto symbols into a single request per fetch cycle, so this is not a concern at current scale. If Celerey scales to many concurrent users, move the fetch to the backend and cache server-side.",
+            "fallback": "If the fetch fails or times out (8s timeout), the client falls back silently to the stored current_value on the holding record \u2014 the UI does not crash."
+          },
+          "stocks_etfs_bonds": {
+            "status": "No live feed implemented yet \u2014 uses manual / stored current_value from the holding record",
+            "recommendedProviders": [
+              {
+                "name": "Finnhub",
+                "url": "https://finnhub.io",
+                "freeTier": "60 req/min, stocks + ETFs + crypto",
+                "endpoint": "https://finnhub.io/api/v1/quote?symbol={symbol}&token={apiKey}",
+                "responseField": "c (current price), pc (previous close), t (timestamp)"
+              },
+              {
+                "name": "Twelve Data",
+                "url": "https://twelvedata.com",
+                "freeTier": "800 req/day, stocks + ETFs + forex",
+                "endpoint": "https://api.twelvedata.com/price?symbol={symbol}&apikey={apiKey}"
+              },
+              {
+                "name": "Alpha Vantage",
+                "url": "https://www.alphavantage.co",
+                "freeTier": "25 req/day",
+                "endpoint": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={apiKey}"
+              }
+            ],
+            "backendNote": "When you add stock/ETF live prices, the fetch should go through the Celerey backend (not directly from the client) so the API key stays secret. The backend can then cache per-symbol prices in Redis with a 15-min TTL and return current_value in the AssetHolding response."
+          }
+        },
+        "backendValuationResponsibility": {
+          "description": "When the backend returns AssetHolding objects, it should populate current_value based on valuation_method:",
+          "market": "Fetch live price from the relevant provider (CoinGecko for crypto; Finnhub/Twelve Data for stocks/ETFs). current_value = quantity * live_price.",
+          "auto_calculated": "Compute accrued value server-side. For bonds: current_value = cost_basis * (1 + coupon_rate/100)^years_held. For cash: similar compound interest logic.",
+          "manual": "Return the current_value as stored \u2014 no computation. The last_updated timestamp tells the client when it was last manually updated."
+        },
+        "environmentVariables": {
+          "note": "Current .env.local keys in the client repo for reference",
+          "NEXT_PUBLIC_BASE_API_URL": "https://api-uat.celerey.app/api/execute \u2014 the Celerey backend base URL",
+          "NEXT_PUBLIC_GOOGLE_API_KEY": "AIzaSyCKGsVjRer1KGYEYaVqeA8Ci2jViSoxLow \u2014 used for the Google Maps property country chart (NOT for asset prices)",
+          "STOCK_PRICE_API_KEY": "NOT YET SET \u2014 provision a Finnhub or Twelve Data key and add it as a server-side env var (no NEXT_PUBLIC_ prefix, keep it backend-only)"
+        }
+      }
+    },
+    "properties": {
+      "description": "Real estate properties with nested mortgage and insurance",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/users/:userId/properties",
+          "description": "List all active properties",
+          "requestBody": null,
+          "responseBody": {
+            "properties": [
+              {
+                "property_id": "uuid",
+                "user_id": "uuid",
+                "name": "string",
+                "property_type": "house | apartment | condo | townhouse | land | commercial | other",
+                "country": "string",
+                "city": "string",
+                "purchase_date": "YYYY-MM-DD",
+                "purchase_price": "number | null",
+                "market_value": "number",
+                "value_uncertain": "boolean",
+                "mortgage_balance": "number \u2014 mirrors mortgage.balance when mortgage is set",
+                "mortgage": {
+                  "lender": "string",
+                  "balance": "number",
+                  "interest_rate_pct": "number",
+                  "min_payment_monthly": "number",
+                  "due_day": "1\u201331 | null",
+                  "original_loan_amount": "number | null",
+                  "expected_payoff_date": "YYYY-MM-DD | null"
+                },
+                "additional_liens": [
+                  {
+                    "id": "uuid",
+                    "name": "string",
+                    "balance": "number"
+                  }
+                ],
+                "is_primary": "boolean",
+                "is_active": "boolean",
+                "insurance": [
+                  {
+                    "insurance_type": "homeowners | landlord | flood | earthquake | umbrella | other",
+                    "provider": "string",
+                    "policy_number": "string",
+                    "coverage_amount": "number",
+                    "annual_premium": "number",
+                    "deductible": "number",
+                    "expiry_date": "YYYY-MM-DD"
+                  }
+                ],
+                "created_at": "ISO datetime",
+                "updated_at": "ISO datetime"
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/users/:userId/properties/:propertyId",
+          "description": "Get a single property",
+          "requestBody": null,
+          "responseBody": {
+            "property": "full Property object (see GET /properties schema)"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/users/:userId/properties",
+          "description": "Create a new property",
+          "requestBody": {
+            "name": "string \u2014 required",
+            "property_type": "house | apartment | condo | townhouse | land | commercial | other \u2014 required",
+            "country": "string \u2014 required",
+            "city": "string \u2014 required",
+            "purchase_date": "YYYY-MM-DD \u2014 required",
+            "purchase_price": "number | null",
+            "market_value": "number \u2014 required",
+            "value_uncertain": "boolean \u2014 default false",
+            "mortgage_balance": "number \u2014 default 0",
+            "mortgage": {
+              "lender": "string \u2014 required if providing mortgage",
+              "balance": "number \u2014 required",
+              "interest_rate_pct": "number \u2014 required",
+              "min_payment_monthly": "number \u2014 required",
+              "due_day": "1\u201331 | null",
+              "original_loan_amount": "number | null",
+              "expected_payoff_date": "YYYY-MM-DD | null"
+            },
+            "additional_liens": [
+              {
+                "name": "string",
+                "balance": "number"
+              }
+            ],
+            "is_primary": "boolean \u2014 default false",
+            "insurance": [
+              {
+                "insurance_type": "homeowners | landlord | flood | earthquake | umbrella | other",
+                "provider": "string \u2014 required",
+                "policy_number": "string \u2014 required",
+                "coverage_amount": "number \u2014 required",
+                "annual_premium": "number \u2014 required",
+                "deductible": "number \u2014 required",
+                "expiry_date": "YYYY-MM-DD \u2014 required"
+              }
+            ]
+          },
+          "responseBody": {
+            "property": "full Property object"
+          },
+          "notes": [
+            "If mortgage is provided, set mortgage_balance = mortgage.balance server-side",
+            "Only one property may have is_primary = true per user; server should enforce this"
+          ]
+        },
+        {
+          "method": "PATCH",
+          "path": "/users/:userId/properties/:propertyId",
+          "description": "Update a property \u2014 replaces the full property object (PUT semantics via PATCH)",
+          "requestBody": {
+            "name": "string | optional",
+            "property_type": "PropertyType | optional",
+            "country": "string | optional",
+            "city": "string | optional",
+            "purchase_date": "YYYY-MM-DD | optional",
+            "purchase_price": "number | null | optional",
+            "market_value": "number | optional",
+            "value_uncertain": "boolean | optional",
+            "mortgage_balance": "number | optional",
+            "mortgage": "PropertyMortgage | null | optional \u2014 null removes the mortgage",
+            "additional_liens": "Lien[] | optional",
+            "is_primary": "boolean | optional",
+            "insurance": "PropertyInsurance[] | optional \u2014 full array replacement"
+          },
+          "responseBody": {
+            "property": "updated Property object"
+          },
+          "notes": [
+            "If mortgage is updated, sync mortgage_balance = mortgage.balance",
+            "insurance is replaced wholesale \u2014 not merged; send the full updated array"
+          ]
+        },
+        {
+          "method": "DELETE",
+          "path": "/users/:userId/properties/:propertyId",
+          "description": "Soft-delete a property (set is_active = false)",
+          "requestBody": null,
+          "responseBody": {
+            "property_id": "uuid",
+            "is_active": false
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/users/:userId/properties/:propertyId/mortgage",
+          "description": "Update or remove the mortgage on a specific property",
+          "requestBody": {
+            "mortgage": "PropertyMortgage | null \u2014 null removes the mortgage and zeros mortgage_balance"
+          },
+          "responseBody": {
+            "property": "updated Property object"
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/users/:userId/properties/:propertyId/insurance",
+          "description": "Replace the full insurance array on a property",
+          "requestBody": {
+            "insurance": [
+              {
+                "insurance_type": "homeowners | landlord | flood | earthquake | umbrella | other",
+                "provider": "string",
+                "policy_number": "string",
+                "coverage_amount": "number",
+                "annual_premium": "number",
+                "deductible": "number",
+                "expiry_date": "YYYY-MM-DD"
+              }
+            ]
+          },
+          "responseBody": {
+            "property": "updated Property object"
+          }
+        }
+      ]
+    },
+    "insurance": {
+      "description": "Standalone insurance policies. Home/property insurance is managed via /properties/:id/insurance and surfaced here as read-only.",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/users/:userId/insurance-policies",
+          "description": "List all standalone insurance policies",
+          "requestBody": null,
+          "responseBody": {
+            "policies": [
+              {
+                "policy_id": "uuid",
+                "user_id": "uuid",
+                "category": "life | health | auto | disability | umbrella | liability | travel | pet | other",
+                "provider": "string",
+                "name": "string",
+                "policy_number": "string",
+                "coverage_amount": "number",
+                "premium_monthly": "number",
+                "deductible": "number",
+                "start_date": "YYYY-MM-DD",
+                "renewal_date": "YYYY-MM-DD",
+                "auto_renew": "boolean",
+                "beneficiary": "string | null",
+                "notes": "string | null",
+                "is_active": "boolean",
+                "created_at": "ISO datetime",
+                "updated_at": "ISO datetime"
+              }
+            ]
+          },
+          "notes": [
+            "Category 'home' is intentionally excluded \u2014 home/property insurance lives on Property.insurance[]",
+            "The client UI merges this list with property insurance for KPI display only"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/users/:userId/insurance-policies",
+          "description": "Add a standalone insurance policy",
+          "requestBody": {
+            "category": "life | health | auto | disability | umbrella | liability | travel | pet | other \u2014 required",
+            "provider": "string \u2014 required",
+            "name": "string \u2014 required",
+            "policy_number": "string \u2014 required",
+            "coverage_amount": "number \u2014 required",
+            "premium_monthly": "number \u2014 required",
+            "deductible": "number \u2014 required",
+            "start_date": "YYYY-MM-DD \u2014 required",
+            "renewal_date": "YYYY-MM-DD \u2014 required",
+            "auto_renew": "boolean \u2014 required",
+            "beneficiary": "string | null",
+            "notes": "string | null"
+          },
+          "responseBody": {
+            "policy": "full InsurancePolicy object"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/users/:userId/insurance-policies/:policyId",
+          "description": "Update a standalone insurance policy",
+          "requestBody": {
+            "provider": "string | optional",
+            "name": "string | optional",
+            "policy_number": "string | optional",
+            "coverage_amount": "number | optional",
+            "premium_monthly": "number | optional",
+            "deductible": "number | optional",
+            "start_date": "YYYY-MM-DD | optional",
+            "renewal_date": "YYYY-MM-DD | optional",
+            "auto_renew": "boolean | optional",
+            "beneficiary": "string | null | optional",
+            "notes": "string | null | optional",
+            "is_active": "boolean | optional"
+          },
+          "responseBody": {
+            "policy": "updated InsurancePolicy object"
+          }
+        },
+        {
+          "method": "DELETE",
+          "path": "/users/:userId/insurance-policies/:policyId",
+          "description": "Soft-delete a standalone policy (set is_active = false)",
+          "requestBody": null,
+          "responseBody": {
+            "policy_id": "uuid",
+            "is_active": false
+          }
+        }
+      ]
+    },
+    "liabilities": {
+      "description": "Standalone liabilities (credit cards, loans, etc). Mortgages are NOT created here \u2014 they live on Property.mortgage and are read into this tab as read-only.",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/users/:userId/liabilities",
+          "description": "List all standalone liabilities",
+          "requestBody": null,
+          "responseBody": {
+            "liabilities": [
+              {
+                "id": "uuid",
+                "name": "string",
+                "lender": "string | null",
+                "type": "credit_card | personal_loan | auto_loan | student_loan | other",
+                "balance": "number",
+                "interestRatePct": "number",
+                "minPaymentMonthly": "number",
+                "dueDay": "1\u201331 | null",
+                "originalLoanAmount": "number | null",
+                "expectedPayoffDate": "YYYY-MM-DD | null",
+                "updatedAt": "ISO datetime"
+              }
+            ]
+          },
+          "notes": [
+            "Type 'mortgage' is excluded from this endpoint \u2014 use PATCH /properties/:id/mortgage instead",
+            "The UI reads property mortgages from GET /properties and renders them as read-only cards alongside these"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/users/:userId/liabilities",
+          "description": "Create a standalone liability",
+          "requestBody": {
+            "name": "string \u2014 required",
+            "lender": "string | null",
+            "type": "credit_card | personal_loan | auto_loan | student_loan | other \u2014 required",
+            "balance": "number \u2014 required",
+            "interestRatePct": "number \u2014 required",
+            "minPaymentMonthly": "number \u2014 required",
+            "dueDay": "1\u201331 | null",
+            "originalLoanAmount": "number | null",
+            "expectedPayoffDate": "YYYY-MM-DD | null"
+          },
+          "responseBody": {
+            "liability": "full Liability object (see GET response schema)"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/users/:userId/liabilities/:liabilityId",
+          "description": "Update a standalone liability",
+          "requestBody": {
+            "name": "string | optional",
+            "lender": "string | null | optional",
+            "type": "LiabilityType | optional",
+            "balance": "number | optional",
+            "interestRatePct": "number | optional",
+            "minPaymentMonthly": "number | optional",
+            "dueDay": "1\u201331 | null | optional",
+            "originalLoanAmount": "number | null | optional",
+            "expectedPayoffDate": "YYYY-MM-DD | null | optional"
+          },
+          "responseBody": {
+            "liability": "updated Liability object"
+          },
+          "notes": [
+            "Set updatedAt = now server-side on every PATCH"
+          ]
+        },
+        {
+          "method": "DELETE",
+          "path": "/users/:userId/liabilities/:liabilityId",
+          "description": "Delete a standalone liability (hard delete)",
+          "requestBody": null,
+          "responseBody": {
+            "id": "uuid",
+            "deleted": true
+          }
+        }
+      ]
+    },
+    "retirement": {
+      "description": "Retirement planning configuration and projections",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/users/:userId/retirement",
+          "description": "Get the user's retirement config and computed projections",
+          "requestBody": null,
+          "responseBody": {
+            "config": {
+              "currentAge": "number",
+              "retirementAge": "number",
+              "lifeExpectancy": "number \u2014 default 85",
+              "currentInvested": "number \u2014 total currently invested/saved",
+              "monthlySavings": "number \u2014 monthly contribution going forward",
+              "existingPensionBalance": "number",
+              "monthlyPensionContribution": "number",
+              "expectedReturnPct": "number \u2014 annualised return % (e.g. 7 for 7%)",
+              "inflationPct": "number \u2014 e.g. 2 for 2%",
+              "safeWithdrawalRatePct": "number \u2014 e.g. 4 for 4%",
+              "desiredMonthlyIncome": "number \u2014 target monthly income in retirement"
+            },
+            "projections": {
+              "yearsToRetirement": "number",
+              "projectedBalanceAtRetirement": "number",
+              "sustainableAnnualIncome": "number",
+              "sustainableMonthlyIncome": "number",
+              "inflationAdjustedSustainableMonthlyIncome": "number",
+              "incomeGap": "number \u2014 desiredMonthlyIncome minus sustainableMonthlyIncome (negative = surplus)",
+              "onTrack": "boolean"
+            }
+          },
+          "notes": [
+            "projections are computed server-side using the standard retirement formula: FV = PV*(1+r)^n + PMT*((1+r)^n - 1)/r",
+            "sustainableAnnualIncome = projectedBalance * safeWithdrawalRatePct / 100",
+            "inflationAdjustedSustainableMonthlyIncome discounts by inflationPct over yearsToRetirement"
+          ]
+        },
+        {
+          "method": "PUT",
+          "path": "/users/:userId/retirement",
+          "description": "Save / update the full retirement config (full replacement)",
+          "requestBody": {
+            "currentAge": "number \u2014 required",
+            "retirementAge": "number \u2014 required",
+            "lifeExpectancy": "number \u2014 required",
+            "currentInvested": "number \u2014 required",
+            "monthlySavings": "number \u2014 required",
+            "existingPensionBalance": "number \u2014 required",
+            "monthlyPensionContribution": "number \u2014 required",
+            "expectedReturnPct": "number \u2014 required",
+            "inflationPct": "number \u2014 required",
+            "safeWithdrawalRatePct": "number \u2014 required",
+            "desiredMonthlyIncome": "number \u2014 required"
+          },
+          "responseBody": {
+            "config": "full RetirementConfig (same as GET response config)",
+            "projections": "computed RetirementOutputs (same as GET response projections)"
+          }
+        }
+      ]
+    },
+    "goals": {
+      "description": "Financial goals with backend-computed progress, probability, and monthly contribution figures. The client never sends computed fields \u2014 only user inputs.",
+      "computedFieldsNote": "yearsRemaining, monthlyContributionNeeded, probability are always derived server-side from target, current, targetDate, and the active Scenario parameters",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/users/:userId/goals",
+          "description": "List all goals with computed enrichment",
+          "requestBody": null,
+          "responseBody": {
+            "goals": [
+              {
+                "id": "uuid",
+                "userId": "uuid",
+                "title": "string",
+                "category": "emergency | retirement | housing | education | travel | vehicle | business | other",
+                "priority": "number \u2014 1-based sort order; lower = higher priority",
+                "description": "string | null",
+                "targetDate": "YYYY-MM-DD | null",
+                "current": "number \u2014 amount saved/accumulated so far",
+                "target": "number \u2014 goal target amount",
+                "completed": "boolean",
+                "completedDate": "YYYY-MM-DD | null",
+                "yearsRemaining": "number \u2014 backend-computed from targetDate",
+                "monthlyContributionNeeded": "number \u2014 backend-computed",
+                "probability": "number 0-100 \u2014 backend-computed likelihood of reaching goal on time",
+                "createdAt": "ISO datetime",
+                "updatedAt": "ISO datetime"
+              }
+            ],
+            "meta": {
+              "total": "number",
+              "totalMonthlyNeeded": "number \u2014 sum of all active goal monthlyContributionNeeded",
+              "totalCurrentSaved": "number \u2014 sum of all goal.current"
+            }
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/users/:userId/goals/scenarios",
+          "description": "Get the system-defined growth scenarios used to stress-test goal projections",
+          "requestBody": null,
+          "responseBody": {
+            "scenarios": [
+              {
+                "id": "string \u2014 capital_preservation | conservative | balanced | growth | aggressive",
+                "label": "string \u2014 e.g. 'Capital Preservation'",
+                "monthlyReturnRate": "number \u2014 e.g. 0.003 for ~3.6% annual",
+                "inflationRate": "number \u2014 annual e.g. 0.02",
+                "description": "string",
+                "monthlyMultiplier": "number | null"
+              }
+            ]
+          },
+          "notes": [
+            "Scenarios are system-defined and global \u2014 not per-user",
+            "Client adjusts displayed monthlyContributionNeeded using: adjustedMonthly = goal.monthlyContributionNeeded / ((1 + scenario.monthlyReturnRate) / (1 + scenario.inflationRate / 12))"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/users/:userId/goals",
+          "description": "Create a new goal",
+          "requestBody": {
+            "title": "string \u2014 required, min 1 char",
+            "category": "emergency | retirement | housing | education | travel | vehicle | business | other \u2014 required",
+            "target": "number >= 1 \u2014 required",
+            "current": "number >= 0 \u2014 required",
+            "targetDate": "YYYY-MM-DD \u2014 required",
+            "description": "string | null",
+            "priority": "number | null \u2014 if omitted, appended to end of list"
+          },
+          "responseBody": {
+            "goal": "full Goal object with all backend-computed fields"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/users/:userId/goals/:goalId",
+          "description": "Update a goal \u2014 all computed fields are recalculated on every change",
+          "requestBody": {
+            "title": "string | optional",
+            "category": "GoalCategory | optional",
+            "target": "number | optional",
+            "current": "number | optional",
+            "targetDate": "YYYY-MM-DD | optional",
+            "description": "string | null | optional",
+            "completed": "boolean | optional \u2014 true captures completedDate = today server-side",
+            "completedDate": "YYYY-MM-DD | null | optional"
+          },
+          "responseBody": {
+            "goal": "updated Goal object with recomputed fields"
+          }
+        },
+        {
+          "method": "DELETE",
+          "path": "/users/:userId/goals/:goalId",
+          "description": "Delete a goal (hard delete)",
+          "requestBody": null,
+          "responseBody": {
+            "id": "uuid",
+            "deleted": true
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/users/:userId/goals/priority",
+          "description": "Reorder goals \u2014 saves new priority values for all goals in one call",
+          "requestBody": {
+            "ordered_ids": [
+              "uuid \u2014 goal IDs in desired priority order, index 0 = priority 1"
+            ]
+          },
+          "responseBody": {
+            "goals": "updated Goal[] with new priority values"
+          },
+          "notes": [
+            "Server sets priority = array index + 1 for each ID",
+            "All goal IDs for the user must be present; returns 422 if any are missing"
+          ]
+        }
+      ]
+    },
+    "cash-flow": {
+      "description": "Income rows, expense categories, emergency fund config, and historical cash-flow snapshots.",
+      "derivedKPIsNote": "monthlySurplus, savingsRate, essentialExpenses, discretionaryExpenses, afterTaxMonthlyIncome, estimatedAnnualTaxes, and EmergencyFundMetrics (runwayMonths, targetBalance, funded, shortfallOrSurplus) are all backend-computed \u2014 do NOT accept them as POST/PATCH body fields",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/users/:userId/income",
+          "description": "List all income rows",
+          "requestBody": null,
+          "responseBody": {
+            "incomeRows": [
+              {
+                "id": "uuid",
+                "name": "string",
+                "amount": "number \u2014 monthly amount",
+                "isRecurring": "boolean",
+                "recurringType": "forever | months | one-time",
+                "recurringMonths": "number | null \u2014 only when recurringType = months",
+                "startDate": "YYYY-MM-DD | null"
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/users/:userId/income",
+          "description": "Add an income row",
+          "requestBody": {
+            "name": "string \u2014 required, max 100 chars",
+            "amount": "number >= 0 \u2014 required \u2014 monthly amount",
+            "isRecurring": "boolean \u2014 required",
+            "recurringType": "forever | months | one-time \u2014 required",
+            "recurringMonths": "number | null \u2014 required when recurringType = months",
+            "startDate": "YYYY-MM-DD | null"
+          },
+          "responseBody": {
+            "incomeRow": "full CashFlowRow object"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/users/:userId/income/:incomeId",
+          "description": "Update an income row",
+          "requestBody": {
+            "name": "string | optional",
+            "amount": "number | optional",
+            "isRecurring": "boolean | optional",
+            "recurringType": "forever | months | one-time | optional",
+            "recurringMonths": "number | null | optional",
+            "startDate": "YYYY-MM-DD | null | optional"
+          },
+          "responseBody": {
+            "incomeRow": "updated CashFlowRow object"
+          }
+        },
+        {
+          "method": "DELETE",
+          "path": "/users/:userId/income/:incomeId",
+          "description": "Delete an income row",
+          "requestBody": null,
+          "responseBody": {
+            "id": "uuid",
+            "deleted": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/users/:userId/expenses",
+          "description": "List all expense categories",
+          "requestBody": null,
+          "responseBody": {
+            "expenseCategories": [
+              {
+                "id": "uuid",
+                "name": "string",
+                "amount": "number \u2014 monthly amount",
+                "essential": "boolean \u2014 true = essential living cost, false = discretionary",
+                "isRecurring": "boolean",
+                "recurringType": "forever | months | one-time",
+                "recurringMonths": "number | null",
+                "startDate": "YYYY-MM-DD | null"
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/users/:userId/expenses",
+          "description": "Add an expense category",
+          "requestBody": {
+            "name": "string \u2014 required, max 100 chars",
+            "amount": "number >= 0 \u2014 required \u2014 monthly amount",
+            "essential": "boolean \u2014 required",
+            "isRecurring": "boolean \u2014 required",
+            "recurringType": "forever | months | one-time \u2014 required",
+            "recurringMonths": "number | null",
+            "startDate": "YYYY-MM-DD | null"
+          },
+          "responseBody": {
+            "expenseCategory": "full ExpenseCategory object"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/users/:userId/expenses/:expenseId",
+          "description": "Update an expense category",
+          "requestBody": {
+            "name": "string | optional",
+            "amount": "number | optional",
+            "essential": "boolean | optional",
+            "isRecurring": "boolean | optional",
+            "recurringType": "forever | months | one-time | optional",
+            "recurringMonths": "number | null | optional",
+            "startDate": "YYYY-MM-DD | null | optional"
+          },
+          "responseBody": {
+            "expenseCategory": "updated ExpenseCategory object"
+          }
+        },
+        {
+          "method": "DELETE",
+          "path": "/users/:userId/expenses/:expenseId",
+          "description": "Delete an expense category",
+          "requestBody": null,
+          "responseBody": {
+            "id": "uuid",
+            "deleted": true
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/users/:userId/cash-flow/settings",
+          "description": "Get emergency fund configuration",
+          "requestBody": null,
+          "responseBody": {
+            "targetMonths": "number \u2014 target months of expenses to hold as emergency fund",
+            "currentCashBalance": "number \u2014 current emergency cash balance",
+            "includeAccountIds": [
+              "uuid \u2014 account IDs that count toward the emergency balance"
+            ],
+            "updatedAt": "ISO datetime"
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/users/:userId/cash-flow/settings",
+          "description": "Save emergency fund configuration (full replacement) \u2014 responds with computed EmergencyFundMetrics",
+          "requestBody": {
+            "targetMonths": "number >= 0, <= 36 \u2014 required",
+            "currentCashBalance": "number >= 0 \u2014 required",
+            "includeAccountIds": [
+              "uuid \u2014 optional"
+            ]
+          },
+          "responseBody": {
+            "settings": "updated emergency fund config",
+            "emergencyFundMetrics": {
+              "currentBalance": "number \u2014 backend-computed",
+              "targetBalance": "number \u2014 targetMonths x monthly expenses \u2014 backend-computed",
+              "runwayMonths": "number \u2014 currentBalance / monthly expenses \u2014 backend-computed",
+              "targetMonths": "number",
+              "funded": "boolean \u2014 currentBalance >= targetBalance \u2014 backend-computed",
+              "shortfallOrSurplus": "number \u2014 currentBalance - targetBalance \u2014 backend-computed"
+            }
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/users/:userId/cash-flow/history",
+          "description": "Get monthly cash-flow history for chart display",
+          "requestBody": null,
+          "responseBody": {
+            "history": [
+              {
+                "month": "YYYY-MM",
+                "income": "number \u2014 total income for this month",
+                "expenses": "number \u2014 total expenses for this month",
+                "surplus": "number \u2014 income minus expenses; negative = deficit"
+              }
+            ]
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/users/:userId/cash-flow/history",
+          "description": "Record or upsert a monthly cash-flow snapshot (month is the natural key)",
+          "requestBody": {
+            "month": "YYYY-MM \u2014 required",
+            "income": "number \u2014 required",
+            "expenses": "number \u2014 required"
+          },
+          "responseBody": {
+            "point": {
+              "month": "YYYY-MM",
+              "income": "number",
+              "expenses": "number",
+              "surplus": "number \u2014 computed: income - expenses"
+            }
+          },
+          "notes": [
+            "Upsert by month \u2014 if a record exists for this month, overwrite it"
+          ]
+        }
+      ]
+    },
+    "risk": {
+      "description": "Risk attitude assessment. 10 questions each scored 1-5. Backend stores the result and syncs user.risk_profile.",
+      "quizStructure": {
+        "questionCount": 10,
+        "scoringPerQuestion": "1 (most risk-averse) to 5 (most aggressive)",
+        "overallScore": "average of all 10 answers, rounded to 1 decimal \u2014 range 1.0 to 5.0",
+        "scoreToBandMapping": {
+          "<= 1.8": "Capital Preservation",
+          "<= 2.6": "Conservative",
+          "<= 3.4": "Balanced",
+          "<= 4.2": "Growth",
+          "> 4.2": "Aggressive"
+        },
+        "bandToRiskProfile": {
+          "Capital Preservation": "conservative",
+          "Conservative": "conservative",
+          "Balanced": "moderate",
+          "Growth": "aggressive",
+          "Aggressive": "aggressive"
+        }
+      },
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/users/:userId/risk",
+          "description": "Get the user's saved risk assessment result",
+          "requestBody": null,
+          "responseBody": {
+            "score": "number 1.0-5.0 | null \u2014 null if assessment not yet completed",
+            "band": "Capital Preservation | Conservative | Balanced | Growth | Aggressive | null",
+            "answers": "Record<questionId (1-10), score (1-5)> | null",
+            "completedAt": "ISO datetime | null"
+          }
+        },
+        {
+          "method": "PUT",
+          "path": "/users/:userId/risk",
+          "description": "Save or replace the risk assessment result \u2014 also updates user.risk_profile in the same transaction",
+          "requestBody": {
+            "score": "number 1.0-5.0 \u2014 required",
+            "band": "Capital Preservation | Conservative | Balanced | Growth | Aggressive \u2014 required",
+            "answers": "Record<questionId (1-10), score (1-5)> \u2014 required \u2014 all 10 question IDs must be present"
+          },
+          "responseBody": {
+            "risk": {
+              "score": "number",
+              "band": "RiskBand",
+              "answers": "Record<questionId, score>",
+              "completedAt": "ISO datetime"
+            },
+            "user": {
+              "user_id": "uuid",
+              "risk_profile": "conservative | moderate | aggressive \u2014 updated to match the band"
+            }
+          },
+          "notes": [
+            "Server derives risk_profile from band using the bandToRiskProfile mapping",
+            "Update user.risk_profile atomically with the risk record save",
+            "The client also mirrors the result to localStorage key 'risk_attitude_result_v1' for offline display \u2014 this is client-side only and not authoritative"
+          ]
+        }
+      ]
+    }
+  },
+  "crossTabRelationships": [
+    {
+      "source": "PATCH /properties/:id/mortgage",
+      "consumedBy": "Liabilities tab",
+      "description": "Property mortgage balance and details appear as a read-only card in the Liabilities tab. The UI redirects 'Edit' to the property form with ?focus=mortgage"
+    },
+    {
+      "source": "PUT /properties/:id/insurance",
+      "consumedBy": "Insurance tab",
+      "description": "Property insurance entries appear as read-only cards in the Insurance tab with a 'Managed via Property' badge. The UI redirects 'Edit' to the property form with ?focus=insurance"
+    },
+    {
+      "source": "GET /users/:userId/properties",
+      "consumedBy": "Liabilities tab KPIs",
+      "description": "Total liabilities KPI = sum of all Liability.balance + sum of all Property.mortgage.balance"
+    },
+    {
+      "source": "GET /users/:userId/properties",
+      "consumedBy": "Insurance tab KPIs",
+      "description": "Total monthly insurance spend = sum of InsurancePolicy.premium_monthly + sum of (Property.insurance[].annual_premium / 12)"
+    },
+    {
+      "source": "POST /enterprise/companies/:companyId/seats",
+      "consumedBy": "All paywall guards (DashboardGuard, login flow, dashboard page)",
+      "description": "When user_type = 'enterprise' the client skips /choose-plan entirely and gets full feature access. The client reads user_type from localStorage as soon as the user logs in."
+    },
+    {
+      "source": "PUT /users/:userId/risk",
+      "consumedBy": "User profile (GET /users/:userId)",
+      "description": "Saving a risk assessment updates user.risk_profile synchronously. Profile and Settings pages read risk_profile from the User object."
+    },
+    {
+      "source": "GET /users/:userId/goals/scenarios",
+      "consumedBy": "Goals tab scenario card",
+      "description": "System scenarios are shown in a selector on the Goals page. The selected scenario adjusts the displayed monthlyContributionNeeded: adjustedMonthly = goal.monthlyContributionNeeded / ((1 + scenario.monthlyReturnRate) / (1 + scenario.inflationRate / 12))"
+    },
+    {
+      "source": "PUT /users/:userId/retirement",
+      "consumedBy": "Goals tab",
+      "description": "The retirement goal card reads retirement.projections.onTrack and sustainableMonthlyIncome to display alongside user-created goals"
+    }
+  ]
+}

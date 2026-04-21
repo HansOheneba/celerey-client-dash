@@ -26,11 +26,13 @@ import {
   type Property,
   type PropertyType,
   type PropertyInsurance,
+  type PropertyMortgage,
   PROPERTY_TYPE_OPTIONS,
   COUNTRY_OPTIONS,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 import { InsuranceSection } from "./insurance-section";
+import { MortgageSection } from "./mortgage-section";
 
 // ── Form state ──────────────────────────────────────────────────
 export type PropertyFormValues = {
@@ -45,6 +47,7 @@ export type PropertyFormValues = {
   mortgageBalance: string;
   isPrimary: boolean;
   insurance: PropertyInsurance[];
+  mortgage: PropertyMortgage | null;
 };
 
 export type PropertyFormProps = {
@@ -91,12 +94,22 @@ export function PropertyForm({
   const isEditing = !!editingProperty;
 
   const insuranceSectionRef = React.useRef<HTMLDivElement>(null);
+  const mortgageSectionRef = React.useRef<HTMLDivElement>(null);
 
   // Auto-scroll to insurance section when navigated with ?focus=insurance
   React.useEffect(() => {
     if (focusSection === "insurance" && insuranceSectionRef.current) {
       const timer = setTimeout(() => {
         insuranceSectionRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+    if (focusSection === "mortgage" && mortgageSectionRef.current) {
+      const timer = setTimeout(() => {
+        mortgageSectionRef.current?.scrollIntoView({
           behavior: "smooth",
           block: "start",
         });
@@ -125,6 +138,7 @@ export function PropertyForm({
         ),
         isPrimary: editingProperty.is_primary,
         insurance: editingProperty.insurance ?? [],
+        mortgage: editingProperty.mortgage ?? null,
       };
     }
     return {
@@ -139,6 +153,7 @@ export function PropertyForm({
       mortgageBalance: "",
       isPrimary: false,
       insurance: [],
+      mortgage: null,
     };
   });
 
@@ -153,7 +168,7 @@ export function PropertyForm({
   }
 
   function handleMoneyInput(
-    key: "purchasePrice" | "marketValue" | "mortgageBalance",
+    key: "purchasePrice" | "marketValue",
     value: string,
   ): void {
     update(key, formatNumberWithCommas(value));
@@ -240,20 +255,21 @@ export function PropertyForm({
         purchase_price: purchasePriceNum > 0 ? purchasePriceNum : null,
         market_value: marketValueNum,
         value_uncertain: form.valueUncertain,
-        mortgage_balance: mortgageNum,
+        // If a full mortgage record exists, keep mortgage_balance in sync with it
+        mortgage_balance: form.mortgage ? form.mortgage.balance : mortgageNum,
         is_primary: form.isPrimary,
         is_active: true,
         insurance: form.insurance,
+        mortgage: form.mortgage ?? undefined,
         created_at: editingProperty?.created_at ?? now,
         updated_at: now,
       };
 
       if (editingProperty) {
-        useFinancialStore
-          .getState()
-          .removeProperty(editingProperty.property_id);
+        useFinancialStore.getState().updateProperty(property);
+      } else {
+        useFinancialStore.getState().addProperty(property);
       }
-      useFinancialStore.getState().addProperty(property);
 
       router.push("/dashboard/properties");
     } finally {
@@ -467,31 +483,6 @@ export function PropertyForm({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="mortgage">Mortgage balance</Label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                      $
-                    </div>
-                    <Input
-                      id="mortgage"
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="450,000"
-                      value={form.mortgageBalance}
-                      onChange={(e) =>
-                        handleMoneyInput("mortgageBalance", e.target.value)
-                      }
-                      className="pl-7"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Leave empty or 0 if fully paid off.
-                  </p>
-                </div>
-              </div>
-
               {/* Equity / LVR preview */}
               {marketValueNum > 0 && (
                 <div className="rounded-xl border bg-muted/20 p-3 text-sm text-muted-foreground">
@@ -523,8 +514,35 @@ export function PropertyForm({
 
               <Separator />
 
+              {/* Mortgage */}
+              <div
+                ref={mortgageSectionRef}
+                id="mortgage-section"
+                className="scroll-mt-6"
+              >
+                <MortgageSection
+                  mortgage={form.mortgage}
+                  onChange={(mortgage) => {
+                    update("mortgage", mortgage);
+                    // Keep the simple mortgageBalance field in sync
+                    if (mortgage) {
+                      update(
+                        "mortgageBalance",
+                        formatNumberWithCommas(String(mortgage.balance)),
+                      );
+                    }
+                  }}
+                />
+              </div>
+
+              <Separator />
+
               {/* Insurance */}
-              <div ref={insuranceSectionRef} id="insurance-section" className="scroll-mt-6">
+              <div
+                ref={insuranceSectionRef}
+                id="insurance-section"
+                className="scroll-mt-6"
+              >
                 <InsuranceSection
                   policies={form.insurance}
                   onChange={(policies) => update("insurance", policies)}

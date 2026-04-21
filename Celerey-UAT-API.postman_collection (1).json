@@ -1,0 +1,623 @@
+{
+  "info": {
+    "_postman_id": "e273535b-39e7-4cbe-a204-2500904f31df",
+    "name": "Celerey UAT API",
+    "description": "Celerey API — auth, onboarding, cash flow, goals, insurance, properties, assets.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url",         "value": "https://api-uat.celerey.app/api/execute", "type": "string" },
+    { "key": "session_token",    "value": "", "type": "string" },
+    { "key": "onboarding_token", "value": "", "type": "string" },
+    { "key": "goal_id",          "value": "", "type": "string" },
+    { "key": "policy_id",        "value": "", "type": "string" },
+    { "key": "property_id",      "value": "", "type": "string" },
+    { "key": "holding_id",       "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Test",
+      "item": [
+        {
+          "name": "Dummy Test",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"name\": \"Kingsley\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/dummy-test", "host": ["{{base_url}}"], "path": ["dummy-test"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"email\":          \"brewleyhab@gmail.com\",\n    \"messageType\":    \"OTPAuthMessage:HTML\",\n    \"messageSubject\": \"Your Celerey Login Code\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/auth.request-otp", "host": ["{{base_url}}"], "path": ["auth.request-otp"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP",
+          "event": [{ "listen": "test", "script": { "exec": ["const res = pm.response.json();", "if (res.success && res.data && res.data.session_token) {", "    pm.collectionVariables.set('session_token', res.data.session_token);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"email\": \"brewleyhab@gmail.com\",\n    \"otp\":   \"______\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/auth.verify-otp", "host": ["{{base_url}}"], "path": ["auth.verify-otp"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Session",
+          "event": [{ "listen": "test", "script": { "exec": ["const res = pm.response.json();", "if (res.success && res.data && res.data.session_token) {", "    pm.collectionVariables.set('session_token', res.data.session_token);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/auth.refresh-session", "host": ["{{base_url}}"], "path": ["auth.refresh-session"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke Session",
+          "event": [{ "listen": "test", "script": { "exec": ["const res = pm.response.json();", "if (res.success) {", "    pm.collectionVariables.set('session_token', '');", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/auth.revoke-session", "host": ["{{base_url}}"], "path": ["auth.revoke-session"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Onboarding",
+      "item": [
+        {
+          "name": "Generate OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"email\":          \"brewleyhab@gmail.com\",\n    \"messageType\":    \"OTPAuthMessage:HTML\",\n    \"messageSubject\": \"Your Celerey Verification Code\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/onboarding.generate-otp", "host": ["{{base_url}}"], "path": ["onboarding.generate-otp"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP",
+          "event": [{ "listen": "test", "script": { "exec": ["const res = pm.response.json();", "if (res.success && res.data && res.data.onboarding_token) {", "    pm.collectionVariables.set('onboarding_token', res.data.onboarding_token);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n    \"email\": \"brewleyhab@gmail.com\",\n    \"otp\":   \"______\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/onboarding.verify-otp", "host": ["{{base_url}}"], "path": ["onboarding.verify-otp"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User (Solo)",
+          "event": [{ "listen": "test", "script": { "exec": ["const res = pm.response.json();", "if (res.success && res.data && res.data.session_token) {", "    pm.collectionVariables.set('session_token', res.data.session_token);", "    pm.collectionVariables.set('onboarding_token', '');", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{onboarding_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"identity\": {\n        \"account_mode\":      \"solo\",\n        \"email\":             \"brewleyhab@gmail.com\",\n        \"first_name\":        \"Kingsley\",\n        \"last_name\":         \"Brew\",\n        \"phone_number\":      \"+233244000000\",\n        \"date_of_birth\":     \"1990-05-15\",\n        \"gender\":            \"M\",\n        \"prefix\":            \"Mr\",\n        \"occupation\":        \"Software Engineer\",\n        \"marital_status\":    \"single\",\n        \"resident_country\":  \"Ghana\",\n        \"resident_city\":     \"Accra\",\n        \"currency\":          \"USD\",\n        \"preferred_contact\": \"email\"\n    },\n    \"goals\": [\n        {\n            \"title\":          \"Buy a Home\",\n            \"target_amount\":  250000,\n            \"current_amount\": 0,\n            \"target_date\":    \"2030-12-31\",\n            \"priority\":       1,\n            \"icon\":           \"home\",\n            \"color\":          \"#0891B2\",\n            \"status\":         \"active\"\n        }\n    ],\n    \"incomes\": [\n        { \"name\": \"Salary\", \"amount_monthly\": 5000, \"category\": \"Salary\", \"is_recurring\": true }\n    ],\n    \"emergencyFund\": { \"cash_balance\": 5000, \"target_months\": 6 },\n    \"retirement\": {\n        \"retirement_age\":           60,\n        \"retirement_target_year\":   2050,\n        \"current_invested\":         25000,\n        \"monthly_savings\":          500,\n        \"existing_pension_balance\": 15000,\n        \"employer_contribution\":    200,\n        \"desired_monthly_income\":   4000\n    }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/onboarding.create-user", "host": ["{{base_url}}"], "path": ["onboarding.create-user"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User (Partner)",
+          "event": [{ "listen": "test", "script": { "exec": ["const res = pm.response.json();", "if (res.success && res.data && res.data.session_token) {", "    pm.collectionVariables.set('session_token', res.data.session_token);", "    pm.collectionVariables.set('onboarding_token', '');", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{onboarding_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"identity\": {\n        \"account_mode\":      \"partner\",\n        \"display_name\":      \"The Brew Household\",\n        \"email\":             \"brewleyhab@gmail.com\",\n        \"resident_country\":  \"Ghana\",\n        \"resident_city\":     \"Accra\",\n        \"currency\":          \"USD\",\n        \"preferred_contact\": \"email\"\n    },\n    \"goals\": [\n        {\n            \"title\":          \"Buy a Home\",\n            \"target_amount\":  350000,\n            \"current_amount\": 0,\n            \"target_date\":    \"2028-12-31\",\n            \"priority\":       1,\n            \"icon\":           \"home\",\n            \"color\":          \"#0891B2\",\n            \"status\":         \"active\"\n        }\n    ],\n    \"incomes\": [\n        { \"name\": \"Salary - Kingsley\", \"amount_monthly\": 5000, \"category\": \"Salary\", \"is_recurring\": true },\n        { \"name\": \"Salary - Partner\",  \"amount_monthly\": 4500, \"category\": \"Salary\", \"is_recurring\": true }\n    ],\n    \"emergencyFund\": { \"cash_balance\": 12000, \"target_months\": 6 },\n    \"retirement\": {\n        \"retirement_target_year\":   2055,\n        \"current_invested\":         50000,\n        \"monthly_savings\":          1000,\n        \"existing_pension_balance\": 30000,\n        \"employer_contribution\":    400,\n        \"desired_monthly_income\":   6000\n    }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/onboarding.create-user", "host": ["{{base_url}}"], "path": ["onboarding.create-user"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Goals",
+      "item": [
+        {
+          "name": "Find Goals",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/goals.find", "host": ["{{base_url}}"], "path": ["goals.find"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Goal",
+          "event": [{ "listen": "test", "script": { "exec": ["const res = pm.response.json();", "if (res.success && res.data && res.data.goal_id) {", "    pm.collectionVariables.set('goal_id', res.data.goal_id);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"title\":          \"Car Fund\",\n    \"target_amount\":  20000.00,\n    \"current_amount\": 1000.00,\n    \"target_date\":    \"2029-09-01\",\n    \"priority\":       2,\n    \"icon\":           \"car\",\n    \"color\":          \"#7C3AED\",\n    \"status\":         \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/goals.create", "host": ["{{base_url}}"], "path": ["goals.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Goal",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"goal_id\":        \"{{goal_id}}\",\n    \"current_amount\": 5000.00\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/goals.update", "host": ["{{base_url}}"], "path": ["goals.update"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Goal",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/goals.delete?goal_id={{goal_id}}", "host": ["{{base_url}}"], "path": ["goals.delete"], "query": [{ "key": "goal_id", "value": "{{goal_id}}" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Reorder Priorities",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"priorities\": [\n        { \"goal_id\": \"______\", \"priority\": 1 },\n        { \"goal_id\": \"______\", \"priority\": 2 }\n    ]\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/goals.priorities", "host": ["{{base_url}}"], "path": ["goals.priorities"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Scenarios",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/goals.scenarios", "host": ["{{base_url}}"], "path": ["goals.scenarios"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Insurance",
+      "description": "Standalone policies only. 'home' category excluded — home insurance lives on Property.insurance[]",
+      "item": [
+        {
+          "name": "Find Policies",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/insurance.find", "host": ["{{base_url}}"], "path": ["insurance.find"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Policy — Life",
+          "event": [{ "listen": "test", "script": { "exec": ["const res = pm.response.json();", "if (res.success && res.data && res.data.policy_id) {", "    pm.collectionVariables.set('policy_id', res.data.policy_id);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"category\":        \"life\",\n    \"provider\":        \"Prudential\",\n    \"name\":            \"Term Life — 20yr\",\n    \"policy_number\":   \"PRU-2024-441122\",\n    \"coverage_amount\": 500000.00,\n    \"premium_monthly\": 85.00,\n    \"deductible\":      0,\n    \"start_date\":      \"2024-01-01\",\n    \"renewal_date\":    \"2027-01-01\",\n    \"auto_renew\":      false,\n    \"beneficiary\":     \"Jane Doe\",\n    \"notes\":           \"Covers accidental death and critical illness riders.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/insurance.create", "host": ["{{base_url}}"], "path": ["insurance.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Policy — Health",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"category\":        \"health\",\n    \"provider\":        \"Blue Cross Blue Shield\",\n    \"name\":            \"PPO Family Plan\",\n    \"policy_number\":   \"BCBS-2025-887744\",\n    \"coverage_amount\": 250000.00,\n    \"premium_monthly\": 420.00,\n    \"deductible\":      3000.00,\n    \"start_date\":      \"2025-01-01\",\n    \"renewal_date\":    \"2026-01-01\",\n    \"auto_renew\":      true,\n    \"beneficiary\":     null,\n    \"notes\":           null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/insurance.create", "host": ["{{base_url}}"], "path": ["insurance.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Policy — Auto",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"category\":        \"auto\",\n    \"provider\":        \"Geico\",\n    \"name\":            \"Full Coverage — Tesla Model 3\",\n    \"policy_number\":   \"GCO-2025-334411\",\n    \"coverage_amount\": 60000.00,\n    \"premium_monthly\": 148.00,\n    \"deductible\":      1000.00,\n    \"start_date\":      \"2025-03-01\",\n    \"renewal_date\":    \"2026-03-01\",\n    \"auto_renew\":      true,\n    \"beneficiary\":     null,\n    \"notes\":           null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/insurance.create", "host": ["{{base_url}}"], "path": ["insurance.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Policy",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"policy_id\":       \"{{policy_id}}\",\n    \"renewal_date\":    \"2028-01-01\",\n    \"premium_monthly\": 90.00,\n    \"auto_renew\":      true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/insurance.update", "host": ["{{base_url}}"], "path": ["insurance.update"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Policy (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/insurance.delete?policy_id={{policy_id}}", "host": ["{{base_url}}"], "path": ["insurance.delete"], "query": [{ "key": "policy_id", "value": "{{policy_id}}" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Properties",
+      "description": "Real estate with nested mortgage, insurance[] and additional_liens[]. Property insurance lives here — not in the Insurance tab.",
+      "item": [
+        {
+          "name": "Find Properties",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/properties.find", "host": ["{{base_url}}"], "path": ["properties.find"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Find One Property",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/properties.find-one?property_id={{property_id}}", "host": ["{{base_url}}"], "path": ["properties.find-one"], "query": [{ "key": "property_id", "value": "{{property_id}}" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Property (with Mortgage + Insurance)",
+          "event": [{ "listen": "test", "script": { "exec": ["const res = pm.response.json();", "if (res.success && res.data && res.data.property_id) {", "    pm.collectionVariables.set('property_id', res.data.property_id);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\":            \"Home — Accra\",\n    \"property_type\":   \"house\",\n    \"country\":         \"Ghana\",\n    \"city\":            \"Accra\",\n    \"purchase_date\":   \"2021-03-01\",\n    \"purchase_price\":  120000.00,\n    \"market_value\":    185000.00,\n    \"value_uncertain\": false,\n    \"is_primary\":      true,\n    \"mortgage\": {\n        \"lender\":               \"Stanbic Bank\",\n        \"balance\":              90000.00,\n        \"interest_rate_pct\":    12.5,\n        \"min_payment_monthly\":  1200.00,\n        \"due_day\":              1,\n        \"original_loan_amount\": 110000.00,\n        \"expected_payoff_date\": \"2036-03-01\"\n    },\n    \"additional_liens\": [],\n    \"insurance\": [\n        {\n            \"insurance_type\":  \"homeowners\",\n            \"provider\":        \"Enterprise Insurance\",\n            \"policy_number\":   \"EI-2024-001122\",\n            \"coverage_amount\": 185000.00,\n            \"annual_premium\":  2400.00,\n            \"deductible\":      1000.00,\n            \"expiry_date\":     \"2025-03-01\"\n        }\n    ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/properties.create", "host": ["{{base_url}}"], "path": ["properties.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Property (No Mortgage)",
+          "event": [{ "listen": "test", "script": { "exec": ["const res = pm.response.json();", "if (res.success && res.data && res.data.property_id) {", "    pm.collectionVariables.set('property_id', res.data.property_id);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\":            \"Land — Kumasi\",\n    \"property_type\":   \"land\",\n    \"country\":         \"Ghana\",\n    \"city\":            \"Kumasi\",\n    \"purchase_date\":   \"2020-06-15\",\n    \"purchase_price\":  45000.00,\n    \"market_value\":    75000.00,\n    \"value_uncertain\": true,\n    \"is_primary\":      false,\n    \"mortgage\":        null,\n    \"additional_liens\": [],\n    \"insurance\":       []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/properties.create", "host": ["{{base_url}}"], "path": ["properties.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Property",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"property_id\":  \"{{property_id}}\",\n    \"market_value\": 195000.00,\n    \"value_uncertain\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/properties.update", "host": ["{{base_url}}"], "path": ["properties.update"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Property (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/properties.delete?property_id={{property_id}}", "host": ["{{base_url}}"], "path": ["properties.delete"], "query": [{ "key": "property_id", "value": "{{property_id}}" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Mortgage",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"property_id\": \"{{property_id}}\",\n    \"mortgage\": {\n        \"lender\":               \"Stanbic Bank\",\n        \"balance\":              88000.00,\n        \"interest_rate_pct\":    12.5,\n        \"min_payment_monthly\":  1200.00,\n        \"due_day\":              1,\n        \"original_loan_amount\": 110000.00,\n        \"expected_payoff_date\": \"2036-03-01\"\n    }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/properties.mortgage.update", "host": ["{{base_url}}"], "path": ["properties.mortgage.update"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Mortgage",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"property_id\": \"{{property_id}}\",\n    \"mortgage\":    null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/properties.mortgage.update", "host": ["{{base_url}}"], "path": ["properties.mortgage.update"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Property Insurance (Full Replacement)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"property_id\": \"{{property_id}}\",\n    \"insurance\": [\n        {\n            \"insurance_type\":  \"homeowners\",\n            \"provider\":        \"Enterprise Insurance\",\n            \"policy_number\":   \"EI-2025-001122\",\n            \"coverage_amount\": 195000.00,\n            \"annual_premium\":  2600.00,\n            \"deductible\":      1000.00,\n            \"expiry_date\":     \"2026-03-01\"\n        },\n        {\n            \"insurance_type\":  \"flood\",\n            \"provider\":        \"Allianz\",\n            \"policy_number\":   \"ALZ-2025-888001\",\n            \"coverage_amount\": 100000.00,\n            \"annual_premium\":  800.00,\n            \"deductible\":      500.00,\n            \"expiry_date\":     \"2026-03-01\"\n        }\n    ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/properties.insurance.update", "host": ["{{base_url}}"], "path": ["properties.insurance.update"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Assets",
+      "item": [
+        {
+          "name": "Find Holdings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/assets.find", "host": ["{{base_url}}"], "path": ["assets.find"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Holding (Stock)",
+          "event": [{ "listen": "test", "script": { "exec": ["const res = pm.response.json();", "if (res.success && res.data && res.data.holding_id) {", "    pm.collectionVariables.set('holding_id', res.data.holding_id);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"asset_type\":         \"stock\",\n    \"name\":               \"Apple Inc.\",\n    \"symbol\":             \"AAPL\",\n    \"quantity\":           10,\n    \"cost_basis\":         1650.00,\n    \"initial_value_date\": \"2024-01-15\",\n    \"coupon_rate\":        null,\n    \"maturity_date\":      null,\n    \"current_value\":      null\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/assets.create", "host": ["{{base_url}}"], "path": ["assets.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Holding (Crypto)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"asset_type\":         \"crypto\",\n    \"name\":               \"Bitcoin\",\n    \"symbol\":             \"BTC\",\n    \"quantity\":           0.45,\n    \"cost_basis\":         30000.00,\n    \"initial_value_date\": \"2022-06-10\",\n    \"coupon_rate\":        null,\n    \"maturity_date\":      null,\n    \"current_value\":      null\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/assets.create", "host": ["{{base_url}}"], "path": ["assets.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Holding (Bond)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"asset_type\":         \"bond\",\n    \"name\":               \"Ghana Eurobond 2029\",\n    \"symbol\":             null,\n    \"quantity\":           null,\n    \"cost_basis\":         5000.00,\n    \"coupon_rate\":        6.375,\n    \"maturity_date\":      \"2029-01-18\",\n    \"initial_value_date\": \"2024-06-01\",\n    \"current_value\":      null\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/assets.create", "host": ["{{base_url}}"], "path": ["assets.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Holding (Alternative / Manual)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"asset_type\":         \"alternative\",\n    \"name\":               \"Private Equity Fund B\",\n    \"symbol\":             null,\n    \"quantity\":           null,\n    \"cost_basis\":         25000.00,\n    \"initial_value_date\": \"2022-09-15\",\n    \"current_value\":      31000.00,\n    \"coupon_rate\":        null,\n    \"maturity_date\":      null\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/assets.create", "host": ["{{base_url}}"], "path": ["assets.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Holding",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"holding_id\":    \"{{holding_id}}\",\n    \"quantity\":      12,\n    \"current_value\": null\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/assets.update", "host": ["{{base_url}}"], "path": ["assets.update"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Holding (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/assets.delete?holding_id={{holding_id}}", "host": ["{{base_url}}"], "path": ["assets.delete"], "query": [{ "key": "holding_id", "value": "{{holding_id}}" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Valuation Snapshot",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"holding_id\": \"{{holding_id}}\",\n    \"value\":      42300.00,\n    \"as_of\":      \"2026-04-12\",\n    \"source\":     \"manual\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/assets.valuation.create", "host": ["{{base_url}}"], "path": ["assets.valuation.create"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cash Flow — Income",
+      "item": [
+        {
+          "name": "Find Income",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/cashflow.income.find?is_active=true", "host": ["{{base_url}}"], "path": ["cashflow.income.find"], "query": [{ "key": "is_active", "value": "true" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Income",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"name\":            \"Monthly Salary\",\n    \"category\":        \"Salary\",\n    \"amount\":          5000.00,\n    \"source_currency\": \"USD\",\n    \"recurring_type\":  \"monthly\",\n    \"start_date\":      \"2024-01-01\",\n    \"end_date\":        null\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/cashflow.income.create", "host": ["{{base_url}}"], "path": ["cashflow.income.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Income",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"id\":     \"______\",\n    \"amount\": 5500.00\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/cashflow.income.update", "host": ["{{base_url}}"], "path": ["cashflow.income.update"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Income",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/cashflow.income.delete?id=______", "host": ["{{base_url}}"], "path": ["cashflow.income.delete"], "query": [{ "key": "id", "value": "______" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cash Flow — Expense",
+      "item": [
+        {
+          "name": "Find Expenses",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/cashflow.expense.find?is_active=true", "host": ["{{base_url}}"], "path": ["cashflow.expense.find"], "query": [{ "key": "is_active", "value": "true" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Expense",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"name\":            \"Rent\",\n    \"category\":        \"Housing\",\n    \"amount\":          1800.00,\n    \"source_currency\": \"USD\",\n    \"recurring_type\":  \"monthly\",\n    \"start_date\":      \"2023-06-01\",\n    \"end_date\":        null,\n    \"essential\":       true\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/cashflow.expense.create", "host": ["{{base_url}}"], "path": ["cashflow.expense.create"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Expense",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"id\":     \"______\",\n    \"amount\": 1900.00\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/cashflow.expense.update", "host": ["{{base_url}}"], "path": ["cashflow.expense.update"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Expense",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/cashflow.expense.delete?id=______", "host": ["{{base_url}}"], "path": ["cashflow.expense.delete"], "query": [{ "key": "id", "value": "______" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cash Flow — History",
+      "item": [
+        {
+          "name": "Find History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/cashflow.history.find?limit=12", "host": ["{{base_url}}"], "path": ["cashflow.history.find"], "query": [{ "key": "limit", "value": "12" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cash Flow — Emergency Fund",
+      "item": [
+        {
+          "name": "Find Emergency Fund",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/cashflow.emergency-fund.find", "host": ["{{base_url}}"], "path": ["cashflow.emergency-fund.find"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Emergency Fund",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n    \"current_cash_balance\": 12000.00,\n    \"target_months\":        6,\n    \"use_essential_only\":   true\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/cashflow.emergency-fund.update", "host": ["{{base_url}}"], "path": ["cashflow.emergency-fund.update"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cash Flow — Summary",
+      "item": [
+        {
+          "name": "Get Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{session_token}}" }],
+            "url": { "raw": "{{base_url}}/cashflow.summary", "host": ["{{base_url}}"], "path": ["cashflow.summary"] }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

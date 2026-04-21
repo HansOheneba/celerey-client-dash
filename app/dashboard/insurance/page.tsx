@@ -296,25 +296,31 @@ function PolicyDialog({
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Category</Label>
             <div className="grid grid-cols-5 gap-2">
-              {INSURANCE_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.value}
-                  type="button"
-                  onClick={() => set("category", cat.value)}
-                  className={`rounded-lg border px-2 py-2 text-xs font-medium transition-all flex flex-col items-center gap-1 ${
-                    draft.category === cat.value
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-muted bg-background text-muted-foreground hover:border-foreground/30"
-                  }`}
-                >
-                  <FontAwesomeIcon
-                    icon={CATEGORY_ICONS[cat.value]}
-                    className="h-3.5 w-3.5"
-                  />
-                  {cat.label}
-                </button>
-              ))}
+              {INSURANCE_CATEGORIES.filter((cat) => cat.value !== "home").map(
+                (cat) => (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    onClick={() => set("category", cat.value)}
+                    className={`rounded-lg border px-2 py-2 text-xs font-medium transition-all flex flex-col items-center gap-1 ${
+                      draft.category === cat.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-muted bg-background text-muted-foreground hover:border-foreground/30"
+                    }`}
+                  >
+                    <FontAwesomeIcon
+                      icon={CATEGORY_ICONS[cat.value]}
+                      className="h-3.5 w-3.5"
+                    />
+                    {cat.label}
+                  </button>
+                ),
+              )}
             </div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
+              <FontAwesomeIcon icon={faHouse} className="h-3 w-3" />
+              Home / property insurance is managed directly on each property.
+            </p>
           </div>
 
           <Separator />
@@ -675,8 +681,7 @@ function PolicyCard({
                     onEdit();
                   }}
                 >
-                  <FontAwesomeIcon icon={faPencil} className="h-3 w-3" />{" "}
-                  Edit
+                  <FontAwesomeIcon icon={faPencil} className="h-3 w-3" /> Edit
                 </Button>
                 <Button
                   variant="ghost"
@@ -687,8 +692,7 @@ function PolicyCard({
                     onDeactivate();
                   }}
                 >
-                  <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />{" "}
-                  Remove
+                  <FontAwesomeIcon icon={faXmark} className="h-3 w-3" /> Remove
                 </Button>
               </div>
             </div>
@@ -718,14 +722,13 @@ function PropertyPolicyCard({
       (1000 * 60 * 60 * 24),
   );
 
-  const expiryTone: "expired" | "urgent" | "soon" | "ok" =
-    expired
-      ? "expired"
-      : daysToExpiry <= 30
-        ? "urgent"
-        : daysToExpiry <= 60
-          ? "soon"
-          : "ok";
+  const expiryTone: "expired" | "urgent" | "soon" | "ok" = expired
+    ? "expired"
+    : daysToExpiry <= 30
+      ? "urgent"
+      : daysToExpiry <= 60
+        ? "soon"
+        : "ok";
 
   const expiryStyles = {
     expired: "text-red-600 border-red-200 bg-red-50",
@@ -739,8 +742,7 @@ function PropertyPolicyCard({
     soon: faCalendarDays,
     ok: faCircleCheck,
   };
-  const expiryLabel =
-    expired ? "Expired" : `${daysToExpiry}d left`;
+  const expiryLabel = expired ? "Expired" : `${daysToExpiry}d left`;
 
   return (
     <motion.div
@@ -844,7 +846,9 @@ function PropertyPolicyCard({
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Annual premium</p>
+                  <p className="text-xs text-muted-foreground">
+                    Annual premium
+                  </p>
                   <p className="text-sm font-semibold">
                     {formatCurrency(policy.annual_premium)}
                   </p>
@@ -862,7 +866,9 @@ function PropertyPolicyCard({
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Insurance type</p>
+                  <p className="text-xs text-muted-foreground">
+                    Insurance type
+                  </p>
                   <p className="text-sm font-semibold capitalize">
                     {propertyInsuranceTypeLabel(policy.insurance_type)}
                   </p>
@@ -901,10 +907,7 @@ function PropertyPolicyCard({
                   }}
                 >
                   Edit in Properties
-                  <FontAwesomeIcon
-                    icon={faArrowRight}
-                    className="h-3 w-3"
-                  />
+                  <FontAwesomeIcon icon={faArrowRight} className="h-3 w-3" />
                 </Button>
               </div>
             </div>
@@ -922,8 +925,10 @@ export default function InsurancePage() {
   const storeProperties = useFinancialStore((s) => s.propertyAssets);
   const storeInsurancePolicies = useFinancialStore((s) => s.insurancePolicies);
 
-  const [policies, setPolicies] = React.useState<InsurancePolicy[]>(() =>
-    storeInsurancePolicies.filter((p) => p.is_active),
+  // Derive directly from the store so this is always in sync — no stale local copy.
+  const policies = React.useMemo(
+    () => storeInsurancePolicies.filter((p) => p.is_active),
+    [storeInsurancePolicies],
   );
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editPolicy, setEditPolicy] = React.useState<InsurancePolicy | null>(
@@ -1014,8 +1019,7 @@ export default function InsurancePage() {
       totalCoverage: standaloneSummary.totalCoverage + propCoverage,
       totalPolicies: standaloneSummary.totalPolicies + propertyEntries.length,
       expiredCount: standaloneSummary.expiredCount + propExpired,
-      expiringSoonCount:
-        standaloneSummary.expiringSoonCount + propExpiringSoon,
+      expiringSoonCount: standaloneSummary.expiringSoonCount + propExpiringSoon,
       premiumToIncomeRatioPct,
     };
   }, [standaloneSummary, propertyEntries, monthlyIncome]);
@@ -1202,20 +1206,17 @@ export default function InsurancePage() {
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   function handleSave(p: InsurancePolicy) {
-    const exists = policies.find((x) => x.policy_id === p.policy_id);
+    const exists = storeInsurancePolicies.find(
+      (x) => x.policy_id === p.policy_id,
+    );
     if (exists) {
-      setPolicies(policies.map((x) => (x.policy_id === p.policy_id ? p : x)));
       useFinancialStore.getState().removeInsurancePolicy(p.policy_id);
-      useFinancialStore.getState().addInsurancePolicy(p);
-    } else {
-      setPolicies([...policies, p]);
-      useFinancialStore.getState().addInsurancePolicy(p);
     }
+    useFinancialStore.getState().addInsurancePolicy(p);
     setEditPolicy(null);
   }
 
   function handleDeactivate(policyId: string) {
-    setPolicies(policies.filter((p) => p.policy_id !== policyId));
     useFinancialStore.getState().removeInsurancePolicy(policyId);
   }
 
@@ -1288,7 +1289,6 @@ export default function InsurancePage() {
             className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
           >
             <div className="flex items-center gap-3">
-             
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight">
                   Insurance
@@ -1569,6 +1569,20 @@ export default function InsurancePage() {
                     const matchingPolicies = policies.filter(
                       (p) => p.category === cat,
                     );
+                    // Property-linked entries count as "home" coverage
+                    const matchingPropertyEntries =
+                      cat === "home" ? propertyEntries : [];
+                    const totalCount =
+                      matchingPolicies.length + matchingPropertyEntries.length;
+                    const totalMonthly =
+                      matchingPolicies.reduce(
+                        (s, p) => s + p.premium_monthly,
+                        0,
+                      ) +
+                      matchingPropertyEntries.reduce(
+                        (s, e) => s + e.policy.annual_premium / 12,
+                        0,
+                      );
                     return (
                       <div
                         key={cat}
@@ -1598,18 +1612,9 @@ export default function InsurancePage() {
                         </div>
                         {covered ? (
                           <span className="text-muted-foreground">
-                            {matchingPolicies.length}{" "}
-                            {matchingPolicies.length === 1
-                              ? "policy"
-                              : "policies"}{" "}
-                            &middot;{" "}
-                            {formatCurrency(
-                              matchingPolicies.reduce(
-                                (s, p) => s + p.premium_monthly,
-                                0,
-                              ),
-                            )}
-                            /mo
+                            {totalCount}{" "}
+                            {totalCount === 1 ? "policy" : "policies"} &middot;{" "}
+                            {formatCurrency(Math.round(totalMonthly))}/mo
                           </span>
                         ) : (
                           <button

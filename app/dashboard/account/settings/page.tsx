@@ -30,7 +30,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Save, UserIcon, Globe, ShieldCheck } from "lucide-react";
+import {
+  CalendarIcon,
+  Save,
+  UserIcon,
+  Globe,
+  ShieldCheck,
+  Building2,
+} from "lucide-react";
 import { format } from "date-fns";
 import {
   countries as allCountries,
@@ -93,6 +100,7 @@ export default function AccountPage() {
 
   const mode = form.account_mode ?? "solo";
   const isSolo = mode === "solo";
+  const isEnterprise = form.user_type === "enterprise";
 
   function handleChange(field: keyof User | "citizenships", value: unknown) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -153,6 +161,12 @@ export default function AccountPage() {
               <Badge variant="outline" className="text-xs">
                 {accountModeLabel(mode)}
               </Badge>
+              {isEnterprise && (
+                <Badge className="text-xs bg-[#1B1856] text-white gap-1">
+                  <Building2 className="h-3 w-3" />
+                  Enterprise
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">{form.email}</p>
           </div>
@@ -502,6 +516,58 @@ export default function AccountPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Enterprise Account — read-only, enterprise users only */}
+      {isEnterprise && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Enterprise Account
+            </CardTitle>
+            <CardDescription>
+              Your access is sponsored by your company. These details are
+              managed by your organisation and cannot be edited here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Company</p>
+                <p className="text-sm font-medium">
+                  {form.enterprise_info?.company_name ?? "—"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Company ID</p>
+                <p className="text-sm font-medium font-mono">
+                  {form.enterprise_info?.company_id ?? "—"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Seat Granted</p>
+                <p className="text-sm font-medium">
+                  {form.enterprise_info?.seat_granted_at
+                    ? new Date(
+                        form.enterprise_info.seat_granted_at,
+                      ).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "—"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Provisioned By</p>
+                <p className="text-sm font-medium">
+                  {form.enterprise_info?.seat_granted_by ?? "—"}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
