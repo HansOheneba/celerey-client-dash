@@ -9,11 +9,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Controller, Control } from "react-hook-form";
+import { Controller, Control, FieldValues, Path } from "react-hook-form";
 
-interface DatePickerFieldProps {
-  control: Control<any>;
-  name: string;
+interface DatePickerFieldProps<TFieldValues extends FieldValues = FieldValues> {
+  control: Control<TFieldValues>;
+  name: Path<TFieldValues>;
   placeholder?: string;
   fromYear?: number;
   toYear?: number;
@@ -71,14 +71,14 @@ function formatRelativeCountdown(date: Date | undefined) {
   return `${pastDays} day${pastDays === 1 ? "" : "s"} ago`;
 }
 
-export function DatePickerField({
+export function DatePickerField<TFieldValues extends FieldValues = FieldValues>({
   control,
   name,
   placeholder = "Select date",
   fromYear = 1950,
   toYear = new Date().getFullYear(),
   showRelativeCountdown = false,
-}: DatePickerFieldProps) {
+}: DatePickerFieldProps<TFieldValues>) {
   const [open, setOpen] = React.useState(false);
 
   return (

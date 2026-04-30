@@ -2828,7 +2828,7 @@ export function selectNetWorthBreakdown(
   const totalOtherAssets = _sum(
     data.accounts.filter((a) => a.type === "other").map((a) => a.balance),
   );
-  const totalPropertyValue = _sum(data.propertyAssets.map((p) => p.market_value));
+  const totalPropertyValue = _sum(data.propertyAssets.map((p) => p.value));
   const totalAssets =
     totalInvestments + totalCash + totalOtherAssets + totalPropertyValue;
   const totalMortgages = _sum(

@@ -90,6 +90,8 @@ interface ApiGoal {
   status?: string;
   icon?: string;
   color?: string;
+  category?: string;
+  description?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -170,6 +172,8 @@ interface ApiUser {
   risk_profile?: string | null;
   dependents?: number | null;
   bio?: string | null;
+  citizenships?: string[] | null;
+  preferred_contact?: string | null;
 }
 
 interface ApiLiability {
@@ -238,10 +242,8 @@ function apiGoalToStore(g: ApiGoal, index: number): Goal {
     title: g.title,
     // API does not return category — default to "other"; round-trip via icon field when available
     category:
-      ((g as Record<string, unknown>).category as GoalCategory) ?? "other",
-    description: (g as Record<string, unknown>).description as
-      | string
-      | undefined,
+      (g.category as GoalCategory | undefined) ?? "other",
+    description: g.description,
     priority: g.priority ?? index + 1,
     target: Number(g.target_amount) || 0,
     current: Number(g.current_amount) || 0,
