@@ -71,7 +71,9 @@ function formatRelativeCountdown(date: Date | undefined) {
   return `${pastDays} day${pastDays === 1 ? "" : "s"} ago`;
 }
 
-export function DatePickerField<TFieldValues extends FieldValues = FieldValues>({
+export function DatePickerField<
+  TFieldValues extends FieldValues = FieldValues,
+>({
   control,
   name,
   placeholder = "Select date",

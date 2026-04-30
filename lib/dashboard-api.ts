@@ -241,8 +241,7 @@ function apiGoalToStore(g: ApiGoal, index: number): Goal {
     userId: g.user_id,
     title: g.title,
     // API does not return category — default to "other"; round-trip via icon field when available
-    category:
-      (g.category as GoalCategory | undefined) ?? "other",
+    category: (g.category as GoalCategory | undefined) ?? "other",
     description: g.description,
     priority: g.priority ?? index + 1,
     target: Number(g.target_amount) || 0,

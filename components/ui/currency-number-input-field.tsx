@@ -1,11 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { Controller, type Control, type FieldValues, type Path } from "react-hook-form";
+import {
+  Controller,
+  type Control,
+  type FieldValues,
+  type Path,
+} from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
 
-interface CurrencyNumberInputFieldProps<TFieldValues extends FieldValues = FieldValues> {
+interface CurrencyNumberInputFieldProps<
+  TFieldValues extends FieldValues = FieldValues,
+> {
   control: Control<TFieldValues>;
   name: Path<TFieldValues>;
   id?: string;
@@ -31,7 +38,9 @@ function sanitizeNumericInput(raw: string) {
   return `${beforeDot}${afterDot}`;
 }
 
-export function CurrencyNumberInputField<TFieldValues extends FieldValues = FieldValues>({
+export function CurrencyNumberInputField<
+  TFieldValues extends FieldValues = FieldValues,
+>({
   control,
   name,
   id,

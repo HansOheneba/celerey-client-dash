@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Controller, type Control, type FieldValues, type Path } from "react-hook-form";
+import {
+  Controller,
+  type Control,
+  type FieldValues,
+  type Path,
+} from "react-hook-form";
 import { parseDate } from "chrono-node";
 import { CalendarIcon } from "lucide-react";
 
@@ -14,7 +19,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-interface NaturalLanguageDatePickerFieldProps<TFieldValues extends FieldValues = FieldValues> {
+interface NaturalLanguageDatePickerFieldProps<
+  TFieldValues extends FieldValues = FieldValues,
+> {
   control: Control<TFieldValues>;
   name: Path<TFieldValues>;
   placeholder?: string;
@@ -105,7 +112,9 @@ function parseInputToDate(value: string) {
   return parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined;
 }
 
-export function NaturalLanguageDatePickerField<TFieldValues extends FieldValues = FieldValues>({
+export function NaturalLanguageDatePickerField<
+  TFieldValues extends FieldValues = FieldValues,
+>({
   control,
   name,
   placeholder = "Tomorrow or next week",
