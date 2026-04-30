@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -309,12 +310,14 @@ export function InsuranceSection({
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="insurance-expiry">Policy expiry date</Label>
-                <Input
+                <DateInput
                   id="insurance-expiry"
-                  type="date"
                   value={form.expiryDate}
-                  onChange={(e) => update("expiryDate", e.target.value)}
-                  required
+                  onChange={(v) => update("expiryDate", v)}
+                  placeholder="Pick expiry date"
+                  fromDate={new Date()}
+                  fromYear={new Date().getFullYear()}
+                  toYear={new Date().getFullYear() + 30}
                 />
               </div>
             </div>

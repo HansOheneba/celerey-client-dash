@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { type PropertyMortgage } from "@/lib/client-data";
+import { DateInput } from "@/components/ui/date-input";
 
 // ── Helpers ─────────────────────────────────────────────────────
 function formatNumberWithCommas(value: string): string {
@@ -357,7 +358,13 @@ export function MortgageSection({
                 max="31"
                 placeholder="1"
                 value={form.dueDay}
-                onChange={(e) => update("dueDay", e.target.value)}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  update(
+                    "dueDay",
+                    isNaN(n) ? "" : String(Math.min(31, Math.max(1, n))),
+                  );
+                }}
               />
             </div>
           </div>
@@ -398,11 +405,14 @@ export function MortgageSection({
                   (optional)
                 </span>
               </Label>
-              <Input
+              <DateInput
                 id="mortgage-payoff"
-                type="date"
                 value={form.expectedPayoffDate}
-                onChange={(e) => update("expectedPayoffDate", e.target.value)}
+                onChange={(v) => update("expectedPayoffDate", v)}
+                placeholder="Pick payoff date"
+                fromDate={new Date()}
+                fromYear={new Date().getFullYear()}
+                toYear={new Date().getFullYear() + 40}
               />
             </div>
           </div>

@@ -44,7 +44,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChevronDown, Settings, LogOut, UserIcon } from "lucide-react";
-import { getUserFullName } from "@/lib/client-data";
+import {
+  clearAuth,
+  clearUserProfile,
+  getUserFullName,
+} from "@/lib/client-data";
 import { useEffect, useState } from "react";
 
 const nav = [
@@ -155,22 +159,22 @@ export default function DashboardSidebar() {
 
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <a
+                <Link
                   href="/dashboard/account/profile"
                   className="flex items-center gap-2 cursor-pointer"
                 >
                   <UserIcon className="h-4 w-4" />
                   Profile
-                </a>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <a
+                <Link
                   href="/dashboard/account/settings"
                   className="flex items-center gap-2 cursor-pointer"
                 >
                   <Settings className="h-4 w-4" />
                   Account Settings
-                </a>
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
 
@@ -178,8 +182,15 @@ export default function DashboardSidebar() {
 
             <DropdownMenuItem
               className="text-destructive cursor-pointer"
-              onClick={() => {
-                console.log("sign out");
+              onClick={async () => {
+                try {
+                  await fetch("/api/auth/sign-out", { method: "POST" });
+                } catch {
+                  // ignore network errors — still clear local state
+                }
+                clearAuth();
+                clearUserProfile();
+                router.replace("/");
               }}
             >
               <LogOut className="h-4 w-4 mr-2" />

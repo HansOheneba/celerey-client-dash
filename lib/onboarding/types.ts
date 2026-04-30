@@ -13,13 +13,19 @@ export interface IdentityData {
   display_name?: string;
   /** Nullable — only collected for solo accounts */
   date_of_birth?: string;
+  /** Injected from auth state before API submission */
+  email?: string;
   phone_number: string;
-  country: string;
+  resident_country: string;
   resident_city: string;
-  preferred_currency: string;
+  currency: string;
   account_mode: "solo" | "partner" | "family";
   marital_status?: string;
   occupation?: string;
+  /** Solo accounts only — e.g. "Mr", "Mrs", "Dr" */
+  prefix?: string;
+  /** Solo accounts only — "M", "F", "O", "X" */
+  gender?: string;
 }
 
 export interface GoalData {
@@ -76,4 +82,48 @@ export interface OnboardingPayload {
   liabilities?: LiabilityData[];
   emergencyFund: EmergencyFundData;
   retirement: RetirementData;
+}
+
+// ── API response types ──────────────────────────────────────────────────────
+
+export interface CreatedUser {
+  user_id: string;
+  account_mode: string;
+  display_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  phone_number: string;
+  resident_country: string;
+  resident_city: string;
+  date_of_birth: string | null;
+  user_type: string;
+  company_id: string | null;
+  email_verified: boolean;
+  verified_at: string;
+  gender: string | null;
+  retirement_age: number | null;
+  currency: string;
+  is_active: boolean;
+  prefix: string | null;
+  occupation: string | null;
+  marital_status: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OnboardingResponseData {
+  user: CreatedUser;
+  goals: unknown[];
+  incomes: unknown[];
+  emergencyFund: unknown;
+  retirement: unknown;
+  session_token: string;
+}
+
+export interface OnboardingResponse {
+  success: boolean;
+  data: OnboardingResponseData;
+  message?: string;
+  error?: string;
 }

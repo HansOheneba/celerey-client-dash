@@ -31,6 +31,7 @@ import {
   isSymbolHeld,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { createAsset, updateAsset } from "@/lib/dashboard-api";
 
 // ── Form state ──────────────────────────────────────────────────
 export type HoldingFormValues = {
@@ -358,7 +359,7 @@ export function HoldingForm({
           ? currentValueNum
           : amountInvestedNum || currentValueNum;
 
-      const holding: AssetHolding = {
+      let holding: AssetHolding = {
         holding_id: holdingId,
         user_id: editingHolding?.user_id ?? "u-1",
         name: form.name.trim(),
@@ -387,7 +388,23 @@ export function HoldingForm({
           )
         : [...storeHoldings, holding];
 
-      setHoldings(updatedHoldings);
+      if (isEditing) {
+        await updateAsset({ ...holding });
+      } else {
+        const created = await createAsset(holding);
+        // Use the backend-assigned holding_id if present
+        if (created?.holding_id && created.holding_id !== holding.holding_id) {
+          holding = { ...holding, holding_id: created.holding_id };
+        }
+      }
+
+      setHoldings(
+        isEditing
+          ? storeHoldings.map((h) =>
+              h.holding_id === holding.holding_id ? holding : h,
+            )
+          : [...storeHoldings, holding],
+      );
       router.push("/dashboard/assets");
     } finally {
       setIsSubmitting(false);

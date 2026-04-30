@@ -12,6 +12,7 @@ interface EmailFormProps {
   onModeToggle: () => void;
   isSubmitting: boolean;
   errorMessage?: string | null;
+  infoMessage?: string | null;
 }
 
 export function EmailForm({
@@ -20,6 +21,7 @@ export function EmailForm({
   onModeToggle,
   isSubmitting,
   errorMessage,
+  infoMessage,
 }: EmailFormProps) {
   const [email, setEmail] = React.useState("");
 
@@ -40,6 +42,12 @@ export function EmailForm({
           ? "Enter your email to log in to your dashboard."
           : "Enter your email to get into your dashboard."}
       </p>
+
+      {infoMessage ? (
+        <p className="mt-3 text-sm text-emerald-600" role="status">
+          {infoMessage}
+        </p>
+      ) : null}
 
       {errorMessage ? (
         <p className="mt-3 text-sm text-destructive" role="alert">

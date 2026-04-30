@@ -23,12 +23,14 @@ export const identitySchema = z
     /** Only collected for solo accounts */
     date_of_birth: z.string().optional(),
     phone_number: z.string().min(1, "Phone number is required").max(255),
-    country: z.string().min(1, "Country is required"),
+    resident_country: z.string().min(1, "Country is required"),
     resident_city: z.string().min(1, "City is required"),
-    preferred_currency: z.string().min(1, "Currency is required").max(3),
+    currency: z.string().min(1, "Currency is required").max(3),
     account_mode: z.enum(["solo", "partner", "family"]),
     marital_status: z.string().optional(),
     occupation: z.string().max(50).optional(),
+    prefix: z.string().optional(),
+    gender: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.account_mode === "solo") {

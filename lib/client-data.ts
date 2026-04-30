@@ -559,6 +559,50 @@ export function clearOnboarded(): void {
   safeRemoveItem(ONBOARDED_KEY);
 }
 
+// ── User profile (returned by onboarding.create-user) ─────────────────────────
+
+const USER_PROFILE_KEY = "user_profile_v1";
+
+export interface UserProfile {
+  user_id: string;
+  account_mode: string;
+  display_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  phone_number: string;
+  resident_country: string;
+  resident_city: string;
+  date_of_birth: string | null;
+  gender: string | null;
+  currency: string;
+  prefix: string | null;
+  occupation: string | null;
+  marital_status: string | null;
+  user_type: string;
+  is_active: boolean;
+}
+
+/** Persists the user profile returned by the API to localStorage. */
+export function setUserProfile(profile: UserProfile): void {
+  safeSetItem(USER_PROFILE_KEY, JSON.stringify(profile));
+}
+
+/** Returns the stored user profile, or null if not yet set. */
+export function getUserProfile(): UserProfile | null {
+  const raw = safeGetItem(USER_PROFILE_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as UserProfile;
+  } catch {
+    return null;
+  }
+}
+
+export function clearUserProfile(): void {
+  safeRemoveItem(USER_PROFILE_KEY);
+}
+
 const NETWORTH_HISTORY_KEY = "networth_history_v1";
 
 export type NetWorthHistoryItem = {
@@ -649,6 +693,10 @@ export type User = {
   updated_at: string;
   occupation?: string;
   marital_status?: "single" | "married" | "divorced" | "widowed";
+  /** e.g. "Mr", "Mrs", "Dr" */
+  prefix?: string;
+  /** "M", "F", "O", "X" */
+  gender?: string;
   account_mode?: "solo" | "partner" | "family";
   risk_profile?: "conservative" | "moderate" | "aggressive";
   dependents?: number;
@@ -2780,7 +2828,7 @@ export function selectNetWorthBreakdown(
   const totalOtherAssets = _sum(
     data.accounts.filter((a) => a.type === "other").map((a) => a.balance),
   );
-  const totalPropertyValue = _sum(data.propertyAssets.map((p) => p.value));
+  const totalPropertyValue = _sum(data.propertyAssets.map((p) => p.market_value));
   const totalAssets =
     totalInvestments + totalCash + totalOtherAssets + totalPropertyValue;
   const totalMortgages = _sum(

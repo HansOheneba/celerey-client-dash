@@ -1,10 +1,19 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
 import { goalsData } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { usePageData } from "@/hooks/usePageData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import {
+  deleteGoal as apiDeleteGoal,
+  reorderGoalPriorities,
+  fetchGoalScenarios,
+} from "@/lib/dashboard-api";
 import { GoalHeader } from "@/components/dashboard/goals/goal-header";
 import { GoalFilterTabs } from "@/components/dashboard/goals/goal-filter-tabs";
 import { GoalCard } from "@/components/dashboard/goals/goal-card";
@@ -20,15 +29,50 @@ import type {
   FilterType,
 } from "@/components/dashboard/goals/types";
 
-const SCENARIOS: Scenario[] = goalsData.scenarios;
+const FALLBACK_SCENARIOS: Scenario[] = goalsData.scenarios;
 
 export default function GoalsDashboard() {
   const router = useRouter();
+  const { loading } = usePageData("goals");
   const storeGoals = useFinancialStore((s) => s.goals);
+
+  const [scenarios, setScenarios] =
+    React.useState<Scenario[]>(FALLBACK_SCENARIOS);
+
+  // Fetch scenarios from API on mount, fall back to static data
+  React.useEffect(() => {
+    fetchGoalScenarios()
+      .then((list) => {
+        console.log("[GoalsDashboard] fetched scenarios:", list);
+        if (list.length > 0) {
+          setScenarios(
+            list.map((s) => ({
+              id: s.id as ScenarioId,
+              label: s.label ?? s.name ?? s.id,
+              description: s.description ?? "",
+              monthlyReturnRate: s.monthly_return_rate ?? 0.005,
+              inflationRate: s.inflation_rate ?? 0.02,
+              monthlyMultiplier: s.monthly_multiplier,
+            })),
+          );
+        }
+      })
+      .catch((err) =>
+        console.warn(
+          "[GoalsDashboard] fetchGoalScenarios failed, using fallback:",
+          err,
+        ),
+      );
+  }, []);
 
   const [goals, setGoals] = React.useState<Goal[]>(() =>
     [...storeGoals].sort((a, b) => a.priority - b.priority),
   );
+
+  // Sync whenever the store is updated by the fetch
+  React.useEffect(() => {
+    setGoals([...storeGoals].sort((a, b) => a.priority - b.priority));
+  }, [storeGoals]);
   const [filter, setFilter] = React.useState<FilterType>("active");
 
   // Enrich goals with calculated values based on cash flow
@@ -49,8 +93,8 @@ export default function GoalsDashboard() {
 
   const scenario = React.useMemo<Scenario | null>(() => {
     if (!activeScenario) return null;
-    return SCENARIOS.find((s) => s.id === activeScenario) ?? null;
-  }, [activeScenario]);
+    return scenarios.find((s) => s.id === activeScenario) ?? null;
+  }, [activeScenario, scenarios]);
 
   // delete confirm dialog state
   const [deleteOpen, setDeleteOpen] = React.useState(false);
@@ -76,8 +120,13 @@ export default function GoalsDashboard() {
 
   const confirmDelete = (): void => {
     if (!pendingDelete) return;
+    const name = pendingDelete.title;
     setGoals((prev) => prev.filter((g) => g.id !== pendingDelete.id));
     useFinancialStore.getState().removeGoal(pendingDelete.id);
+    apiDeleteGoal(pendingDelete.id).catch(() => {
+      toast.error(`Failed to delete "${name}". Please try again.`);
+    });
+    toast.success(`"${name}" deleted.`);
     setDeleteOpen(false);
     setPendingDelete(null);
   };
@@ -91,10 +140,20 @@ export default function GoalsDashboard() {
     setGoals(reordered);
     const store = useFinancialStore.getState();
     reordered.forEach((g) => store.updateGoal(g));
+    reorderGoalPriorities(
+      reordered.map((g) => ({ goal_id: g.id, priority: g.priority })),
+    )
+      .then(() => toast.success("Priorities saved."))
+      .catch(() => toast.error("Failed to save priorities. Please try again."));
   };
 
   return (
-    <div className="min-h-screen from-background to-muted/20">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen from-background to-muted/20"
+    >
       <div className="mx-auto w-full px-4 py-8 md:px-6">
         {/* Header */}
         <GoalHeader
@@ -112,20 +171,24 @@ export default function GoalsDashboard() {
 
         {/* Grid */}
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-          {filteredGoals.map((g) => (
-            <GoalCard
-              key={g.id}
-              goal={g}
-              scenario={scenario}
-              onEdit={goToEditGoal}
-              onRequestDelete={requestDelete}
-            />
-          ))}
+          {loading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-36 w-full rounded-xl" />
+              ))
+            : filteredGoals.map((g) => (
+                <GoalCard
+                  key={g.id}
+                  goal={g}
+                  scenario={scenario}
+                  onEdit={goToEditGoal}
+                  onRequestDelete={requestDelete}
+                />
+              ))}
         </div>
 
         {/* Scenario modeling */}
         <ScenarioCard
-          scenarios={SCENARIOS}
+          scenarios={scenarios}
           activeScenario={activeScenario}
           setActiveScenario={setActiveScenario}
         />
@@ -147,6 +210,6 @@ export default function GoalsDashboard() {
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
       />
-    </div>
+    </motion.div>
   );
 }

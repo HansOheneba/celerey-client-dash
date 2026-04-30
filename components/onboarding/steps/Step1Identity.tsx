@@ -89,12 +89,20 @@ const CURRENCIES = [
 ];
 
 const MARITAL_STATUSES = [
-  "Single",
-  "Married",
-  "Divorced",
-  "Widowed",
-  "Separated",
-  "Prefer not to say",
+  { value: "single", label: "Single" },
+  { value: "married", label: "Married" },
+  { value: "divorced", label: "Divorced" },
+  { value: "widowed", label: "Widowed" },
+  { value: "separated", label: "Separated" },
+];
+
+const PREFIXES = ["Mr", "Mrs", "Ms", "Dr", "Prof", "Rev"];
+
+const GENDERS = [
+  { value: "M", label: "Male" },
+  { value: "F", label: "Female" },
+  { value: "O", label: "Non-binary / Other" },
+  { value: "X", label: "Prefer not to say" },
 ];
 
 interface Step1IdentityProps {
@@ -123,12 +131,14 @@ export function Step1Identity({
     display_name: defaultValues?.display_name ?? "",
     date_of_birth: defaultValues?.date_of_birth ?? "",
     phone_number: defaultValues?.phone_number ?? "",
-    country: defaultValues?.country ?? "",
+    resident_country: defaultValues?.resident_country ?? "",
     resident_city: defaultValues?.resident_city ?? "",
-    preferred_currency: defaultValues?.preferred_currency ?? "",
+    currency: defaultValues?.currency ?? "",
     account_mode: accountMode,
     marital_status: defaultValues?.marital_status ?? "",
     occupation: defaultValues?.occupation ?? "",
+    prefix: defaultValues?.prefix ?? "",
+    gender: defaultValues?.gender ?? "",
   };
 
   const {
@@ -145,10 +155,10 @@ export function Step1Identity({
     reValidateMode: "onChange",
   });
 
-  const selectedCountry = watch("country");
+  const selectedCountry = watch("resident_country");
   const watchedPhoneNumber = watch("phone_number");
   const watchedResidentCity = watch("resident_city");
-  const watchedCurrency = watch("preferred_currency");
+  const watchedCurrency = watch("currency");
   const watchedDisplayName = watch("display_name");
   const watchedFirstName = watch("first_name");
   const watchedLastName = watch("last_name");
@@ -188,8 +198,8 @@ export function Step1Identity({
         if (data?.country_code) {
           const match = COUNTRY_LIST.find((c) => c.code === data.country_code);
           if (match) {
-            if (!defaultValues?.country) {
-              setValue("country", match.name);
+            if (!defaultValues?.resident_country) {
+              setValue("resident_country", match.name);
             }
             if (!defaultValues?.phone_number && match.dialCode) {
               setDialCode(match.dialCode);
@@ -215,6 +225,8 @@ export function Step1Identity({
       date_of_birth: isSolo ? data.date_of_birth : undefined,
       marital_status: data.marital_status || undefined,
       occupation: data.occupation || undefined,
+      prefix: isSolo ? data.prefix || undefined : undefined,
+      gender: isSolo ? data.gender || undefined : undefined,
     });
   }
 
@@ -243,8 +255,32 @@ export function Step1Identity({
           </p>
 
           {isSolo ? (
-            /* ── SOLO: collect first name + last name ── */
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            /* ── SOLO: collect prefix + first name + last name ── */
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label>
+                  Prefix{" "}
+                  <span className="text-slate-400">(optional)</span>
+                </Label>
+                <Controller
+                  control={control}
+                  name="prefix"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PREFIXES.map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {p}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
               <div className="space-y-1.5">
                 <Label>First name</Label>
                 <Input {...register("first_name")} />
@@ -399,9 +435,34 @@ export function Step1Identity({
             </div>
           </div>
 
-          {/* Marital + Occupation */}
+          {/* Gender + Marital + Occupation */}
           {isSolo && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label>
+                  Gender{" "}
+                  <span className="text-slate-400">(optional)</span>
+                </Label>
+                <Controller
+                  control={control}
+                  name="gender"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {GENDERS.map((g) => (
+                          <SelectItem key={g.value} value={g.value}>
+                            {g.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <Label>
                   Marital status{" "}
@@ -420,8 +481,8 @@ export function Step1Identity({
                       </SelectTrigger>
                       <SelectContent>
                         {MARITAL_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s}
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -432,7 +493,8 @@ export function Step1Identity({
 
               <div className="space-y-1.5">
                 <Label>
-                  Occupation <span className="text-slate-400">(optional)</span>
+                  Occupation{" "}
+                  <span className="text-slate-400">(optional)</span>
                 </Label>
                 <Input {...register("occupation")} />
               </div>
@@ -486,7 +548,7 @@ export function Step1Identity({
                             key={c.code}
                             value={c.name}
                             onSelect={(val) => {
-                              setValue("country", val, {
+                              setValue("resident_country", val, {
                                 shouldValidate: true,
                                 shouldDirty: true,
                                 shouldTouch: true,
@@ -510,8 +572,8 @@ export function Step1Identity({
                   </Command>
                 </PopoverContent>
               </Popover>
-              {errors.country && (
-                <p className="text-xs text-red-500">{errors.country.message}</p>
+              {errors.resident_country && (
+                <p className="text-xs text-red-500">{errors.resident_country.message}</p>
               )}
             </div>
 
@@ -532,7 +594,7 @@ export function Step1Identity({
             <Label>Preferred currency</Label>
             <Controller
               control={control}
-              name="preferred_currency"
+              name="currency"
               render={({ field }) => (
                 <Select
                   onValueChange={field.onChange}
@@ -551,9 +613,9 @@ export function Step1Identity({
                 </Select>
               )}
             />
-            {errors.preferred_currency && (
+            {errors.currency && (
               <p className="text-xs text-red-500">
-                {errors.preferred_currency.message}
+                {errors.currency.message}
               </p>
             )}
           </div>

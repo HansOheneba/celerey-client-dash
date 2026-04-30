@@ -18,6 +18,7 @@ interface OtpFormProps {
   onBack: () => void;
   isSubmitting: boolean;
   errorMessage?: string | null;
+  infoMessage?: string | null;
 }
 
 const OTP_LENGTH = 6;
@@ -29,6 +30,7 @@ export function OtpForm({
   onBack,
   isSubmitting,
   errorMessage,
+  infoMessage,
 }: OtpFormProps) {
   const [otp, setOtp] = React.useState("");
 
@@ -66,6 +68,12 @@ export function OtpForm({
         <span className="font-medium text-foreground">{email}</span>. Enter it
         below to {mode === "login" ? "log in" : "continue"}.
       </p>
+
+      {infoMessage ? (
+        <p className="mt-3 text-sm text-emerald-600" role="status">
+          {infoMessage}
+        </p>
+      ) : null}
 
       {errorMessage ? (
         <p className="mt-3 text-sm text-destructive" role="alert">

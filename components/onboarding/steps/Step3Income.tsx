@@ -283,7 +283,7 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
   const [incomes, setIncomes] = useState<IncomeData[]>(defaultValues);
   const [showForm, setShowForm] = useState(defaultValues.length === 0);
   const store = useOnboardingStore();
-  const preferredCurrency = store.identity?.preferred_currency || "USD";
+  const preferredCurrency = store.identity?.currency || "USD";
 
   const {
     register,

@@ -1,28 +1,62 @@
 // lib/onboarding/api.ts
-import type { OnboardingPayload } from "./types";
+import type { OnboardingPayload, OnboardingResponse } from "./types";
+
+/** Thrown when the onboarding token has expired and the user must re-verify. */
+export class TokenExpiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TokenExpiredError";
+  }
+}
 
 /**
- * Submits the full onboarding payload.
- * No real API yet — data is persisted in Zustand and printed to the console.
+ * Submits the full onboarding payload to the backend via the secure
+ * server-side route, which attaches the HttpOnly onboarding_token cookie
+ * as a Bearer token header so JS never has to read it.
+ *
+ * Returns the full API response so callers can access the created user data
+ * and session_token (which is also set as an HttpOnly cookie by the route).
+ *
+ * Throws `TokenExpiredError` when the onboarding token has expired.
  */
 export async function submitOnboarding(
   payload: OnboardingPayload,
-): Promise<void> {
-  console.log(
-    "%c[Celerey Onboarding] ✅ Submission triggered",
-    "color: #151339; font-weight: bold; font-size: 14px; background: #f0f0ff; padding: 2px 8px; border-radius: 4px;",
-  );
-  console.log(
-    "%c[Celerey Onboarding] Full payload:",
-    "color: #4f46e5; font-weight: 600;",
-  );
-  console.log(JSON.stringify(payload, null, 2));
+): Promise<OnboardingResponse> {
+  const response = await fetch("/api/onboarding/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 
-  // Simulate network latency
-  await new Promise((resolve) => setTimeout(resolve, 900));
+  const data = (await response.json().catch(() => null)) as
+    | (OnboardingResponse & {
+        status?: number;
+      })
+    | null;
 
-  console.log(
-    "%c[Celerey Onboarding] 🎉 Persisted (mock — no API yet)",
-    "color: #16a34a; font-weight: bold; font-size: 13px;",
-  );
+  // The upstream API returns HTTP 200 with success:false + status:401 when
+  // the onboarding token has expired.
+  const isTokenExpired =
+    data?.status === 401 ||
+    (data?.message ?? "").toLowerCase().includes("token");
+
+  if ((!response.ok || data?.success === false) && isTokenExpired) {
+    throw new TokenExpiredError(
+      data?.message ?? "Your session has expired. Please re-verify your email.",
+    );
+  }
+
+  if (!response.ok || data?.success === false) {
+    throw new Error(
+      data?.message ??
+        data?.error ??
+        "Failed to submit onboarding data. Please try again.",
+    );
+  }
+
+  if (!data?.data?.user) {
+    throw new Error("Failed to submit onboarding data. Please try again.");
+  }
+
+  return data;
 }

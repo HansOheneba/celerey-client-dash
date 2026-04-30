@@ -187,6 +187,7 @@ export default function OnboardingPage() {
           onComplete={handleStep7Complete}
           onEditStep={(step) => setStep(step)}
           onBack={handleBack}
+          email={auth.email ?? ""}
         />
       )}
       {currentStep === 8 && (

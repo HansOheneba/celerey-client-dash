@@ -4,7 +4,6 @@ import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-
   faPlus,
   faPencil,
   faTrash,
@@ -63,6 +62,8 @@ import type {
   LegacyState,
 } from "@/store/financialStore";
 import { formatCurrency } from "@/lib/client-data";
+import { DateInput } from "@/components/ui/date-input";
+import { MoneyInput } from "@/components/ui/money-input";
 
 // ─── Brand ────────────────────────────────────────────────────────────────────
 const PRIMARY = "#151339";
@@ -171,7 +172,6 @@ function WillDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
-           
             Will & Estate
           </DialogTitle>
         </DialogHeader>
@@ -200,12 +200,12 @@ function WillDialog({
               Last updated{" "}
               <InfoTip content="When was your will last reviewed or updated?" />
             </Label>
-            <Input
-              type="date"
+            <DateInput
               value={draft.lastUpdated ?? ""}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, lastUpdated: e.target.value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, lastUpdated: v }))}
+              placeholder="Pick a date"
+              toDate={new Date()}
+              toYear={new Date().getFullYear()}
             />
           </div>
           <div className="space-y-1.5">
@@ -446,12 +446,13 @@ function DependentDialog({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Date of birth</Label>
-            <Input
-              type="date"
+            <DateInput
               value={draft.dateOfBirth ?? ""}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, dateOfBirth: e.target.value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, dateOfBirth: v }))}
+              placeholder="Pick date of birth"
+              toDate={new Date()}
+              toYear={new Date().getFullYear()}
+              fromYear={1900}
             />
           </div>
           <div className="space-y-1.5">
@@ -587,20 +588,13 @@ function DigitalAssetDialog({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Estimated value</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                $
-              </span>
-              <Input
-                type="number"
-                placeholder="0"
-                className="pl-6"
-                value={draft.value || ""}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, value: Number(e.target.value) }))
-                }
-              />
-            </div>
+            <MoneyInput
+              value={draft.value ? String(draft.value) : ""}
+              onChange={(v) =>
+                setDraft((d) => ({ ...d, value: Number(v) || 0 }))
+              }
+              placeholder="0"
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold flex items-center gap-1">
@@ -691,12 +685,12 @@ function LetterDialog({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Last updated</Label>
-            <Input
-              type="date"
+            <DateInput
               value={draft.lastUpdated ?? ""}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, lastUpdated: e.target.value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, lastUpdated: v }))}
+              placeholder="Pick a date"
+              toDate={new Date()}
+              toYear={new Date().getFullYear()}
             />
           </div>
           <div className="space-y-1.5">
@@ -947,7 +941,6 @@ export default function LegacyPage() {
             className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
           >
             <div className="flex items-center gap-3">
-             
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight">
                   Legacy

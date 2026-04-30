@@ -29,6 +29,7 @@ import type {
   RetirementData,
   EmergencyFundData,
 } from "@/lib/onboarding/types";
+import type { DashboardBootstrapData } from "@/lib/dashboard-api";
 
 // ── Legacy types ──────────────────────────────────────────────────────────────
 
@@ -185,14 +186,19 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
   legacy: LegacyState;
 
   setUser: (user: User | null) => void;
+  setGoals: (goals: Goal[]) => void;
   setIncome: (rows: CashFlowRow[]) => void;
   setExpenses: (categories: ExpenseCategory[]) => void;
+  setLiabilities: (liabilities: Liability[]) => void;
   addLiability: (liability: Liability) => void;
   updateLiability: (id: string, patch: Partial<Omit<Liability, "id">>) => void;
   removeLiability: (id: string) => void;
   setRetirement: (config: RetirementConfig) => void;
   setEmergencyFund: (config: EmergencyFundConfig) => void;
   setHoldings: (holdings: AssetHolding[]) => void;
+  setPropertyAssets: (props: Property[]) => void;
+  setCashFlowHistory: (points: CashFlowPoint[]) => void;
+  setInsurancePolicies: (policies: InsurancePolicy[]) => void;
   addProperty: (property: Property) => void;
   updateProperty: (property: Property) => void;
   removeProperty: (id: string) => void;
@@ -214,6 +220,12 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
   removeDigitalAsset: (id: string) => void;
   setLetterOfWishes: (letter: LetterOfWishes) => void;
   seedFromOnboarding: (data: OnboardingSeedData) => void;
+  /**
+   * Replace live sections with fresh data fetched from the API.
+   * Preserves user, retirement config (seeded at onboarding), legacy state,
+   * and liabilities (not yet managed via API).
+   */
+  hydrateFromApi: (data: DashboardBootstrapData) => void;
   profileCompletionScore: number;
 }
 
@@ -222,14 +234,19 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
 type FinancialData = Omit<
   FinancialState,
   | "setUser"
+  | "setGoals"
   | "setIncome"
   | "setExpenses"
+  | "setLiabilities"
   | "addLiability"
   | "updateLiability"
   | "removeLiability"
   | "setRetirement"
   | "setEmergencyFund"
   | "setHoldings"
+  | "setPropertyAssets"
+  | "setCashFlowHistory"
+  | "setInsurancePolicies"
   | "addProperty"
   | "updateProperty"
   | "removeProperty"
@@ -251,6 +268,7 @@ type FinancialData = Omit<
   | "removeDigitalAsset"
   | "setLetterOfWishes"
   | "seedFromOnboarding"
+  | "hydrateFromApi"
 >;
 
 const INITIAL_STATE: FinancialData = {
@@ -290,6 +308,15 @@ export const useFinancialStore = create<FinancialState>()(
           };
         }),
 
+      setGoals: (goals) =>
+        set((s) => {
+          const n = { ...s, goals };
+          return {
+            goals,
+            profileCompletionScore: computeProfileCompletionScore(n),
+          };
+        }),
+
       setIncome: (rows) =>
         set((s) => {
           const n = { ...s, incomeRows: rows };
@@ -307,6 +334,15 @@ export const useFinancialStore = create<FinancialState>()(
             profileCompletionScore: computeProfileCompletionScore(n),
           };
         }),
+
+      setLiabilities: (liabilities) =>
+        set((s) => ({
+          liabilities,
+          profileCompletionScore: computeProfileCompletionScore({
+            ...s,
+            liabilities,
+          }),
+        })),
 
       addLiability: (liability) =>
         set((s) => {
@@ -371,6 +407,26 @@ export const useFinancialStore = create<FinancialState>()(
           const n = { ...s, holdings };
           return {
             holdings,
+            profileCompletionScore: computeProfileCompletionScore(n),
+          };
+        }),
+
+      setPropertyAssets: (propertyAssets) =>
+        set((s) => {
+          const n = { ...s, propertyAssets };
+          return {
+            propertyAssets,
+            profileCompletionScore: computeProfileCompletionScore(n),
+          };
+        }),
+
+      setCashFlowHistory: (cashFlowHistory) => set(() => ({ cashFlowHistory })),
+
+      setInsurancePolicies: (insurancePolicies) =>
+        set((s) => {
+          const n = { ...s, insurancePolicies };
+          return {
+            insurancePolicies,
             profileCompletionScore: computeProfileCompletionScore(n),
           };
         }),
@@ -589,8 +645,8 @@ export const useFinancialStore = create<FinancialState>()(
           ? {
               user_id: uid(),
               email: "",
-              resident_country: identity.country,
-              currency: identity.preferred_currency,
+              resident_country: identity.resident_country,
+              currency: identity.currency,
               is_active: true,
               created_at: timestamp,
               updated_at: timestamp,
@@ -601,6 +657,8 @@ export const useFinancialStore = create<FinancialState>()(
               phone_number: identity.phone_number,
               city: identity.resident_city,
               date_of_birth: identity.date_of_birth,
+              gender: identity.gender,
+              prefix: identity.prefix,
               occupation: identity.occupation,
               marital_status: identity.marital_status as User["marital_status"],
               account_mode: identity.account_mode,
@@ -702,6 +760,47 @@ export const useFinancialStore = create<FinancialState>()(
           ...seedData,
           legacy: DEFAULT_LEGACY,
           profileCompletionScore: computeProfileCompletionScore(seedData),
+        });
+      },
+
+      hydrateFromApi: ({
+        goals,
+        incomeRows,
+        expenseCategories,
+        emergencyFund,
+        cashFlowHistory,
+        holdings,
+        insurancePolicies,
+        propertyAssets,
+        liabilities,
+      }) => {
+        const timestamp = new Date().toISOString();
+        set((s) => {
+          const emergencyFundConfig: EmergencyFundConfig = emergencyFund
+            ? {
+                currentCashBalance: Number(emergencyFund.cash_balance) || 0,
+                targetMonths: emergencyFund.target_months ?? 6,
+                includeAccountIds: [],
+                updatedAt: timestamp,
+              }
+            : s.emergencyFund;
+
+          const next = {
+            ...s,
+            goals,
+            incomeRows,
+            expenseCategories,
+            emergencyFund: emergencyFundConfig,
+            cashFlowHistory,
+            holdings,
+            insurancePolicies,
+            propertyAssets,
+            liabilities,
+          };
+          return {
+            ...next,
+            profileCompletionScore: computeProfileCompletionScore(next),
+          };
         });
       },
     }),

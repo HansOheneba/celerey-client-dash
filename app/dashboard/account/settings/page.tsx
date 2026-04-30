@@ -1,14 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { getUserFullName, type User } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { usePageData } from "@/hooks/usePageData";
+import { updateUser } from "@/lib/dashboard-api";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -24,26 +29,28 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
-  CalendarIcon,
   Save,
   UserIcon,
   Globe,
   ShieldCheck,
   Building2,
+  ClipboardList,
 } from "lucide-react";
-import { format } from "date-fns";
+import { DateInput } from "@/components/ui/date-input";
 import {
   countries as allCountries,
   currencies as allCurrencies,
   getSymbolFromCurrency,
 } from "country-data-list";
+import RiskAttitudeQuiz from "@/components/dashboard/risk/quiz";
 
 const countryOptions = allCountries.all
   .filter((c) => c.status === "assigned" && c.name)
@@ -53,7 +60,12 @@ const currencyOptions = allCurrencies.all
   .filter((c) => c.code && c.name)
   .sort((a, b) => a.code.localeCompare(b.code));
 
-const contactMethods = ["Email", "Phone", "WhatsApp"];
+const contactMethods = ["email", "phone", "whatsapp"];
+const contactMethodLabels: Record<string, string> = {
+  email: "Email",
+  phone: "Phone",
+  whatsapp: "WhatsApp",
+};
 
 const maritalStatusOptions = [
   { value: "single", label: "Single" },
@@ -62,11 +74,39 @@ const maritalStatusOptions = [
   { value: "widowed", label: "Widowed" },
 ];
 
-const riskProfileOptions = [
-  { value: "conservative", label: "Conservative" },
-  { value: "moderate", label: "Moderate Growth" },
-  { value: "aggressive", label: "Aggressive Growth" },
-];
+type OptionScore = 1 | 2 | 3 | 4 | 5;
+type RiskBand =
+  | "Capital Preservation"
+  | "Conservative"
+  | "Balanced"
+  | "Growth"
+  | "Aggressive";
+
+/** Map quiz band → API risk_profile value */
+function bandToApiValue(band: RiskBand): string {
+  const map: Record<RiskBand, string> = {
+    "Capital Preservation": "conservative",
+    Conservative: "conservative",
+    Balanced: "moderate",
+    Growth: "aggressive",
+    Aggressive: "aggressive",
+  };
+  return map[band];
+}
+
+function riskBandLabel(val?: string | null): string {
+  const map: Record<string, string> = {
+    conservative: "Conservative",
+    moderate: "Moderate Growth",
+    aggressive: "Aggressive Growth",
+    "Capital Preservation": "Capital Preservation",
+    Conservative: "Conservative",
+    Balanced: "Balanced",
+    Growth: "Growth",
+    Aggressive: "Aggressive",
+  };
+  return val ? (map[val] ?? val) : "Not assessed yet";
+}
 
 function accountModeLabel(mode?: string) {
   if (mode === "partner") return "Partner Account";
@@ -74,9 +114,13 @@ function accountModeLabel(mode?: string) {
   return "Individual Account";
 }
 
-export default function AccountPage() {
+export default function AccountSettingsPage() {
+  const { loading } = usePageData("profile");
   const storeUser = useFinancialStore((s) => s.user);
   const setUser = useFinancialStore((s) => s.setUser);
+
+  const [saving, setSaving] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
 
   const baseUser: User = storeUser ?? {
     user_id: "",
@@ -93,10 +137,8 @@ export default function AccountPage() {
     ...baseUser,
     citizenships: baseUser.citizenships ?? [],
     city: baseUser.city ?? "",
-    preferred_contact: baseUser.preferred_contact ?? "Email",
+    preferred_contact: baseUser.preferred_contact ?? "email",
   });
-
-  const [saved, setSaved] = useState(false);
 
   const mode = form.account_mode ?? "solo";
   const isSolo = mode === "solo";
@@ -104,7 +146,6 @@ export default function AccountPage() {
 
   function handleChange(field: keyof User | "citizenships", value: unknown) {
     setForm((prev) => ({ ...prev, [field]: value }));
-    setSaved(false);
   }
 
   function handleCitizenshipAdd(country: string) {
@@ -113,7 +154,6 @@ export default function AccountPage() {
         ...prev,
         citizenships: [...prev.citizenships, country],
       }));
-      setSaved(false);
     }
   }
 
@@ -122,13 +162,73 @@ export default function AccountPage() {
       ...prev,
       citizenships: prev.citizenships.filter((c) => c !== country),
     }));
-    setSaved(false);
   }
 
-  function handleSave() {
-    setUser({ ...form, updated_at: new Date().toISOString() });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const payload: Record<string, unknown> = {
+        first_name: form.first_name,
+        last_name: form.last_name,
+        display_name: form.display_name,
+        phone_number: form.phone_number,
+        resident_country: form.resident_country,
+        city: form.city,
+        citizenships: form.citizenships.join(", "),
+        date_of_birth: form.date_of_birth,
+        currency: form.currency,
+        preferred_contact: form.preferred_contact,
+        occupation: form.occupation,
+        marital_status: form.marital_status,
+        account_mode: form.account_mode,
+        dependents: form.dependents,
+        bio: form.bio,
+      };
+      Object.keys(payload).forEach(
+        (k) => payload[k] == null && delete payload[k],
+      );
+      const updated = await updateUser(payload);
+      if (updated) {
+        setUser({ ...form, updated_at: new Date().toISOString() });
+        toast.success("Profile saved.");
+      } else {
+        toast.error("Failed to save. Please try again.");
+      }
+    } catch {
+      toast.error("Failed to save. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleQuizSave(result: {
+    score: number;
+    band: RiskBand;
+    answers: Record<number, OptionScore>;
+  }) {
+    setQuizOpen(false);
+    const apiRiskValue = bandToApiValue(result.band);
+    try {
+      const updated = await updateUser({
+        risk_profile: apiRiskValue,
+        risk_score: result.score,
+        risk_answers: result.answers,
+      });
+      if (updated) {
+        const next = {
+          ...form,
+          risk_profile: apiRiskValue as User["risk_profile"],
+          updated_at: new Date().toISOString(),
+        };
+        setUser(next);
+        setForm(next);
+        toast.success(`Risk profile updated to ${riskBandLabel(result.band)}.`);
+      } else {
+        toast.error("Failed to save risk profile. Please try again.");
+      }
+    } catch {
+      toast.error("Failed to save risk profile. Please try again.");
+    }
   }
 
   const initials = getUserFullName(form)
@@ -138,8 +238,13 @@ export default function AccountPage() {
     .join("");
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      {/* Header */}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-5xl mx-auto space-y-6"
+    >
+      {/* Header — always visible */}
       <div>
         <h1 className="text-2xl font-semibold">Account Settings</h1>
         <p className="text-sm text-muted-foreground">
@@ -152,23 +257,34 @@ export default function AccountPage() {
         <CardContent className="flex items-center gap-4 p-6">
           <Avatar className="h-14 w-14">
             <AvatarFallback className="bg-[#1B1856] text-white">
-              {initials}
+              {loading ? "…" : initials}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-semibold text-lg">{getUserFullName(form)}</p>
-              <Badge variant="outline" className="text-xs">
-                {accountModeLabel(mode)}
-              </Badge>
-              {isEnterprise && (
-                <Badge className="text-xs bg-[#1B1856] text-white gap-1">
-                  <Building2 className="h-3 w-3" />
-                  Enterprise
-                </Badge>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground">{form.email}</p>
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-4 w-56" />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-semibold text-lg">
+                    {getUserFullName(form)}
+                  </p>
+                  <Badge variant="outline" className="text-xs">
+                    {accountModeLabel(mode)}
+                  </Badge>
+                  {isEnterprise && (
+                    <Badge className="text-xs bg-[#1B1856] text-white gap-1">
+                      <Building2 className="h-3 w-3" />
+                      Enterprise
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">{form.email}</p>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -188,158 +304,207 @@ export default function AccountPage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Display name — works for all account modes */}
-          <div className="space-y-2">
-            <Label>{isSolo ? "Full Name" : "Household Name"}</Label>
-            <Input
-              value={form.display_name ?? ""}
-              onChange={(e) => handleChange("display_name", e.target.value)}
-            />
-          </div>
-
-          {/* First / last name — solo only */}
-          {isSolo && (
-            <div className="grid gap-4 md:grid-cols-2">
+          {loading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <div className="grid gap-4 md:grid-cols-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : (
+            <>
+              {/* Display name — works for all account modes */}
               <div className="space-y-2">
-                <Label>First Name</Label>
+                <Label>{isSolo ? "Full Name" : "Household Name"}</Label>
                 <Input
-                  value={form.first_name ?? ""}
-                  onChange={(e) => handleChange("first_name", e.target.value)}
+                  value={form.display_name ?? ""}
+                  onChange={(e) => handleChange("display_name", e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Last Name</Label>
-                <Input
-                  value={form.last_name ?? ""}
-                  onChange={(e) => handleChange("last_name", e.target.value)}
-                />
-              </div>
-            </div>
-          )}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone Number</Label>
-              <Input
-                type="tel"
-                value={form.phone_number ?? ""}
-                onChange={(e) => handleChange("phone_number", e.target.value)}
-              />
-            </div>
-          </div>
+              {/* First / last name — solo only */}
+              {isSolo && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>First Name</Label>
+                    <Input
+                      value={form.first_name ?? ""}
+                      onChange={(e) =>
+                        handleChange("first_name", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Last Name</Label>
+                    <Input
+                      value={form.last_name ?? ""}
+                      onChange={(e) =>
+                        handleChange("last_name", e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+              )}
 
-          {/* Date of Birth — solo only */}
-          {isSolo && (
-            <div className="space-y-2 w-fit">
-              <Label>Date of Birth</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-[220px] justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.date_of_birth
-                      ? format(new Date(form.date_of_birth), "PPP")
-                      : "Select date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    captionLayout="dropdown"
-                    selected={
-                      form.date_of_birth
-                        ? new Date(form.date_of_birth)
-                        : undefined
-                    }
-                    onSelect={(date) => {
-                      if (date)
-                        handleChange(
-                          "date_of_birth",
-                          date.toISOString().split("T")[0],
-                        );
-                    }}
-                    disabled={(date) => date > new Date()}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => handleChange("email", e.target.value)}
                   />
-                </PopoverContent>
-              </Popover>
-            </div>
-          )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone Number</Label>
+                  <Input
+                    type="tel"
+                    value={form.phone_number ?? ""}
+                    onChange={(e) =>
+                      handleChange("phone_number", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
 
-          {/* Occupation + Marital Status — solo only */}
-          {isSolo && (
-            <div className="grid gap-4 md:grid-cols-2">
+              {/* Date of Birth — solo only */}
+              {isSolo && (
+                <div className="space-y-2 w-fit">
+                  <Label>Date of Birth</Label>
+                  <DateInput
+                    value={form.date_of_birth ?? ""}
+                    onChange={(v) => handleChange("date_of_birth", v)}
+                    toDate={new Date()}
+                    fromYear={1920}
+                    toYear={new Date().getFullYear()}
+                  />
+                </div>
+              )}
+
+              {/* Occupation + Marital Status — solo only */}
+              {isSolo && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Occupation</Label>
+                    <Input
+                      value={form.occupation ?? ""}
+                      onChange={(e) =>
+                        handleChange("occupation", e.target.value)
+                      }
+                      placeholder="e.g. Software Engineer"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Marital Status</Label>
+                    <Select
+                      value={form.marital_status ?? ""}
+                      onValueChange={(v) => handleChange("marital_status", v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {maritalStatusOptions.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* Prefix + Gender — solo only */}
+              {isSolo && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Prefix</Label>
+                    <Select
+                      value={form.prefix ?? ""}
+                      onValueChange={(v) => handleChange("prefix", v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select prefix" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Mr", "Mrs", "Ms", "Dr", "Prof", "Rev"].map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {p}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select
+                      value={form.gender ?? ""}
+                      onValueChange={(v) => handleChange("gender", v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          { value: "M", label: "Male" },
+                          { value: "F", label: "Female" },
+                          { value: "O", label: "Non-binary / Other" },
+                          { value: "X", label: "Prefer not to say" },
+                        ].map((g) => (
+                          <SelectItem key={g.value} value={g.value}>
+                            {g.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* Dependents — partner/family accounts */}
+              {!isSolo && (
+                <div className="space-y-2 w-fit">
+                  <Label>Number of Dependents</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.dependents ?? ""}
+                    onChange={(e) =>
+                      handleChange(
+                        "dependents",
+                        e.target.value === ""
+                          ? undefined
+                          : Number(e.target.value),
+                      )
+                    }
+                    className="w-32"
+                  />
+                </div>
+              )}
+
+              {/* Bio */}
               <div className="space-y-2">
-                <Label>Occupation</Label>
-                <Input
-                  value={form.occupation ?? ""}
-                  onChange={(e) => handleChange("occupation", e.target.value)}
-                  placeholder="e.g. Software Engineer"
+                <Label>{isSolo ? "Bio" : "Household Description"}</Label>
+                <Textarea
+                  value={form.bio ?? ""}
+                  onChange={(e) => handleChange("bio", e.target.value)}
+                  placeholder={
+                    isSolo
+                      ? "A short description about yourself…"
+                      : "A short description about your household…"
+                  }
+                  rows={3}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Marital Status</Label>
-                <Select
-                  value={form.marital_status ?? ""}
-                  onValueChange={(v) => handleChange("marital_status", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {maritalStatusOptions.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            </>
           )}
-
-          {/* Dependents — partner/family accounts */}
-          {!isSolo && (
-            <div className="space-y-2 w-fit">
-              <Label>Number of Dependents</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.dependents ?? ""}
-                onChange={(e) =>
-                  handleChange(
-                    "dependents",
-                    e.target.value === "" ? undefined : Number(e.target.value),
-                  )
-                }
-                className="w-32"
-              />
-            </div>
-          )}
-
-          {/* Bio — all account types */}
-          <div className="space-y-2">
-            <Label>{isSolo ? "Bio" : "Household Description"}</Label>
-            <Textarea
-              value={form.bio ?? ""}
-              onChange={(e) => handleChange("bio", e.target.value)}
-              placeholder={
-                isSolo
-                  ? "A short description about yourself..."
-                  : "A short description about your household..."
-              }
-              rows={3}
-            />
-          </div>
         </CardContent>
       </Card>
 
@@ -356,99 +521,123 @@ export default function AccountPage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Country of Residence</Label>
-              <Select
-                value={form.resident_country}
-                onValueChange={(v) => handleChange("resident_country", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select country" />
-                </SelectTrigger>
-                <SelectContent>
-                  {countryOptions.map((c) => (
-                    <SelectItem key={c.alpha2} value={c.name}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>City</Label>
-              <Input
-                value={form.city}
-                onChange={(e) => handleChange("city", e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Citizenship — solo only (partner/family share a household) */}
-          {isSolo && (
-            <div className="space-y-2">
-              <Label>Citizenship</Label>
-              <Select onValueChange={(v) => handleCitizenshipAdd(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Add citizenship" />
-                </SelectTrigger>
-                <SelectContent>
-                  {countryOptions.map((c) => (
-                    <SelectItem key={c.alpha2} value={c.name}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {form.citizenships.map((country) => (
-                  <span
-                    key={country}
-                    className="px-3 py-1 text-xs bg-muted rounded-full cursor-pointer hover:bg-muted/70"
-                    onClick={() => handleCitizenshipRemove(country)}
-                  >
-                    {country} &times;
-                  </span>
-                ))}
+          {loading ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
               </div>
+              <Skeleton className="h-10 w-full" />
             </div>
+          ) : (
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Country of Residence</Label>
+                  <Select
+                    value={form.resident_country}
+                    onValueChange={(v) => handleChange("resident_country", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countryOptions.map((c) => (
+                        <SelectItem key={c.alpha2} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>City</Label>
+                  <Input
+                    value={form.city}
+                    onChange={(e) => handleChange("city", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Citizenship — solo only (partner/family share a household) */}
+              {isSolo && (
+                <div className="space-y-2">
+                  <Label>Citizenship</Label>
+                  <Select onValueChange={(v) => handleCitizenshipAdd(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Add citizenship" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countryOptions.map((c) => (
+                        <SelectItem key={c.alpha2} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {form.citizenships.map((country) => (
+                      <span
+                        key={country}
+                        className="px-3 py-1 text-xs bg-muted rounded-full cursor-pointer hover:bg-muted/70"
+                        onClick={() => handleCitizenshipRemove(country)}
+                      >
+                        {country} &times;
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Financial Profile */}
+      {/* Financial Profile — risk is read-only, requires quiz to update */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4" />
-            Financial Profile
+            Risk Profile
           </CardTitle>
           <CardDescription>
-            Your risk tolerance and investment preferences.
+            Your risk tolerance is determined by the risk assessment
+            questionnaire. To change it, retake the quiz.
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-6">
-          <div className="space-y-2 max-w-xs">
-            <Label>Risk Profile</Label>
-            <Select
-              value={form.risk_profile ?? ""}
-              onValueChange={(v) =>
-                handleChange("risk_profile", v as User["risk_profile"])
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select risk profile" />
-              </SelectTrigger>
-              <SelectContent>
-                {riskProfileOptions.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <CardContent className="space-y-4">
+          {loading ? (
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+              <Skeleton className="h-9 w-36" />
+            </div>
+          ) : (
+            <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-4">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                  Current risk profile
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  {form.risk_profile
+                    ? riskBandLabel(form.risk_profile)
+                    : "Not assessed yet"}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setQuizOpen(true)}
+              >
+                <ClipboardList className="h-4 w-4" />
+                {form.risk_profile ? "Retake quiz" : "Take quiz"}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -460,58 +649,66 @@ export default function AccountPage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Preferred Currency</Label>
-              <Select
-                value={form.currency}
-                onValueChange={(v) => handleChange("currency", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select currency" />
-                </SelectTrigger>
-                <SelectContent>
-                  {currencyOptions.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {getSymbolFromCurrency(c.code) !== c.code
-                        ? `${getSymbolFromCurrency(c.code)} `
-                        : ""}
-                      {c.code} – {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {loading ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
             </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Preferred Currency</Label>
+                <Select
+                  value={form.currency}
+                  onValueChange={(v) => handleChange("currency", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencyOptions.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {getSymbolFromCurrency(c.code) !== c.code
+                          ? `${getSymbolFromCurrency(c.code)} `
+                          : ""}
+                        {c.code} – {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label>Preferred Contact Method</Label>
-              <Select
-                value={form.preferred_contact}
-                onValueChange={(v) => handleChange("preferred_contact", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select method" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contactMethods.map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Label>Preferred Contact Method</Label>
+                <Select
+                  value={form.preferred_contact ?? "email"}
+                  onValueChange={(v) => handleChange("preferred_contact", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contactMethods.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {contactMethodLabels[m]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
+          )}
 
           <Separator />
 
           <div className="flex justify-end">
             <Button
               onClick={handleSave}
+              disabled={saving || loading}
               className="bg-[#1B1856] hover:bg-[#1B1856]/90"
             >
               <Save className="mr-2 h-4 w-4" />
-              {saved ? "Saved!" : "Save Changes"}
+              {saving ? "Saving…" : "Save Changes"}
             </Button>
           </div>
         </CardContent>
@@ -568,6 +765,22 @@ export default function AccountPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+
+      {/* Risk quiz dialog */}
+      <Dialog open={quizOpen} onOpenChange={setQuizOpen}>
+        <DialogContent className="p-0 overflow-hidden w-[calc(100vw-24px)] sm:w-[calc(100vw-48px)] max-w-5xl h-[92vh] sm:h-[88vh]">
+          <DialogHeader className="px-6 pt-6 pb-2">
+            <DialogTitle>Risk Assessment</DialogTitle>
+            <DialogDescription>
+              Answer honestly — there are no right or wrong answers. Your result
+              will be saved to your profile.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="h-[calc(92vh-92px)] sm:h-[calc(88vh-92px)] overflow-auto">
+            <RiskAttitudeQuiz onSave={handleQuizSave} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </motion.div>
   );
 }

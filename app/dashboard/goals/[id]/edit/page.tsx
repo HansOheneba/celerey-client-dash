@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Collapsible,
   CollapsibleContent,
@@ -41,6 +42,9 @@ import {
   type GoalCategory,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { updateGoal as apiUpdateGoal } from "@/lib/dashboard-api";
+import { toast } from "sonner";
+import { DateInput } from "@/components/ui/date-input";
 
 type GoalForm = {
   title: string;
@@ -417,9 +421,25 @@ export default function EditGoalPage() {
         updatedAt: now,
       };
 
-      useFinancialStore.getState().updateGoal(updatedGoal);
+      await apiUpdateGoal({
+        goal_id: goalId,
+        title: form.title.trim(),
+        target_amount: toNumber(form.target),
+        current_amount: toNumber(form.current),
+        target_date: form.targetDate || undefined,
+        status:
+          toNumber(form.current) >= toNumber(form.target)
+            ? "completed"
+            : "active",
+      });
 
+      useFinancialStore.getState().updateGoal(updatedGoal);
+      toast.success("Goal updated.");
       router.push("/dashboard/goals");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update goal.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -428,17 +448,24 @@ export default function EditGoalPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-linear-to-b from-background to-muted/20">
-        <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6">
-          <Card className="border-muted/60 bg-background/70 shadow-sm backdrop-blur">
-            <CardHeader>
-              <CardTitle className="text-base">Loading goal…</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
-              <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
-              <div className="h-24 w-full animate-pulse rounded bg-muted" />
-            </CardContent>
-          </Card>
+        <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6 space-y-6">
+          {/* Back button + title skeleton */}
+          <div className="flex items-center gap-3 mb-6">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
+          {/* Main form card skeleton */}
+          <Skeleton className="h-56 w-full rounded-xl" />
+          {/* Progress card skeleton */}
+          <Skeleton className="h-32 w-full rounded-xl" />
+          {/* Contributions + milestones skeletons */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Skeleton className="h-40 rounded-xl" />
+            <Skeleton className="h-40 rounded-xl" />
+          </div>
         </div>
       </div>
     );
@@ -752,11 +779,14 @@ export default function EditGoalPage() {
               {/* Target date */}
               <div className="space-y-2">
                 <Label htmlFor="targetDate">Target date</Label>
-                <Input
+                <DateInput
                   id="targetDate"
-                  type="date"
                   value={form.targetDate}
-                  onChange={(e) => update("targetDate", e.target.value)}
+                  onChange={(v) => update("targetDate", v)}
+                  placeholder="Pick a target date"
+                  fromDate={new Date()}
+                  fromYear={new Date().getFullYear()}
+                  toYear={new Date().getFullYear() + 50}
                 />
                 <p className="text-xs text-muted-foreground">
                   The specific date you want to reach your goal by.
@@ -923,21 +953,16 @@ export default function EditGoalPage() {
 
                         <div className="space-y-2">
                           <Label htmlFor="contrib-date">Date</Label>
-                          <div className="relative">
-                            <CalendarDays className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              id="contrib-date"
-                              type="date"
-                              value={contrib.date}
-                              onChange={(e) =>
-                                setContrib((p) => ({
-                                  ...p,
-                                  date: e.target.value,
-                                }))
-                              }
-                              className="pl-10"
-                            />
-                          </div>
+                          <DateInput
+                            id="contrib-date"
+                            value={contrib.date}
+                            onChange={(v) =>
+                              setContrib((p) => ({ ...p, date: v }))
+                            }
+                            placeholder="Pick a date"
+                            toDate={new Date()}
+                            toYear={new Date().getFullYear()}
+                          />
                         </div>
 
                         <div className="space-y-2">
@@ -999,21 +1024,16 @@ export default function EditGoalPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="mile-date">Date</Label>
-                      <div className="relative">
-                        <CalendarDays className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="mile-date"
-                          type="date"
-                          value={milestone.date}
-                          onChange={(e) =>
-                            setMilestone((p) => ({
-                              ...p,
-                              date: e.target.value,
-                            }))
-                          }
-                          className="pl-10"
-                        />
-                      </div>
+                      <DateInput
+                        id="mile-date"
+                        value={milestone.date}
+                        onChange={(v) =>
+                          setMilestone((p) => ({ ...p, date: v }))
+                        }
+                        placeholder="Pick a date"
+                        toDate={new Date()}
+                        toYear={new Date().getFullYear()}
+                      />
                     </div>
 
                     <div className="space-y-2">

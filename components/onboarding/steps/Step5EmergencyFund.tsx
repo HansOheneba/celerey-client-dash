@@ -27,7 +27,7 @@ export function Step5EmergencyFund({
   onBack,
 }: Step5EmergencyFundProps) {
   const store = useOnboardingStore();
-  const preferredCurrency = store.identity?.preferred_currency || "USD";
+  const preferredCurrency = store.identity?.currency || "USD";
 
   const [targetMonths, setTargetMonths] = useState<number>(
     defaultValues?.target_months ?? 6,

@@ -28,7 +28,7 @@ export function Step6Retirement({
   onBack,
 }: Step6RetirementProps) {
   const store = useOnboardingStore();
-  const preferredCurrency = store.identity?.preferred_currency || "USD";
+  const preferredCurrency = store.identity?.currency || "USD";
   const accountMode = store.accountMode;
   const isSolo = accountMode === "solo";
 

@@ -1,10 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useOnboardingStore } from "@/store/onboardingStore";
-import { submitOnboarding } from "@/lib/onboarding/api";
+import { submitOnboarding, TokenExpiredError } from "@/lib/onboarding/api";
 import type { OnboardingPayload } from "@/lib/onboarding/types";
+import {
+  setOnboarded,
+  setUserProfile,
+  type UserProfile,
+} from "@/lib/client-data";
 import {
   CheckCircle2,
   ChevronRight,
@@ -22,6 +28,7 @@ interface Step7ReviewProps {
   onComplete: () => void;
   onEditStep: (step: number) => void;
   onBack?: () => void;
+  email: string;
 }
 
 function SectionCard({
@@ -65,10 +72,13 @@ export function Step7Review({
   onComplete,
   onEditStep,
   onBack,
+  email,
 }: Step7ReviewProps) {
   const store = useOnboardingStore();
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const { identity, goals, incomes, emergencyFund, retirement } = store;
 
@@ -81,7 +91,10 @@ export function Step7Review({
     }
 
     const payload: OnboardingPayload = {
-      identity,
+      identity: {
+        ...identity,
+        email, // injected from auth state
+      },
       goals,
       incomes,
       emergencyFund,
@@ -92,19 +105,48 @@ export function Step7Review({
     setSubmitError("");
 
     try {
-      await submitOnboarding(payload);
+      const result = await submitOnboarding(payload);
+
+      // Persist the created user profile for use throughout the dashboard.
+      const user = result.data.user;
+      setUserProfile({
+        user_id: user.user_id,
+        account_mode: user.account_mode,
+        display_name: user.display_name,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        phone_number: user.phone_number,
+        resident_country: user.resident_country,
+        resident_city: user.resident_city,
+        date_of_birth: user.date_of_birth,
+        gender: user.gender,
+        currency: user.currency,
+        prefix: user.prefix,
+        occupation: user.occupation,
+        marital_status: user.marital_status,
+        user_type: user.user_type,
+        is_active: user.is_active,
+      } satisfies UserProfile);
+
+      setOnboarded();
       onComplete();
-    } catch {
-      setSubmitError(
-        "Something went wrong. Please try again. Your progress is saved.",
-      );
+    } catch (err) {
+      if (err instanceof TokenExpiredError) {
+        setSessionExpired(true);
+        setSubmitError("");
+      } else {
+        setSubmitError(
+          "Something went wrong. Please try again. Your progress is saved.",
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
   }
 
   const totalIncome = incomes.reduce((s, i) => s + Number(i.amount_monthly), 0);
-  const preferredCurrency = identity?.preferred_currency || "USD";
+  const preferredCurrency = identity?.currency || "USD";
 
   return (
     <div className="space-y-10">
@@ -126,7 +168,7 @@ export function Step7Review({
           title="Your profile"
           summary={
             identity
-              ? `${identity.display_name ?? [identity.first_name, identity.last_name].filter(Boolean).join(" ")} · ${identity.country} · ${identity.preferred_currency}`
+              ? `${identity.display_name ?? [identity.first_name, identity.last_name].filter(Boolean).join(" ")} · ${identity.resident_country} · ${identity.currency}`
               : "Not completed"
           }
           step={2}
@@ -199,6 +241,27 @@ export function Step7Review({
           plan based on your goals.
         </p>
       </div>
+
+      {sessionExpired && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 space-y-3">
+          <p className="text-sm font-semibold text-amber-800">
+            Your onboarding session has expired
+          </p>
+
+          <p className="text-sm text-amber-700 leading-relaxed">
+            Your onboarding session expired while you were away, for security reasons. Your progress is saved,
+            reverify your email to continue.
+          </p>
+
+          <Button
+            type="button"
+            className="h-9 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm px-4"
+            onClick={() => router.push("/")}
+          >
+            Restart onboarding →
+          </Button>
+        </div>
+      )}
 
       {submitError && (
         <p className="text-sm text-red-600 font-medium rounded-xl bg-red-50 border border-red-100 px-4 py-3">

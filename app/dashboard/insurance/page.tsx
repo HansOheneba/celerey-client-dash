@@ -78,6 +78,16 @@ import {
   type PropertyInsurance,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import {
+  createInsurancePolicy,
+  updateInsurancePolicy,
+  deleteInsurancePolicy,
+} from "@/lib/dashboard-api";
+import { usePageData } from "@/hooks/usePageData";
+import { toast } from "sonner";
+import { DateInput } from "@/components/ui/date-input";
+import { MoneyInput } from "@/components/ui/money-input";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ─── Asset-linked entry type ──────────────────────────────────────────────────
 
@@ -364,54 +374,33 @@ function PolicyDialog({
                 Coverage
                 <InfoTip content="Total payout amount this policy provides." />
               </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  $
-                </span>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  className="pl-6"
-                  value={draft.coverage_amount}
-                  onChange={(e) => set("coverage_amount", e.target.value)}
-                />
-              </div>
+              <MoneyInput
+                value={draft.coverage_amount}
+                onChange={(v) => set("coverage_amount", v)}
+                placeholder="0"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold flex items-center gap-1">
                 Monthly premium
                 <InfoTip content="What you pay each month to keep this policy active." />
               </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  $
-                </span>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  className="pl-6"
-                  value={draft.premium_monthly}
-                  onChange={(e) => set("premium_monthly", e.target.value)}
-                />
-              </div>
+              <MoneyInput
+                value={draft.premium_monthly}
+                onChange={(v) => set("premium_monthly", v)}
+                placeholder="0"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold flex items-center gap-1">
                 Deductible
                 <InfoTip content="Amount you pay out of pocket before the policy kicks in." />
               </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  $
-                </span>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  className="pl-6"
-                  value={draft.deductible}
-                  onChange={(e) => set("deductible", e.target.value)}
-                />
-              </div>
+              <MoneyInput
+                value={draft.deductible}
+                onChange={(v) => set("deductible", v)}
+                placeholder="0"
+              />
             </div>
           </div>
 
@@ -419,18 +408,22 @@ function PolicyDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Start date</Label>
-              <Input
-                type="date"
+              <DateInput
                 value={draft.start_date}
-                onChange={(e) => set("start_date", e.target.value)}
+                onChange={(v) => set("start_date", v)}
+                placeholder="Pick start date"
+                toYear={new Date().getFullYear() + 1}
               />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Renewal date</Label>
-              <Input
-                type="date"
+              <DateInput
                 value={draft.renewal_date}
-                onChange={(e) => set("renewal_date", e.target.value)}
+                onChange={(v) => set("renewal_date", v)}
+                placeholder="Pick renewal date"
+                fromDate={new Date()}
+                fromYear={new Date().getFullYear()}
+                toYear={new Date().getFullYear() + 40}
               />
             </div>
           </div>
@@ -922,6 +915,7 @@ function PropertyPolicyCard({
 
 export default function InsurancePage() {
   const router = useRouter();
+  const { loading } = usePageData("insurance");
   const storeProperties = useFinancialStore((s) => s.propertyAssets);
   const storeInsurancePolicies = useFinancialStore((s) => s.insurancePolicies);
 
@@ -930,6 +924,7 @@ export default function InsurancePage() {
     () => storeInsurancePolicies.filter((p) => p.is_active),
     [storeInsurancePolicies],
   );
+
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editPolicy, setEditPolicy] = React.useState<InsurancePolicy | null>(
     null,
@@ -1205,19 +1200,36 @@ export default function InsurancePage() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  function handleSave(p: InsurancePolicy) {
+  async function handleSave(p: InsurancePolicy) {
     const exists = storeInsurancePolicies.find(
       (x) => x.policy_id === p.policy_id,
     );
-    if (exists) {
-      useFinancialStore.getState().removeInsurancePolicy(p.policy_id);
+    try {
+      if (exists) {
+        await updateInsurancePolicy(p);
+        useFinancialStore.getState().removeInsurancePolicy(p.policy_id);
+      } else {
+        const created = await createInsurancePolicy(p).catch(() => null);
+        if (created?.policy_id && created.policy_id !== p.policy_id) {
+          p = { ...p, policy_id: created.policy_id };
+        }
+      }
+      useFinancialStore.getState().addInsurancePolicy(p);
+      toast.success(exists ? "Policy updated." : "Policy added.");
+    } catch {
+      toast.error("Failed to save policy. Please try again.");
     }
-    useFinancialStore.getState().addInsurancePolicy(p);
     setEditPolicy(null);
   }
 
-  function handleDeactivate(policyId: string) {
-    useFinancialStore.getState().removeInsurancePolicy(policyId);
+  async function handleDeactivate(policyId: string) {
+    try {
+      await deleteInsurancePolicy(policyId);
+      useFinancialStore.getState().removeInsurancePolicy(policyId);
+      toast.success("Policy removed.");
+    } catch {
+      toast.error("Failed to remove policy. Please try again.");
+    }
   }
 
   // ── KPI strip ─────────────────────────────────────────────────────────────
@@ -1314,7 +1326,15 @@ export default function InsurancePage() {
 
           {/* ── KPI Strip ── */}
           <motion.div variants={mi}>
-            <KpiStrip cols={4} items={kpiItems} />
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-20 rounded-xl" />
+                ))}
+              </div>
+            ) : (
+              <KpiStrip cols={4} items={kpiItems} />
+            )}
           </motion.div>
 
           {/* ── Renewal alerts ── */}
@@ -1673,8 +1693,14 @@ export default function InsurancePage() {
               </div>
             </div>
 
-            {filteredPolicies.length === 0 &&
-            filteredPropertyEntries.length === 0 ? (
+            {loading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-32 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : filteredPolicies.length === 0 &&
+              filteredPropertyEntries.length === 0 ? (
               combinedSummary.totalPolicies === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
                   <div className="p-4 rounded-full bg-muted">

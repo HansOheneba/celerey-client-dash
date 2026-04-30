@@ -95,6 +95,20 @@ import {
   type FinancialDomainData,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import {
+  createIncome,
+  updateIncome,
+  deleteIncome,
+  createExpense,
+  updateExpense,
+  deleteExpense,
+  updateEmergencyFund,
+  fetchCashFlowSummary,
+} from "@/lib/dashboard-api";
+import { usePageData } from "@/hooks/usePageData";
+import { toast } from "sonner";
+import { DateInput } from "@/components/ui/date-input";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ─── Local-only types ──────────────────────────────────────────────────────
 
@@ -481,14 +495,14 @@ function EnhancedRowDialog({
                 (you can backdate this)
               </span>
             </Label>
-            <Input
+            <DateInput
               id="row-date"
-              type="date"
               value={draft.startDate}
-              max={new Date().toISOString().split("T")[0]}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, startDate: e.target.value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, startDate: v }))}
+              placeholder="Pick a start date"
+              toDate={new Date()}
+              fromYear={2000}
+              toYear={new Date().getFullYear()}
             />
             {draft.startDate &&
               draft.startDate < new Date().toISOString().split("T")[0] && (
@@ -752,6 +766,18 @@ function CategoryBreakdown({
 
 export default function CashFlowPage() {
   const router = useRouter();
+  const { loading } = usePageData("cash-flow");
+
+  // Fetch cashflow summary from API on mount (logged to console)
+  React.useEffect(() => {
+    fetchCashFlowSummary()
+      .then((summary) =>
+        console.log("[CashFlowPage] cashflow.summary response:", summary),
+      )
+      .catch((err) =>
+        console.warn("[CashFlowPage] cashflow.summary failed:", err),
+      );
+  }, []);
 
   // ── Store subscriptions ───────────────────────────────────────────────────
   const storeHoldings = useFinancialStore((s) => s.holdings);
@@ -762,6 +788,7 @@ export default function CashFlowPage() {
 
   const income = useFinancialStore((s) => s.incomeRows);
   const expenses = useFinancialStore((s) => s.expenseCategories);
+  const pageCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
   const settings = React.useMemo<CashFlowSettings>(
     () => ({
       emergencyFundMonths: storeEmergencyFund.targetMonths,
@@ -1010,9 +1037,15 @@ export default function CashFlowPage() {
     if (deleteTarget.type === "income") {
       const updated = income.filter((x) => x.id !== deleteTarget.row.id);
       useFinancialStore.getState().setIncome(updated);
+      deleteIncome(deleteTarget.row.id)
+        .then(() => toast.success("Income source deleted."))
+        .catch(() => toast.error("Failed to delete income source."));
     } else {
       const updated = expenses.filter((x) => x.id !== deleteTarget.row.id);
       useFinancialStore.getState().setExpenses(updated);
+      deleteExpense(deleteTarget.row.id)
+        .then(() => toast.success("Expense deleted."))
+        .catch(() => toast.error("Failed to delete expense."));
     }
     setDeleteOpen(false);
     setDeleteTarget(null);
@@ -1038,6 +1071,31 @@ export default function CashFlowPage() {
             : undefined,
         startDate: rowDraft.startDate || undefined,
       };
+      if (rowDialogMode === "edit") {
+        updateIncome({
+          id: newRow.id,
+          name: newRow.name,
+          amount: newRow.amount,
+        })
+          .then(() => toast.success("Income source updated."))
+          .catch(() => toast.error("Failed to update income source."));
+      } else {
+        createIncome({
+          name: newRow.name,
+          amount: newRow.amount,
+          category: rowDraft.category || "Other",
+          source_currency: pageCurrency,
+          recurring_type:
+            newRow.recurringType === "one-time" ? "one-time" : "monthly",
+          start_date:
+            newRow.startDate ?? new Date().toISOString().split("T")[0],
+        })
+          .then((created) => {
+            if (created?.id) newRow.id = created.id;
+            toast.success("Income source added.");
+          })
+          .catch(() => toast.error("Failed to add income source."));
+      }
       const updated =
         rowDialogMode === "edit"
           ? income.map((r) => (r.id === newRow.id ? newRow : r))
@@ -1057,6 +1115,31 @@ export default function CashFlowPage() {
             : undefined,
         startDate: rowDraft.startDate || undefined,
       };
+      if (rowDialogMode === "edit") {
+        updateExpense({
+          id: newRow.id,
+          name: newRow.name,
+          amount: newRow.amount,
+        })
+          .then(() => toast.success("Expense updated."))
+          .catch(() => toast.error("Failed to update expense."));
+      } else {
+        createExpense({
+          name: newRow.name,
+          amount: newRow.amount,
+          category: rowDraft.category || "Other",
+          source_currency: pageCurrency,
+          recurring_type:
+            newRow.recurringType === "one-time" ? "one-time" : "monthly",
+          start_date:
+            newRow.startDate ?? new Date().toISOString().split("T")[0],
+        })
+          .then((created) => {
+            if (created?.id) newRow.id = created.id;
+            toast.success("Expense added.");
+          })
+          .catch(() => toast.error("Failed to add expense."));
+      }
       const updated =
         rowDialogMode === "edit"
           ? expenses.map((r) => (r.id === newRow.id ? newRow : r))
@@ -1075,7 +1158,7 @@ export default function CashFlowPage() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.3 }}
       className="min-h-screen"
     >
       <div className="mx-auto w-full px-4 py-8 md:px-6 space-y-8">
@@ -1142,7 +1225,15 @@ export default function CashFlowPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <KpiStrip items={cashFlowKpis} cols={6} />
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <KpiStrip items={cashFlowKpis} cols={6} />
+          )}
         </motion.div>
 
         {/* Cash Flow Chart */}
@@ -1316,22 +1407,23 @@ export default function CashFlowPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <CategoryBreakdown
-                    rows={income}
-                    total={totalIncome}
-                    type="income"
-                  />
-                  <Separator />
                   <div className="space-y-2">
-                    {income.map((r) => (
-                      <RowItem
-                        key={r.id}
-                        row={r}
-                        total={totalIncome}
-                        onEdit={() => openEdit("income", r)}
-                        onDelete={() => requestDelete("income", r)}
-                      />
-                    ))}
+                    {loading
+                      ? Array.from({ length: 3 }).map((_, i) => (
+                          <Skeleton
+                            key={i}
+                            className="h-12 w-full rounded-lg"
+                          />
+                        ))
+                      : income.map((r) => (
+                          <RowItem
+                            key={r.id}
+                            row={r}
+                            total={totalIncome}
+                            onEdit={() => openEdit("income", r)}
+                            onDelete={() => requestDelete("income", r)}
+                          />
+                        ))}
                   </div>
                   <Button
                     variant="outline"
@@ -1359,22 +1451,23 @@ export default function CashFlowPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <CategoryBreakdown
-                    rows={expenses}
-                    total={totalExpenses}
-                    type="expense"
-                  />
-                  <Separator />
                   <div className="space-y-2">
-                    {expenses.map((r) => (
-                      <RowItem
-                        key={r.id}
-                        row={r}
-                        total={totalExpenses}
-                        onEdit={() => openEdit("expense", r)}
-                        onDelete={() => requestDelete("expense", r)}
-                      />
-                    ))}
+                    {loading
+                      ? Array.from({ length: 3 }).map((_, i) => (
+                          <Skeleton
+                            key={i}
+                            className="h-12 w-full rounded-lg"
+                          />
+                        ))
+                      : expenses.map((r) => (
+                          <RowItem
+                            key={r.id}
+                            row={r}
+                            total={totalExpenses}
+                            onEdit={() => openEdit("expense", r)}
+                            onDelete={() => requestDelete("expense", r)}
+                          />
+                        ))}
                   </div>
                   <Button
                     variant="outline"
@@ -1399,12 +1492,21 @@ export default function CashFlowPage() {
         onOpenChange={setSettingsOpen}
         settings={settings}
         setSettings={(s) => {
-          useFinancialStore.getState().setEmergencyFund({
+          const updated = {
             ...storeEmergencyFund,
             targetMonths: s.emergencyFundMonths,
             currentCashBalance: s.currentCashBalance,
             updatedAt: new Date().toISOString(),
-          });
+          };
+          useFinancialStore.getState().setEmergencyFund(updated);
+          updateEmergencyFund({
+            cash_balance: s.currentCashBalance,
+            target_months: s.emergencyFundMonths,
+          })
+            .then(() => toast.success("Emergency fund settings saved."))
+            .catch(() =>
+              toast.error("Failed to save emergency fund settings."),
+            );
         }}
       />
 

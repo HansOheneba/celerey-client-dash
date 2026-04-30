@@ -73,7 +73,7 @@ export function Step2Goals({
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   const store = useOnboardingStore();
-  const preferredCurrency = store.identity?.preferred_currency || "USD";
+  const preferredCurrency = store.identity?.currency || "USD";
 
   const {
     register,

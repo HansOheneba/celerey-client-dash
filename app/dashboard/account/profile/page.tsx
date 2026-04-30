@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { format } from "date-fns";
+import { motion } from "framer-motion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Building2 } from "lucide-react";
 import { useFinancialStore } from "@/store/financialStore";
-import { getUserFullName, getUserAge, mockUser } from "@/lib/client-data";
+import { usePageData } from "@/hooks/usePageData";
+import { getUserFullName, getUserAge } from "@/lib/client-data";
 
 type ProfileField = { label: string; value: string };
 
@@ -39,42 +42,57 @@ function ucFirst(s?: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function Section({ title, fields }: { title: string; fields: ProfileField[] }) {
-  if (!fields.length) return null;
+function Section({
+  title,
+  fields,
+  loading,
+}: {
+  title: string;
+  fields: ProfileField[];
+  loading?: boolean;
+}) {
+  if (!loading && !fields.length) return null;
   return (
     <div className="rounded-xl border bg-white">
       <div className="border-b px-6 py-4">
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 px-6 py-5">
-        {fields.map((field) => (
-          <div key={field.label}>
-            <p className="text-xs text-muted-foreground">{field.label}</p>
-            <p className="text-sm font-medium">{field.value || "—"}</p>
-          </div>
-        ))}
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="space-y-1">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-4 w-36" />
+              </div>
+            ))
+          : fields.map((field) => (
+              <div key={field.label}>
+                <p className="text-xs text-muted-foreground">{field.label}</p>
+                <p className="text-sm font-medium">{field.value || "—"}</p>
+              </div>
+            ))}
       </div>
     </div>
   );
 }
 
 export default function ProfilePage() {
-  const user = useFinancialStore((s) => s.user) ?? mockUser;
-  const mode = user.account_mode ?? "solo";
+  const { loading } = usePageData("profile");
+  const user = useFinancialStore((s) => s.user);
+  const mode = user?.account_mode ?? "solo";
   const isSolo = mode === "solo";
-  const isFamily = mode === "family";
-  const fullName = getUserFullName(user);
-  const isEnterprise = user.user_type === "enterprise";
+  const fullName = getUserFullName(user ?? undefined);
+  const isEnterprise = user?.user_type === "enterprise";
 
   // ── Personal / Household Information ──────────────────────────────────────
   const personalFields: ProfileField[] = [
     ...(isSolo
       ? [
-          { label: "First Name", value: user.first_name ?? "" },
-          { label: "Last Name", value: user.last_name ?? "" },
+          { label: "First Name", value: user?.first_name ?? "" },
+          { label: "Last Name", value: user?.last_name ?? "" },
         ]
-      : [{ label: "Household Name", value: user.display_name ?? "" }]),
-    ...(isSolo && user.date_of_birth
+      : [{ label: "Household Name", value: user?.display_name ?? "" }]),
+    ...(isSolo && user?.date_of_birth
       ? [
           {
             label: "Date of Birth",
@@ -86,15 +104,15 @@ export default function ProfilePage() {
     { label: "Account Type", value: accountModeLabel(mode) },
     ...(isSolo
       ? [
-          { label: "Marital Status", value: ucFirst(user.marital_status) },
-          { label: "Occupation", value: user.occupation ?? "" },
+          { label: "Marital Status", value: ucFirst(user?.marital_status) },
+          { label: "Occupation", value: user?.occupation ?? "" },
         ]
       : []),
     ...(!isSolo
       ? [
           {
             label: "Dependents",
-            value: user.dependents != null ? String(user.dependents) : "",
+            value: user?.dependents != null ? String(user.dependents) : "",
           },
         ]
       : []),
@@ -102,45 +120,45 @@ export default function ProfilePage() {
 
   // ── Contact ────────────────────────────────────────────────────────────────
   const contactFields: ProfileField[] = [
-    { label: "Email", value: user.email },
-    { label: "Phone", value: user.phone_number ?? "" },
-    { label: "Preferred Contact", value: user.preferred_contact ?? "" },
+    { label: "Email", value: user?.email ?? "" },
+    { label: "Phone", value: user?.phone_number ?? "" },
+    { label: "Preferred Contact", value: user?.preferred_contact ?? "" },
   ];
 
   // ── Location ───────────────────────────────────────────────────────────────
   const locationFields: ProfileField[] = [
-    { label: "Country of Residence", value: user.resident_country },
-    { label: "City", value: user.city ?? "" },
+    { label: "Country of Residence", value: user?.resident_country ?? "" },
+    { label: "City", value: user?.city ?? "" },
     {
       label: "Citizenship(s)",
-      value: user.citizenships?.join(", ") ?? "",
+      value: user?.citizenships?.join(", ") ?? "",
     },
   ];
 
   // ── Account Information ────────────────────────────────────────────────────
   const accountFields: ProfileField[] = [
-    { label: "Client ID", value: user.user_id },
-    { label: "Account Currency", value: user.currency },
+    { label: "Client ID", value: user?.user_id ?? "" },
+    { label: "Account Currency", value: user?.currency ?? "" },
     {
       label: "Member Since",
-      value: user.created_at
+      value: user?.created_at
         ? format(new Date(user.created_at), "MMMM yyyy")
         : "",
     },
     {
       label: "Account Status",
-      value: user.is_active ? "Active" : "Inactive",
+      value: user?.is_active ? "Active" : "Inactive",
     },
   ];
 
   // ── Enterprise ────────────────────────────────────────────────────────────
   const enterpriseFields: ProfileField[] = isEnterprise
     ? [
-        { label: "Company", value: user.enterprise_info?.company_name ?? "" },
-        { label: "Company ID", value: user.enterprise_info?.company_id ?? "" },
+        { label: "Company", value: user?.enterprise_info?.company_name ?? "" },
+        { label: "Company ID", value: user?.enterprise_info?.company_id ?? "" },
         {
           label: "Seat Granted",
-          value: user.enterprise_info?.seat_granted_at
+          value: user?.enterprise_info?.seat_granted_at
             ? format(
                 new Date(user.enterprise_info.seat_granted_at),
                 "dd MMM yyyy",
@@ -149,20 +167,25 @@ export default function ProfilePage() {
         },
         {
           label: "Provisioned By",
-          value: user.enterprise_info?.seat_granted_by ?? "",
+          value: user?.enterprise_info?.seat_granted_by ?? "",
         },
       ]
     : [];
 
   // ── Financial Profile ──────────────────────────────────────────────────────
   const financialFields: ProfileField[] = [
-    { label: "Risk Profile", value: riskLabel(user.risk_profile) },
-    ...(user.bio ? [{ label: "Bio", value: user.bio }] : []),
+    { label: "Risk Profile", value: riskLabel(user?.risk_profile) },
+    ...(user?.bio ? [{ label: "Bio", value: user.bio }] : []),
   ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      {/* Header */}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-5xl mx-auto space-y-6"
+    >
+      {/* Header — always visible */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Profile</h1>
@@ -181,37 +204,63 @@ export default function ProfilePage() {
       <div className="flex items-center gap-4 rounded-xl border bg-white p-6">
         <Avatar className="h-14 w-14">
           <AvatarFallback className="bg-[#1B1856] text-white text-sm">
-            {getInitials(fullName)}
+            {loading ? "…" : getInitials(fullName)}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-semibold text-lg">{fullName}</p>
-            <Badge variant="outline" className="text-xs">
-              {accountModeLabel(mode)}
-            </Badge>
-            {isEnterprise && (
-              <Badge className="text-xs bg-[#1B1856] text-white gap-1">
-                <Building2 className="h-3 w-3" />
-                Enterprise
-              </Badge>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground">{user.email}</p>
+          {loading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-56" />
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-semibold text-lg">{fullName}</p>
+                <Badge variant="outline" className="text-xs">
+                  {accountModeLabel(mode)}
+                </Badge>
+                {isEnterprise && (
+                  <Badge className="text-xs bg-[#1B1856] text-white gap-1">
+                    <Building2 className="h-3 w-3" />
+                    Enterprise
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
+            </>
+          )}
         </div>
       </div>
 
       <Section
         title={isSolo ? "Personal Information" : "Household Information"}
         fields={personalFields}
+        loading={loading}
       />
-      <Section title="Contact Details" fields={contactFields} />
-      <Section title="Location" fields={locationFields} />
-      <Section title="Account Information" fields={accountFields} />
-      <Section title="Financial Profile" fields={financialFields} />
+      <Section
+        title="Contact Details"
+        fields={contactFields}
+        loading={loading}
+      />
+      <Section title="Location" fields={locationFields} loading={loading} />
+      <Section
+        title="Account Information"
+        fields={accountFields}
+        loading={loading}
+      />
+      <Section
+        title="Financial Profile"
+        fields={financialFields}
+        loading={loading}
+      />
       {isEnterprise && (
-        <Section title="Enterprise Account" fields={enterpriseFields} />
+        <Section
+          title="Enterprise Account"
+          fields={enterpriseFields}
+          loading={loading}
+        />
       )}
-    </div>
+    </motion.div>
   );
 }

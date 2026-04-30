@@ -46,8 +46,33 @@ import {
   type PropertyMortgage,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import {
+  fetchLiabilities,
+  createLiability,
+  updateLiability as apiUpdateLiability,
+  deleteLiability,
+} from "@/lib/dashboard-api";
+import { toast } from "sonner";
+import { DateInput } from "@/components/ui/date-input";
+import { MoneyInput } from "@/components/ui/money-input";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
+
+function ordinalSuffix(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
+}
 
 function uid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto)
@@ -200,21 +225,13 @@ function LiabilityDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="lib-balance">Outstanding balance</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  {currencySymbol}
-                </span>
-                <Input
-                  id="lib-balance"
-                  type="number"
-                  placeholder="0"
-                  className="pl-6"
-                  value={draft.balance}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, balance: e.target.value }))
-                  }
-                />
-              </div>
+              <MoneyInput
+                id="lib-balance"
+                value={draft.balance}
+                onChange={(v) => setDraft((d) => ({ ...d, balance: v }))}
+                currencySymbol={currencySymbol}
+                placeholder="0"
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -223,6 +240,9 @@ function LiabilityDialog({
                 id="lib-rate"
                 type="number"
                 placeholder="0"
+                min="0"
+                max="100"
+                step="0.01"
                 value={draft.interestRatePct}
                 onChange={(e) =>
                   setDraft((d) => ({ ...d, interestRatePct: e.target.value }))
@@ -234,24 +254,15 @@ function LiabilityDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="lib-payment">Min monthly payment</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  {currencySymbol}
-                </span>
-                <Input
-                  id="lib-payment"
-                  type="number"
-                  placeholder="0"
-                  className="pl-6"
-                  value={draft.minPaymentMonthly}
-                  onChange={(e) =>
-                    setDraft((d) => ({
-                      ...d,
-                      minPaymentMonthly: e.target.value,
-                    }))
-                  }
-                />
-              </div>
+              <MoneyInput
+                id="lib-payment"
+                value={draft.minPaymentMonthly}
+                onChange={(v) =>
+                  setDraft((d) => ({ ...d, minPaymentMonthly: v }))
+                }
+                currencySymbol={currencySymbol}
+                placeholder="0"
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -261,12 +272,22 @@ function LiabilityDialog({
                 type="number"
                 min="1"
                 max="31"
-                placeholder="1"
+                placeholder="1–31"
                 value={draft.dueDay}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, dueDay: e.target.value }))
-                }
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "") {
+                    setDraft((d) => ({ ...d, dueDay: "" }));
+                    return;
+                  }
+                  const n = Math.min(31, Math.max(1, parseInt(v, 10)));
+                  setDraft((d) => ({
+                    ...d,
+                    dueDay: isNaN(n) ? "" : String(n),
+                  }));
+                }}
               />
+              <p className="text-xs text-muted-foreground">Day 1 – 31</p>
             </div>
           </div>
 
@@ -278,24 +299,15 @@ function LiabilityDialog({
                   (optional)
                 </span>
               </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  {currencySymbol}
-                </span>
-                <Input
-                  id="lib-original"
-                  type="number"
-                  placeholder="0"
-                  className="pl-6"
-                  value={draft.originalLoanAmount}
-                  onChange={(e) =>
-                    setDraft((d) => ({
-                      ...d,
-                      originalLoanAmount: e.target.value,
-                    }))
-                  }
-                />
-              </div>
+              <MoneyInput
+                id="lib-original"
+                value={draft.originalLoanAmount}
+                onChange={(v) =>
+                  setDraft((d) => ({ ...d, originalLoanAmount: v }))
+                }
+                currencySymbol={currencySymbol}
+                placeholder="0"
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -305,16 +317,16 @@ function LiabilityDialog({
                   (optional)
                 </span>
               </Label>
-              <Input
+              <DateInput
                 id="lib-payoff"
-                type="date"
                 value={draft.expectedPayoffDate}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    expectedPayoffDate: e.target.value,
-                  }))
+                onChange={(v) =>
+                  setDraft((d) => ({ ...d, expectedPayoffDate: v }))
                 }
+                placeholder="Pick a date"
+                fromDate={new Date()}
+                fromYear={new Date().getFullYear()}
+                toYear={new Date().getFullYear() + 40}
               />
             </div>
           </div>
@@ -435,7 +447,7 @@ function LiabilityRow({
               <div className="flex justify-between text-[11px] text-muted-foreground">
                 <span>{pct.toFixed(1)}% of total debt</span>
                 {liability.dueDay && (
-                  <span>Due on the {liability.dueDay}th</span>
+                  <span>Due on the {ordinalSuffix(liability.dueDay)}</span>
                 )}
               </div>
               <Progress value={pct} className="h-1.5" />
@@ -558,7 +570,7 @@ function PropertyMortgageCard({
               <div className="flex justify-between text-[11px] text-muted-foreground">
                 <span>{pct.toFixed(1)}% of total debt</span>
                 {mortgage.due_day && (
-                  <span>Due on the {mortgage.due_day}th</span>
+                  <span>Due on the {ordinalSuffix(mortgage.due_day)}</span>
                 )}
               </div>
               <Progress value={pct} className="h-1.5" />
@@ -585,6 +597,7 @@ function PropertyMortgageCard({
 
 export default function LiabilitiesPage() {
   const router = useRouter();
+  const storeSetLiabilities = useFinancialStore((s) => s.setLiabilities);
   const storeAddLiability = useFinancialStore((s) => s.addLiability);
   const storeUpdateLiability = useFinancialStore((s) => s.updateLiability);
   const storeRemoveLiability = useFinancialStore((s) => s.removeLiability);
@@ -593,6 +606,7 @@ export default function LiabilitiesPage() {
 
   const currencySymbol = React.useMemo(() => getCurrencySymbol(), []);
 
+  const [isLoading, setIsLoading] = React.useState(true);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<LiabilityDraft>(DEFAULT_DRAFT);
@@ -602,6 +616,20 @@ export default function LiabilitiesPage() {
     id: string;
     name: string;
   } | null>(null);
+
+  // ── Fetch liabilities from API on mount ──────────────────────────────────
+  React.useEffect(() => {
+    setIsLoading(true);
+    fetchLiabilities()
+      .then((list) => {
+        console.log("[LiabilitiesPage] fetched liabilities:", list);
+        // Full replace — avoids stale-closure duplicates on every page visit
+        storeSetLiabilities(list);
+      })
+      .catch((err) => console.warn("[LiabilitiesPage] fetch failed:", err))
+      .finally(() => setIsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Property-linked mortgages derived from store ──────────────────────────
   const propertyMortgages = React.useMemo<PropertyLinkedMortgage[]>(
@@ -719,8 +747,8 @@ export default function LiabilitiesPage() {
     const now = new Date().toISOString();
 
     if (editingId) {
-      // Merge patch into existing entry — no remove needed
-      storeUpdateLiability(editingId, {
+      // Optimistic: update store immediately
+      const patch = {
         name: draft.name.trim(),
         lender: draft.lender.trim() || undefined,
         type: draft.type as LiabilityType,
@@ -732,24 +760,60 @@ export default function LiabilitiesPage() {
           ? Number(draft.originalLoanAmount)
           : undefined,
         expectedPayoffDate: draft.expectedPayoffDate || undefined,
-      });
-    } else {
-      const newLiability: Liability = {
-        id: uid(),
-        name: draft.name.trim(),
-        lender: draft.lender.trim() || undefined,
-        type: draft.type as LiabilityType,
-        balance: Number(draft.balance) || 0,
-        interestRatePct: Number(draft.interestRatePct) || 0,
-        minPaymentMonthly: Number(draft.minPaymentMonthly) || 0,
-        dueDay: draft.dueDay ? Number(draft.dueDay) : undefined,
-        originalLoanAmount: draft.originalLoanAmount
-          ? Number(draft.originalLoanAmount)
-          : undefined,
-        expectedPayoffDate: draft.expectedPayoffDate || undefined,
-        updatedAt: now,
       };
-      storeAddLiability(newLiability);
+      storeUpdateLiability(editingId, patch);
+      apiUpdateLiability({ id: editingId, ...patch })
+        .then((updated) => {
+          console.log("[LiabilitiesPage] updateLiability response:", updated);
+          storeUpdateLiability(updated.id, updated);
+          toast.success("Liability updated");
+        })
+        .catch((err) => {
+          console.error("[LiabilitiesPage] updateLiability error:", err);
+          toast.error("Failed to update liability");
+        });
+    } else {
+      const payload = {
+        name: draft.name.trim(),
+        type: draft.type as LiabilityType,
+        balance: Number(draft.balance) || 0,
+        interestRatePct: Number(draft.interestRatePct) || 0,
+        minPaymentMonthly: Number(draft.minPaymentMonthly) || 0,
+        lender: draft.lender.trim() || undefined,
+        dueDay: draft.dueDay ? Number(draft.dueDay) : undefined,
+        originalLoanAmount: draft.originalLoanAmount
+          ? Number(draft.originalLoanAmount)
+          : undefined,
+        expectedPayoffDate: draft.expectedPayoffDate || undefined,
+      };
+      // Optimistic: add a temp entry to store while API call is in-flight
+      const tempId = uid();
+      storeAddLiability({
+        id: tempId,
+        name: payload.name,
+        lender: payload.lender,
+        type: payload.type,
+        balance: payload.balance,
+        interestRatePct: payload.interestRatePct,
+        minPaymentMonthly: payload.minPaymentMonthly,
+        dueDay: payload.dueDay,
+        originalLoanAmount: payload.originalLoanAmount,
+        expectedPayoffDate: payload.expectedPayoffDate,
+        updatedAt: now,
+      });
+      createLiability(payload)
+        .then((created) => {
+          console.log("[LiabilitiesPage] createLiability response:", created);
+          // Replace temp entry with real one from API
+          storeRemoveLiability(tempId);
+          storeAddLiability(created);
+          toast.success("Liability added");
+        })
+        .catch((err) => {
+          console.error("[LiabilitiesPage] createLiability error:", err);
+          storeRemoveLiability(tempId);
+          toast.error("Failed to add liability");
+        });
     }
 
     setDialogOpen(false);
@@ -763,9 +827,48 @@ export default function LiabilitiesPage() {
 
   function confirmDelete() {
     if (deleteConfirm) {
-      storeRemoveLiability(deleteConfirm.id);
+      const { id, name } = deleteConfirm;
+      storeRemoveLiability(id);
       setDeleteConfirm(null);
+      deleteLiability(id)
+        .then(() => {
+          console.log("[LiabilitiesPage] deleteLiability success for id:", id);
+          toast.success(`"${name}" removed`);
+        })
+        .catch((err) => {
+          console.error("[LiabilitiesPage] deleteLiability error:", err);
+          toast.error("Failed to delete liability");
+        });
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen">
+        <div className="mx-auto w-full px-4 py-8 md:px-6 space-y-8">
+          {/* Header skeleton */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-36" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-9 w-32" />
+          </div>
+          {/* KPI strip skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
+            ))}
+          </div>
+          {/* Liability card skeletons */}
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

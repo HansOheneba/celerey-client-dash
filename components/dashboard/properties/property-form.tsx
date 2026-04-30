@@ -31,8 +31,13 @@ import {
   COUNTRY_OPTIONS,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import {
+  createProperty,
+  updateProperty as apiUpdateProperty,
+} from "@/lib/dashboard-api";
 import { InsuranceSection } from "./insurance-section";
 import { MortgageSection } from "./mortgage-section";
+import { DateInput } from "@/components/ui/date-input";
 
 // ── Form state ──────────────────────────────────────────────────
 export type PropertyFormValues = {
@@ -244,7 +249,7 @@ export function PropertyForm({
 
     try {
       const now = new Date().toISOString();
-      const property: Property = {
+      let property: Property = {
         property_id: editingProperty?.property_id ?? `p-${Date.now()}`,
         user_id: "u-1",
         name: form.name.trim(),
@@ -266,8 +271,13 @@ export function PropertyForm({
       };
 
       if (editingProperty) {
+        await apiUpdateProperty({ ...property }).catch(() => {});
         useFinancialStore.getState().updateProperty(property);
       } else {
+        const created = await createProperty(property).catch(() => null);
+        if (created?.property_id) {
+          property = { ...property, property_id: created.property_id };
+        }
         useFinancialStore.getState().addProperty(property);
       }
 
@@ -555,12 +565,13 @@ export function PropertyForm({
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="purchase-date">Purchase date</Label>
-                  <Input
+                  <DateInput
                     id="purchase-date"
-                    type="date"
                     value={form.purchaseDate}
-                    onChange={(e) => update("purchaseDate", e.target.value)}
-                    required
+                    onChange={(v) => update("purchaseDate", v)}
+                    placeholder="Pick purchase date"
+                    toDate={new Date()}
+                    toYear={new Date().getFullYear()}
                   />
                   <p className="text-xs text-muted-foreground">
                     When you purchased or settled on this property.

@@ -24,6 +24,8 @@ import {
   type GoalCategory,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { createGoal } from "@/lib/dashboard-api";
+import { toast } from "sonner";
 
 type GoalForm = {
   title: string;
@@ -33,6 +35,7 @@ type GoalForm = {
   current: string;
   timelineValue: string;
   timelineUnit: "months" | "years";
+  targetDate?: string;
 };
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -126,9 +129,30 @@ export default function NewGoalPage() {
     setIsSubmitting(true);
 
     try {
+      const targetDate = form.targetDate
+        ? form.targetDate
+        : (() => {
+            const d = new Date();
+            const years =
+              form.timelineUnit === "years"
+                ? timelineValueNum
+                : timelineValueNum / 12;
+            d.setFullYear(d.getFullYear() + Math.round(years));
+            return d.toISOString().split("T")[0];
+          })();
+
+      const created = await createGoal({
+        title: form.title.trim(),
+        target_amount: toNumber(form.target),
+        current_amount: toNumber(form.current),
+        target_date: targetDate,
+        priority: nextPriority,
+        status: isComplete ? "completed" : "active",
+      });
+
       const now = new Date().toISOString();
       const newGoal: Goal = {
-        id: `goal-${Date.now()}`,
+        id: created.goal_id ?? `goal-${Date.now()}`,
         title: form.title.trim(),
         category: form.category,
         priority: nextPriority,
@@ -137,7 +161,7 @@ export default function NewGoalPage() {
         current: toNumber(form.current),
         yearsRemaining,
         completed: isComplete,
-        // Defaults — backend will override once real API is wired
+        targetDate,
         monthlyContributionNeeded:
           yearsRemaining > 0 ? Math.ceil(remaining / (yearsRemaining * 12)) : 0,
         probability: 50,
@@ -146,7 +170,12 @@ export default function NewGoalPage() {
       };
 
       useFinancialStore.getState().addGoal(newGoal);
+      toast.success("Goal created.");
       router.push("/dashboard/goals");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create goal.",
+      );
     } finally {
       setIsSubmitting(false);
     }

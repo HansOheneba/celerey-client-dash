@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -83,6 +85,15 @@ import {
   type ValuationMethod,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import {
+  deleteAsset,
+  createAsset,
+  updateAsset,
+  createAssetValuation,
+} from "@/lib/dashboard-api";
+import { DateInput } from "@/components/ui/date-input";
+import { usePageData } from "@/hooks/usePageData";
+import { toast } from "sonner";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -770,15 +781,18 @@ function AddHoldingDialog({
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Maturity date</Label>
-                <Input
-                  type="date"
+                <DateInput
                   value={draft.maturity_date}
-                  onChange={(e) =>
+                  onChange={(v) =>
                     setDraft((d) => ({
                       ...d,
-                      maturity_date: e.target.value,
+                      maturity_date: v,
                     }))
                   }
+                  placeholder="Pick maturity date"
+                  fromDate={new Date()}
+                  fromYear={new Date().getFullYear()}
+                  toYear={new Date().getFullYear() + 30}
                 />
               </div>
             </div>
@@ -927,12 +941,12 @@ function AddHoldingDialog({
               <Label className="text-xs font-semibold">
                 {isCash ? "As-of date" : "When did you buy this?"}
               </Label>
-              <Input
-                type="date"
+              <DateInput
                 value={draft.purchase_date}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, purchase_date: e.target.value }))
-                }
+                onChange={(v) => setDraft((d) => ({ ...d, purchase_date: v }))}
+                placeholder="Pick a date"
+                toDate={new Date()}
+                toYear={new Date().getFullYear()}
               />
             </div>
           )}
@@ -1393,10 +1407,16 @@ function EmptyHoldings({ onAdd }: { onAdd: () => void }) {
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AssetsPage() {
+  const { loading } = usePageData("assets");
+  const storeHoldings = useFinancialStore((s) => s.holdings);
   const [holdings, setHoldings] = React.useState<AssetHolding[]>(() =>
     useFinancialStore.getState().holdings.filter((h) => h.is_active),
   );
   const [valuations, setValuations] = React.useState<AssetValuation[]>([]);
+
+  React.useEffect(() => {
+    setHoldings(storeHoldings.filter((h) => h.is_active));
+  }, [storeHoldings]);
 
   const storePortfolioPerformance = useFinancialStore(
     (s) => s.portfolioPerformance,
@@ -1513,8 +1533,28 @@ export default function AssetsPage() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  function handleSaveHolding(h: AssetHolding, val?: AssetValuation) {
+  async function handleSaveHolding(h: AssetHolding, val?: AssetValuation) {
     const exists = holdings.find((x) => x.holding_id === h.holding_id);
+    try {
+      if (exists) {
+        const updated = await updateAsset(h);
+        // Use server-returned holding if available, otherwise keep local
+        h = updated ?? h;
+      } else {
+        const created = await createAsset(h);
+        // Adopt server-assigned holding_id if different
+        if (created?.holding_id && created.holding_id !== h.holding_id) {
+          h = { ...h, holding_id: created.holding_id };
+        }
+      }
+      toast.success(exists ? "Asset updated." : "Asset added.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to save asset. Please try again.",
+      );
+    }
     const updatedHoldings = exists
       ? holdings.map((x) => (x.holding_id === h.holding_id ? h : x))
       : [...holdings, h];
@@ -1525,6 +1565,16 @@ export default function AssetsPage() {
         ...prev.filter((v) => v.holding_id !== val.holding_id),
         val,
       ]);
+      createAssetValuation({
+        holding_id: h.holding_id,
+        value: val.value,
+        as_of: val.as_of,
+        source: val.source ?? "manual",
+      })
+        .then((r) => console.log("[Assets] createAssetValuation response:", r))
+        .catch((err) =>
+          console.warn("[Assets] createAssetValuation failed:", err),
+        );
     }
     setEditHolding(null);
   }
@@ -1533,6 +1583,9 @@ export default function AssetsPage() {
     const updatedHoldings = holdings.filter((h) => h.holding_id !== holdingId);
     setHoldings(updatedHoldings);
     useFinancialStore.getState().setHoldings(updatedHoldings);
+    deleteAsset(holdingId)
+      .then(() => toast.success("Asset removed."))
+      .catch(() => toast.error("Failed to remove asset. Please try again."));
   }
 
   // ── KPI strip ─────────────────────────────────────────────────────────────
@@ -1652,7 +1705,15 @@ export default function AssetsPage() {
 
           {/* ── KPI Strip ── */}
           <motion.div variants={mi}>
-            <KpiStrip cols={4} items={kpiItems} />
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-20 rounded-xl" />
+                ))}
+              </div>
+            ) : (
+              <KpiStrip cols={4} items={kpiItems} />
+            )}
           </motion.div>
 
           {/* ── Allocation + Performance (only when holdings exist) ── */}
@@ -1823,7 +1884,13 @@ export default function AssetsPage() {
               </div>
             </div>
 
-            {filteredHoldings.length === 0 ? (
+            {loading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-20 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : filteredHoldings.length === 0 ? (
               <EmptyHoldings onAdd={() => setAddOpen(true)} />
             ) : (
               <div className="space-y-2">
