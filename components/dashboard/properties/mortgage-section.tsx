@@ -82,6 +82,7 @@ export function MortgageSection({
   onChange: (mortgage: PropertyMortgage | null) => void;
 }) {
   const [editing, setEditing] = React.useState(false);
+  const [showForm, setShowForm] = React.useState(false);
   const [form, setForm] = React.useState<MortgageFormValues>(
     mortgage ? mortgageToForm(mortgage) : emptyMortgageForm,
   );
@@ -122,6 +123,7 @@ export function MortgageSection({
     };
     onChange(m);
     setEditing(false);
+    setShowForm(false);
   }
 
   function handleRemove() {
@@ -240,9 +242,29 @@ export function MortgageSection({
     );
   }
 
-  // ── Render: add / edit form ─────────────────────────────────
-  const showingForm = editing || (!mortgage && true);
+  // ── Render: no mortgage, form not shown → collapsed state ────
+  if (!mortgage && !showForm) {
+    return (
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Building2 className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Mortgage</h3>
+          <span className="text-xs text-muted-foreground">· Optional</span>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5 text-xs"
+          onClick={() => setShowForm(true)}
+        >
+          <Building2 className="h-3 w-3" /> Add mortgage
+        </Button>
+      </div>
+    );
+  }
 
+  // ── Render: add / edit form ─────────────────────────────────
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -253,20 +275,19 @@ export function MortgageSection({
             <span className="text-xs text-muted-foreground">· Optional</span>
           )}
         </div>
-        {editing && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground"
-            onClick={() => {
-              setForm(mortgage ? mortgageToForm(mortgage) : emptyMortgageForm);
-              setEditing(false);
-            }}
-          >
-            Cancel
-          </Button>
-        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-xs text-muted-foreground"
+          onClick={() => {
+            setForm(mortgage ? mortgageToForm(mortgage) : emptyMortgageForm);
+            setEditing(false);
+            if (!mortgage) setShowForm(false);
+          }}
+        >
+          Cancel
+        </Button>
       </div>
 
       <DashCard>
@@ -418,21 +439,18 @@ export function MortgageSection({
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
-            {editing && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setForm(
-                    mortgage ? mortgageToForm(mortgage) : emptyMortgageForm,
-                  );
-                  setEditing(false);
-                }}
-              >
-                Cancel
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setForm(mortgage ? mortgageToForm(mortgage) : emptyMortgageForm);
+                setEditing(false);
+                if (!mortgage) setShowForm(false);
+              }}
+            >
+              Cancel
+            </Button>
             <Button
               type="button"
               size="sm"

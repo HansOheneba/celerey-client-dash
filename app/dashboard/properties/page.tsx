@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PropertiesTab } from "@/components/dashboard/properties/properties-tab";
 
 export default function PropertiesPage() {
@@ -7,11 +10,18 @@ export default function PropertiesPage() {
     <div className="min-h-screen from-background to-muted/20">
       <div className="mx-auto w-full px-4 py-8 md:px-6">
         {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Properties</h1>
-          <p className="text-sm text-muted-foreground">
-            Real estate holdings, equity breakdown, and property analysis.
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1.5">
+            <h1 className="text-2xl font-semibold tracking-tight">Properties</h1>
+            <p className="text-sm text-muted-foreground">
+              Real estate holdings, equity breakdown, and property analysis.
+            </p>
+          </div>
+          <Button asChild size="sm" className="gap-1.5">
+            <Link href="/dashboard/properties/new">
+              <Plus className="h-3.5 w-3.5" /> Add property
+            </Link>
+          </Button>
         </div>
 
         <div className="mt-6 space-y-6">
