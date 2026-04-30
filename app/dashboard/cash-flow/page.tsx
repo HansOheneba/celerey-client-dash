@@ -1225,15 +1225,7 @@ export default function CashFlowPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 rounded-xl" />
-              ))}
-            </div>
-          ) : (
-            <KpiStrip items={cashFlowKpis} cols={6} />
-          )}
+          <KpiStrip items={cashFlowKpis} cols={6} loading={loading} />
         </motion.div>
 
         {/* Cash Flow Chart */}

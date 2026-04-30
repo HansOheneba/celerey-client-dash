@@ -102,7 +102,7 @@ export default function Home() {
         if (mode === "signup" && msg.toLowerCase().includes("already exists")) {
           setMode("login");
           setInfoMessage(
-            "You already have an account — we're sending you a login code instead.",
+            "An account with this email already exists. We’ve sent you a login code instead.",
           );
           const ok = await requestOtp(submittedEmail, "login");
           if (ok) {

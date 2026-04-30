@@ -842,35 +842,6 @@ export default function LiabilitiesPage() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen">
-        <div className="mx-auto w-full px-4 py-8 md:px-6 space-y-8">
-          {/* Header skeleton */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-36" />
-              <Skeleton className="h-4 w-64" />
-            </div>
-            <Skeleton className="h-9 w-32" />
-          </div>
-          {/* KPI strip skeleton */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
-            ))}
-          </div>
-          {/* Liability card skeletons */}
-          <div className="space-y-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-28 w-full rounded-xl" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -879,7 +850,7 @@ export default function LiabilitiesPage() {
       className="min-h-screen"
     >
       <div className="mx-auto w-full px-4 py-8 md:px-6 space-y-8">
-        {/* Header */}
+        {/* Header — always visible */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1.5">
             <h1 className="text-2xl font-semibold tracking-tight">
@@ -894,7 +865,18 @@ export default function LiabilitiesPage() {
           </Button>
         </div>
 
-        {totalEntries === 0 ? (
+        {isLoading ? (
+          <>
+            {/* KPI strip skeleton — labels visible, values loading */}
+            <KpiStrip items={kpiItems} cols={4} loading />
+            {/* Liability card skeletons */}
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-28 w-full rounded-xl" />
+              ))}
+            </div>
+          </>
+        ) : totalEntries === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
             <div className="p-4 rounded-full bg-muted">
               <TrendingDown className="h-8 w-8 text-muted-foreground" />

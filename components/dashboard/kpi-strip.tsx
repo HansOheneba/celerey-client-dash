@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/client-data";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export type KpiItem = {
   label: string;
@@ -16,6 +17,8 @@ interface KpiStripProps {
   items: KpiItem[];
   cols?: 2 | 3 | 4 | 5 | 6;
   className?: string;
+  /** When true, shows the static label but replaces value/subline with skeletons */
+  loading?: boolean;
 }
 
 const toneClass: Record<NonNullable<KpiItem["tone"]>, string> = {
@@ -33,16 +36,21 @@ const colsClass: Record<NonNullable<KpiStripProps["cols"]>, string> = {
   6: "grid-cols-2 md:grid-cols-3 lg:grid-cols-6",
 };
 
-export function KpiStrip({ items, cols = 6, className }: KpiStripProps) {
+export function KpiStrip({
+  items,
+  cols = 6,
+  className,
+  loading,
+}: KpiStripProps) {
   return (
     <div className={cn(`grid gap-3 ${colsClass[cols]}`, className)}>
       {items.map((item) => (
         <div
           key={item.label}
-          onClick={item.onClick}
+          onClick={loading ? undefined : item.onClick}
           className={cn(
             "rounded-xl border bg-card px-4 py-3.5 space-y-1",
-            item.onClick && "cursor-pointer transition-shadow",
+            !loading && item.onClick && "cursor-pointer transition-shadow",
           )}
         >
           {item.icon && (
@@ -53,16 +61,27 @@ export function KpiStrip({ items, cols = 6, className }: KpiStripProps) {
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             {item.label}
           </p>
-          <p
-            className={cn(
-              "text-lg font-bold tabular-nums tracking-tight",
-              item.tone ? toneClass[item.tone] : "text-foreground",
-            )}
-          >
-            {item.value}
-          </p>
-          {item.subline && (
-            <p className="text-[11px] text-muted-foreground">{item.subline}</p>
+          {loading ? (
+            <>
+              <Skeleton className="h-6 w-24 mt-1" />
+              <Skeleton className="h-3 w-32 mt-1" />
+            </>
+          ) : (
+            <>
+              <p
+                className={cn(
+                  "text-lg font-bold tabular-nums tracking-tight",
+                  item.tone ? toneClass[item.tone] : "text-foreground",
+                )}
+              >
+                {item.value}
+              </p>
+              {item.subline && (
+                <p className="text-[11px] text-muted-foreground">
+                  {item.subline}
+                </p>
+              )}
+            </>
           )}
         </div>
       ))}
