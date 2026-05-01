@@ -49,7 +49,7 @@ import {
   clearUserProfile,
   getUserFullName,
 } from "@/lib/client-data";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useProfilePanel } from "./ProfilePanelContext";
 
 const nav = [
@@ -86,6 +86,33 @@ export default function DashboardSidebar() {
     (s) => s.profileCompletionScore,
   );
   const { isOpen, open: openProfilePanel } = useProfilePanel();
+
+  // ── Attention badges: incomplete checklist items mapped to their nav href ──
+  const store = useFinancialStore();
+  const attentionHrefs = useMemo(() => {
+    const hrefs = new Set<string>();
+    const s = useFinancialStore.getState();
+    if (!s.goals.length) hrefs.add("/dashboard/goals");
+    if (!s.holdings.length && !s.accounts.length) hrefs.add("/dashboard/assets");
+    if (!s.insurancePolicies.length) hrefs.add("/dashboard/insurance");
+    if (!s.incomeRows.length || !s.expenseCategories.length || !s.emergencyFund.currentCashBalance)
+      hrefs.add("/dashboard/cash-flow");
+    if (!s.liabilities.length) hrefs.add("/dashboard/liabilities");
+    if (!s.retirement.desiredMonthlyIncome || !s.retirement.retirementAge)
+      hrefs.add("/dashboard/retirement");
+    return hrefs;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    store.goals,
+    store.holdings,
+    store.accounts,
+    store.insurancePolicies,
+    store.incomeRows,
+    store.expenseCategories,
+    store.emergencyFund,
+    store.liabilities,
+    store.retirement,
+  ]);
 
   return (
     <Sidebar
@@ -225,14 +252,28 @@ export default function DashboardSidebar() {
                   `}
                 >
                   <Link className="flex items-center gap-3" href={item.href}>
-                    <FontAwesomeIcon
-                      icon={item.icon}
-                      className={`
-                        h-4 w-4
-                        ${active ? "text-[#160b35]" : "text-gray-400"}
-                      `}
-                      fixedWidth
-                    />
+                    <span className="relative shrink-0">
+                      <FontAwesomeIcon
+                        icon={item.icon}
+                        className={`
+                          h-4 w-4
+                          ${active ? "text-[#160b35]" : "text-gray-400"}
+                        `}
+                        fixedWidth
+                      />
+                      <AnimatePresence>
+                        {attentionHrefs.has(item.href) && (
+                          <motion.span
+                            key="badge"
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            transition={{ type: "spring", damping: 16, stiffness: 300 }}
+                            className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500 ring-1 ring-white"
+                          />
+                        )}
+                      </AnimatePresence>
+                    </span>
 
                     <AnimatePresence initial={false}>
                       {!collapsed && (

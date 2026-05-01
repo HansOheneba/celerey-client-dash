@@ -71,7 +71,9 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
       <div className="flex-1 min-w-0">
         <p
           className={`text-xs font-medium leading-snug ${
-            item.completed ? "line-through text-muted-foreground" : "text-foreground"
+            item.completed
+              ? "line-through text-muted-foreground"
+              : "text-foreground"
           }`}
         >
           {item.label}
@@ -268,59 +270,61 @@ export function ProfileSetupPanel() {
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
           className="shrink-0 overflow-hidden"
         >
-        <motion.aside
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ type: "spring", damping: 28, stiffness: 280 }}
-          className="flex flex-col h-svh w-[360px] border-l border-gray-200 bg-white overflow-hidden"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                Complete your profile
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                {completedItems} of {totalItems} done
-              </p>
+          <motion.aside
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 280 }}
+            className="flex flex-col h-svh w-[360px] border-l border-gray-200 bg-white overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  Complete your profile
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {completedItems} of {totalItems} done
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={dismiss}
+                className="rounded-md p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={dismiss}
-              className="rounded-md p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-              aria-label="Dismiss"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
 
-          {/* Score bar */}
-          <div className="px-4 py-3 border-b border-gray-100 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Profile completeness</p>
-              <span className="text-sm font-bold tabular-nums text-[#160b35]">
-                {score}%
-              </span>
+            {/* Score bar */}
+            <div className="px-4 py-3 border-b border-gray-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Profile completeness
+                </p>
+                <span className="text-sm font-bold tabular-nums text-[#160b35]">
+                  {score}%
+                </span>
+              </div>
+              <Progress value={score} className="h-2" />
+              {score === 100 && (
+                <p className="text-xs text-emerald-600 font-medium">
+                  Your profile is fully set up!
+                </p>
+              )}
             </div>
-            <Progress value={score} className="h-2" />
-            {score === 100 && (
-              <p className="text-xs text-emerald-600 font-medium">
-                Your profile is fully set up!
-              </p>
-            )}
-          </div>
 
-          {/* Checklist */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-            <ChecklistSection title="Financial basics" items={basicsItems} />
-            <Separator />
-            <ChecklistSection
-              title="Complete your picture"
-              items={completePictureItems}
-            />
-          </div>
-        </motion.aside>
+            {/* Checklist */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+              <ChecklistSection title="Financial basics" items={basicsItems} />
+              <Separator />
+              <ChecklistSection
+                title="Complete your picture"
+                items={completePictureItems}
+              />
+            </div>
+          </motion.aside>
         </motion.div>
       )}
     </AnimatePresence>
