@@ -33,6 +33,7 @@ import {
 
 import { useClientGate } from "../../lib/useClientGate";
 import { useMonthlySnapshot } from "@/hooks/useMonthlySnapshot";
+import { usePageData } from "@/hooks/usePageData";
 import {
   canAccessFeature,
   type FeatureKey,
@@ -61,6 +62,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip as UITooltip,
   TooltipContent,
@@ -373,6 +375,8 @@ export default function DashboardPage() {
   }, [sub.status, userType]);
 
   // ── Store ─────────────────────────────────────────────────────────────────
+
+  const { loading } = usePageData("overview");
 
   const store = useFinancialStore();
   const financialData: FinancialDomainData = useMemo(
@@ -760,6 +764,7 @@ export default function DashboardPage() {
             <SectionLabel>At a glance</SectionLabel>
             <KpiStrip
               cols={4}
+              loading={loading}
               items={[
                 {
                   label: "Net Worth",
@@ -860,30 +865,41 @@ export default function DashboardPage() {
 
                     {/* Summary stats */}
                     <div className="flex gap-6 pt-2 flex-wrap">
-                      <StatPill
-                        label="Monthly income"
-                        value={formatCurrency(snapshot.monthlyIncome)}
-                        positive={true}
-                        tip="Total income across all sources this month."
-                      />
-                      <StatPill
-                        label="Monthly expenses"
-                        value={formatCurrency(snapshot.monthlyExpenses)}
-                        positive={false}
-                        tip="Total outgoings this month including essential and discretionary spend."
-                      />
-                      <StatPill
-                        label="Surplus"
-                        value={formatCurrency(snapshot.monthlyCashFlow)}
-                        positive={snapshot.monthlyCashFlow > 0}
-                        tip="What remains after all expenses. Positive means you are saving money this month."
-                      />
-                      <StatPill
-                        label="Savings rate"
-                        value={`${snapshot.savingsRate.toFixed(1)}%`}
-                        positive={snapshot.savingsRate >= 20}
-                        tip="Percentage of income saved. Financial advisors recommend at least 20%."
-                      />
+                      {loading ? (
+                        <>
+                          <Skeleton className="h-8 w-28" />
+                          <Skeleton className="h-8 w-28" />
+                          <Skeleton className="h-8 w-28" />
+                          <Skeleton className="h-8 w-28" />
+                        </>
+                      ) : (
+                        <>
+                          <StatPill
+                            label="Monthly income"
+                            value={formatCurrency(snapshot.monthlyIncome)}
+                            positive={true}
+                            tip="Total income across all sources this month."
+                          />
+                          <StatPill
+                            label="Monthly expenses"
+                            value={formatCurrency(snapshot.monthlyExpenses)}
+                            positive={false}
+                            tip="Total outgoings this month including essential and discretionary spend."
+                          />
+                          <StatPill
+                            label="Surplus"
+                            value={formatCurrency(snapshot.monthlyCashFlow)}
+                            positive={snapshot.monthlyCashFlow > 0}
+                            tip="What remains after all expenses. Positive means you are saving money this month."
+                          />
+                          <StatPill
+                            label="Savings rate"
+                            value={`${snapshot.savingsRate.toFixed(1)}%`}
+                            positive={snapshot.savingsRate >= 20}
+                            tip="Percentage of income saved. Financial advisors recommend at least 20%."
+                          />
+                        </>
+                      )}
                     </div>
 
                     {/* Legend */}

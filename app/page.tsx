@@ -11,7 +11,7 @@ import { EmailForm } from "@/components/login/email-form";
 import { OtpForm } from "@/components/login/otp-form";
 import { CelereyLoader } from "@/components/login/celerey-loader";
 import type { AuthMode, AuthStep } from "@/components/login/types";
-import { setAuth, getSubscription, getUserType } from "../lib/client-data";
+import { setAuth, getSubscription, getUserType, setOnboarded } from "../lib/client-data";
 
 const OTP_MESSAGE_TYPE = "OTPAuthMessage:HTML";
 
@@ -184,6 +184,9 @@ export default function Home() {
         verificationSucceeded = true;
         setIsNavigating(true);
         setAuth(email);
+        // Existing users with a session token have already completed onboarding.
+        // Mark them as onboarded so DashboardGuard doesn't redirect them.
+        setOnboarded();
 
         const sub = getSubscription();
         if (getUserType() === "enterprise" || sub.status !== "none") {
