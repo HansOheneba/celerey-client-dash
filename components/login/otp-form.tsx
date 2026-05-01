@@ -106,7 +106,7 @@ export function OtpForm({
         <Button
           type="submit"
           disabled={isSubmitting || otp.length < OTP_LENGTH}
-          className="h-11 w-full rounded-full"
+          className="h-11 w-full "
         >
           {isSubmitting
             ? "Verifying…"

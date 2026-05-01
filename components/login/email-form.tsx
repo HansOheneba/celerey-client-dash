@@ -66,7 +66,7 @@ export function EmailForm({
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-11 rounded-xl"
+            className="h-11 rounded-md"
             disabled={isSubmitting}
             required
           />
@@ -75,7 +75,7 @@ export function EmailForm({
         <Button
           type="submit"
           disabled={isSubmitting || email.trim().length === 0}
-          className="h-11 w-full rounded-full"
+          className="h-11 w-full"
         >
           {isSubmitting
             ? "Sending code…"
