@@ -1954,7 +1954,7 @@ export default function AssetsPage() {
                         </AreaChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="flex h-[200px] items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/20 px-6 text-center">
+                      <div className="flex h-50 items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/20 px-6 text-center">
                         <div className="space-y-1">
                           <p className="text-sm font-medium text-foreground">
                             No performance history yet

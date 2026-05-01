@@ -50,6 +50,7 @@ import {
   getUserFullName,
 } from "@/lib/client-data";
 import { useEffect, useState } from "react";
+import { useProfilePanel } from "./ProfilePanelContext";
 
 const nav = [
   { label: "Overview", href: "/dashboard", icon: faChartPie },
@@ -84,6 +85,7 @@ export default function DashboardSidebar() {
   const profileCompletionScore = useFinancialStore(
     (s) => s.profileCompletionScore,
   );
+  const { isOpen, open: openProfilePanel } = useProfilePanel();
 
   return (
     <Sidebar
@@ -264,8 +266,9 @@ export default function DashboardSidebar() {
       <SidebarSeparator className="my-3 bg-gray-200" />
 
       {/* ── Profile Completion Widget ── */}
+      {/* Hidden while the panel is open — they alternate */}
       <AnimatePresence initial={false}>
-        {!collapsed && (
+        {!collapsed && !isOpen && (
           <motion.div
             key="profile-completion"
             initial={{ opacity: 0, height: 0 }}
@@ -276,7 +279,7 @@ export default function DashboardSidebar() {
           >
             <button
               type="button"
-              onClick={() => router.push("/dashboard/profile/setup")}
+              onClick={openProfilePanel}
               className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors px-3 py-2.5 space-y-2"
             >
               <div className="flex items-center justify-between">

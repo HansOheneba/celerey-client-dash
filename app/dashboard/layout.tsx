@@ -12,6 +12,8 @@ import { useFinancialStore } from "@/store/financialStore";
 import { setDefaultCurrency } from "@/lib/client-data";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { SessionExpiredError } from "@/lib/dashboard-api";
+import { ProfilePanelProvider } from "@/components/dashboard/ProfilePanelContext";
+import { ProfileSetupPanel } from "@/components/dashboard/profile-setup-panel";
 
 /** Triggers zustand-persist rehydration from localStorage after mount. */
 function StoreHydrator() {
@@ -116,19 +118,23 @@ export default function RootLayout({
         <ApiDataLoader />
         <CurrencySync />
         <DashboardGuard>
-          <SidebarProvider defaultOpen>
-            <div className="flex min-h-svh w-full overflow-x-hidden">
-              <AdminSidebar />
+          <ProfilePanelProvider>
+            <SidebarProvider defaultOpen>
+              <div className="flex min-h-svh w-full overflow-x-hidden">
+                <AdminSidebar />
 
-              <SidebarInset className="min-w-0 flex flex-col h-svh overflow-hidden">
-                <DashboardTopbar />
+                <SidebarInset className="min-w-0 flex flex-col h-svh overflow-hidden">
+                  <DashboardTopbar />
 
-                <main className="flex-1 overflow-y-auto bg-blue-50/20 p-6">
-                  {children}
-                </main>
-              </SidebarInset>
-            </div>
-          </SidebarProvider>
+                  <main className="flex-1 overflow-y-auto bg-blue-50/20 p-6">
+                    {children}
+                  </main>
+                </SidebarInset>
+
+                <ProfileSetupPanel />
+              </div>
+            </SidebarProvider>
+          </ProfilePanelProvider>
         </DashboardGuard>
       </div>
     </>
