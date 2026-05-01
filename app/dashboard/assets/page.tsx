@@ -78,12 +78,17 @@ import {
   supportsMarket,
   ASSET_TYPE_OPTIONS,
   POPULAR_SYMBOLS,
+  mockPortfolioPerformance,
   selectPerformanceMetrics,
+  calculateNetWorth,
   type AssetHolding,
   type AssetValuation,
   type AssetType,
+  type NetWorthBreakdownMetrics,
+  type PerformancePoint,
   type ValuationMethod,
 } from "@/lib/client-data";
+import { NetWorthBreakdown as NetWorthBreakdownCard } from "@/components/dashboard/financial/NetWorthBreakdown";
 import { useFinancialStore } from "@/store/financialStore";
 import {
   deleteAsset,
@@ -301,10 +306,11 @@ function getLiveValue(
 ): number {
   // Live pricing for market assets (stock, ETF, crypto)
   const livePrice = livePrices[holding.holding_id];
-  if (livePrice != null && holding.quantity)
+  if (livePrice != null && Number.isFinite(livePrice) && holding.quantity)
     return livePrice * holding.quantity;
   // Use manually entered current_value when present
-  if (holding.current_value != null) return holding.current_value;
+  if (holding.current_value != null && Number.isFinite(holding.current_value))
+    return holding.current_value;
   return currentValue(holding, valuations);
 }
 
@@ -314,7 +320,7 @@ function getLiveGainLoss(
   livePrices: LivePrices,
 ): { amount: number; pct: number } {
   const cv = getLiveValue(holding, valuations, livePrices);
-  const cost = holding.cost_basis;
+  const cost = Number.isFinite(holding.cost_basis) ? holding.cost_basis : 0;
   const amount = cv - cost;
   const pct = cost > 0 ? (amount / cost) * 100 : 0;
   return { amount, pct };
@@ -377,6 +383,61 @@ function getCurrencySymbol(currency: string): string {
   } catch {
     return currency;
   }
+}
+
+function formatPortfolioAxisTick(value: number, currency: string): string {
+  const absValue = Math.abs(value);
+
+  try {
+    if (absValue >= 1_000_000) {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency,
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }).format(value);
+    }
+
+    if (absValue >= 1_000) {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency,
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }).format(value);
+    }
+
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    return `${getCurrencySymbol(currency)}${Math.round(value)}`;
+  }
+}
+
+function buildPortfolioPerformanceSeries(
+  points: PerformancePoint[],
+  currentPortfolioValue: number,
+) {
+  const source = points.length > 0 ? points : mockPortfolioPerformance;
+  if (source.length === 0 || currentPortfolioValue <= 0) return [];
+
+  const lastValue = source.at(-1)?.value ?? 0;
+  const scale =
+    points.length > 0 || lastValue <= 0 ? 1 : currentPortfolioValue / lastValue;
+
+  return [...source]
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .map((point) => ({
+      label: new Date(point.month + "-01").toLocaleDateString("en-US", {
+        month: "short",
+        year: "2-digit",
+      }),
+      value: Math.max(0, Math.round(point.value * scale)),
+      contributions: Math.max(0, Math.round(point.contributions * scale)),
+    }));
 }
 
 // ─── Add / Edit Dialog ─────────────────────────────────────────────────────────
@@ -1001,8 +1062,23 @@ function AllocationDonut({
   const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
   const total = data.reduce((s, d) => s + d.value, 0);
 
+  if (data.length === 0 || total <= 0) {
+    return (
+      <div className="flex min-h-56 items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/20 px-6 text-center">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            Allocation will appear here
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Add a priced holding to see your portfolio mix by asset type.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col md:flex-row items-center gap-6">
+    <div className="flex flex-col md:flex-row items-center gap-6 rounded-2xl bg-muted/10 p-3 sm:p-4">
       <div className="relative shrink-0">
         <PieChart width={180} height={180}>
           <Pie
@@ -1012,6 +1088,7 @@ function AllocationDonut({
             innerRadius={55}
             outerRadius={80}
             dataKey="value"
+            paddingAngle={data.length > 1 ? 2 : 0}
             onMouseEnter={(_, i) => setActiveIndex(i)}
             onMouseLeave={() => setActiveIndex(null)}
           >
@@ -1088,6 +1165,14 @@ function HoldingRow({
   const gl = getLiveGainLoss(holding, valuations, livePrices);
   const pct = totalPortfolio > 0 ? (value / totalPortfolio) * 100 : 0;
   const hasLivePrice = livePrices[holding.holding_id] != null;
+  const hasHistoricalValuation = valuations.some(
+    (valuation) => valuation.holding_id === holding.holding_id,
+  );
+  const showReturnMetrics =
+    hasLivePrice ||
+    holding.current_value != null ||
+    hasHistoricalValuation ||
+    holding.valuation_method !== "market";
 
   // Stale-data nudge: manual holdings not updated in >30 days
   const daysSinceUpdate = holding.last_updated
@@ -1210,7 +1295,7 @@ function HoldingRow({
 
         {/* Gain / loss */}
         <div className="hidden sm:flex flex-col items-end shrink-0 w-24">
-          {hasLivePrice || holding.current_value != null ? (
+          {showReturnMetrics ? (
             <>
               <span
                 className="text-xs font-medium"
@@ -1229,7 +1314,7 @@ function HoldingRow({
             </>
           ) : (
             <span className="text-xs text-muted-foreground">
-              {holding.valuation_method === "market" ? "Fetching…" : "—"}
+              Awaiting price
             </span>
           )}
         </div>
@@ -1422,6 +1507,7 @@ export default function AssetsPage() {
     (s) => s.portfolioPerformance,
   );
   const storeAccounts = useFinancialStore((s) => s.accounts);
+  const storePropertyAssets = useFinancialStore((s) => s.propertyAssets);
   const userCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
   const currencySymbol = getCurrencySymbol(userCurrency);
   const [addOpen, setAddOpen] = React.useState(false);
@@ -1448,7 +1534,11 @@ export default function AssetsPage() {
   );
 
   const totalCostBasis = React.useMemo(
-    () => holdings.reduce((s, h) => s + h.cost_basis, 0),
+    () =>
+      holdings.reduce(
+        (s, h) => s + (Number.isFinite(h.cost_basis) ? h.cost_basis : 0),
+        0,
+      ),
     [holdings],
   );
 
@@ -1456,9 +1546,17 @@ export default function AssetsPage() {
   const totalGainPct =
     totalCostBasis > 0 ? (totalGainLoss / totalCostBasis) * 100 : 0;
 
-  const perfMetrics = React.useMemo(
-    () => selectPerformanceMetrics(storePortfolioPerformance),
+  const performanceSource = React.useMemo(
+    () =>
+      storePortfolioPerformance.length > 0
+        ? storePortfolioPerformance
+        : mockPortfolioPerformance,
     [storePortfolioPerformance],
+  );
+
+  const perfMetrics = React.useMemo(
+    () => selectPerformanceMetrics(performanceSource),
+    [performanceSource],
   );
 
   // Allocation breakdown by asset type — derived from holdings + live prices
@@ -1482,18 +1580,14 @@ export default function AssetsPage() {
   // Performance chart — from store portfolioPerformance
   const perfChartData = React.useMemo(
     () =>
-      [...storePortfolioPerformance]
-        .sort((a, b) => a.month.localeCompare(b.month))
-        .map((p) => ({
-          label: new Date(p.month + "-01").toLocaleDateString("en-US", {
-            month: "short",
-            year: "2-digit",
-          }),
-          value: p.value,
-          contributions: p.contributions,
-        })),
-    [storePortfolioPerformance],
+      buildPortfolioPerformanceSeries(
+        storePortfolioPerformance,
+        totalPortfolioValue,
+      ),
+    [storePortfolioPerformance, totalPortfolioValue],
   );
+
+  const hasPerformanceHistory = storePortfolioPerformance.length > 0;
 
   // Filtered + sorted holdings
   const filteredHoldings = React.useMemo(() => {
@@ -1590,7 +1684,45 @@ export default function AssetsPage() {
 
   // ── KPI strip ─────────────────────────────────────────────────────────────
 
+  const netWorth = React.useMemo(
+    () =>
+      calculateNetWorth(
+        holdings,
+        valuations,
+        storePropertyAssets.filter((p) => p.is_active),
+        [],
+        [],
+        [],
+      ),
+    [holdings, valuations, storePropertyAssets],
+  );
+
+  const nwMetrics: NetWorthBreakdownMetrics = React.useMemo(() => {
+    const shortTermDebt = Math.max(
+      0,
+      netWorth.totalLiabilities - netWorth.mortgageBalances,
+    );
+    return {
+      totalInvestments: netWorth.investmentAssets,
+      totalCash: netWorth.cashAssets,
+      totalPropertyValue: netWorth.propertyValues,
+      totalOtherAssets: netWorth.totalOtherAssets,
+      totalAssets: netWorth.totalAssets,
+      totalMortgages: netWorth.mortgageBalances,
+      totalShortTermDebt: shortTermDebt,
+      totalLiabilities: netWorth.totalLiabilities,
+      totalNetWorth: netWorth.netWorth,
+      liquidNetWorth: netWorth.cashAssets - shortTermDebt,
+    };
+  }, [netWorth]);
+
   const kpiItems = [
+    {
+      label: "Net Worth",
+      value: formatCurrency(netWorth.netWorth),
+      subline: "Assets minus liabilities",
+      tone: netWorth.netWorth >= 0 ? ("good" as const) : ("danger" as const),
+    },
     {
       label: "Portfolio Value",
       value: formatCurrency(totalPortfolioValue),
@@ -1705,7 +1837,7 @@ export default function AssetsPage() {
 
           {/* ── KPI Strip ── */}
           <motion.div variants={mi}>
-            <KpiStrip cols={4} items={kpiItems} loading={loading} />
+            <KpiStrip cols={5} items={kpiItems} loading={loading} />
           </motion.div>
 
           {/* ── Allocation + Performance (only when holdings exist) ── */}
@@ -1715,10 +1847,10 @@ export default function AssetsPage() {
               initial="hidden"
               animate="show"
               variants={mi}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+              className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(340px,460px)_minmax(0,1fr)]"
             >
               {/* Allocation donut */}
-              <div>
+              <div className="xl:max-w-[460px]">
                 <SectionLabel>Allocation</SectionLabel>
                 <Card>
                   <CardHeader className="pb-2">
@@ -1740,7 +1872,7 @@ export default function AssetsPage() {
               </div>
 
               {/* Performance chart */}
-              <div>
+              <div className="min-w-0">
                 <SectionLabel>Performance</SectionLabel>
                 <Card>
                   <CardHeader className="pb-2">
@@ -1752,170 +1884,202 @@ export default function AssetsPage() {
                       Portfolio value over time
                     </CardTitle>
                     <p className="text-xs text-muted-foreground">
-                      {storePortfolioPerformance.length} months of history
+                      {perfChartData.length} months of history
+                      {!hasPerformanceHistory && perfChartData.length > 0
+                        ? " · estimated from current portfolio value"
+                        : ""}
                     </p>
                   </CardHeader>
                   <CardContent className="px-2 sm:px-6">
-                    <ResponsiveContainer width="100%" height={200}>
-                      <AreaChart
-                        data={perfChartData}
-                        margin={{ left: 8, right: 8, top: 4, bottom: 0 }}
-                      >
-                        <defs>
-                          <linearGradient
-                            id="perfGrad"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="5%"
-                              stopColor="#151339"
-                              stopOpacity={0.25}
-                            />
-                            <stop
-                              offset="95%"
-                              stopColor="#151339"
-                              stopOpacity={0.02}
-                            />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid
-                          vertical={false}
-                          strokeDasharray="3 3"
-                          stroke="currentColor"
-                          strokeOpacity={0.1}
-                        />
-                        <XAxis
-                          dataKey="label"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tick={{ fontSize: 10 }}
-                          interval="preserveStartEnd"
-                        />
-                        <YAxis
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tick={{ fontSize: 10 }}
-                          tickFormatter={(v) =>
-                            `${currencySymbol}${(v / 1000000).toFixed(1)}M`
-                          }
-                          width={52}
-                        />
-                        <Tooltip content={<ChartTooltipContent />} />
-                        <Area
-                          dataKey="value"
-                          name="Portfolio value"
-                          stroke="#151339"
-                          strokeWidth={2}
-                          fill="url(#perfGrad)"
-                          dot={false}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    {perfChartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <AreaChart
+                          data={perfChartData}
+                          margin={{ left: 8, right: 8, top: 4, bottom: 0 }}
+                        >
+                          <defs>
+                            <linearGradient
+                              id="perfGrad"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="5%"
+                                stopColor="#151339"
+                                stopOpacity={0.25}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="#151339"
+                                stopOpacity={0.02}
+                              />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid
+                            vertical={false}
+                            strokeDasharray="3 3"
+                            stroke="currentColor"
+                            strokeOpacity={0.1}
+                          />
+                          <XAxis
+                            dataKey="label"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tick={{ fontSize: 10 }}
+                            interval="preserveStartEnd"
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tick={{ fontSize: 10 }}
+                            tickFormatter={(v) =>
+                              formatPortfolioAxisTick(v, userCurrency)
+                            }
+                            width={64}
+                          />
+                          <Tooltip content={<ChartTooltipContent />} />
+                          <Area
+                            type="monotone"
+                            dataKey="value"
+                            name="Portfolio value"
+                            stroke="#151339"
+                            strokeWidth={2}
+                            fill="url(#perfGrad)"
+                            dot={perfChartData.length === 1}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex h-[200px] items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/20 px-6 text-center">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">
+                            No performance history yet
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Add more portfolio activity to build a performance
+                            trend over time.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
             </motion.div>
           )}
 
-          {/* ── Holdings list ── */}
-          <motion.div variants={mi}>
-            <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
-              <SectionLabel>Holdings</SectionLabel>
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Type filter pills */}
-                <div className="flex items-center gap-1 text-xs flex-wrap">
-                  <button
-                    onClick={() => setFilterType("all")}
-                    className={`px-2.5 py-1 rounded-full border transition-all ${
-                      filterType === "all"
-                        ? "text-white border-transparent"
-                        : "border-muted text-muted-foreground hover:border-foreground/30"
-                    }`}
-                    style={
-                      filterType === "all" ? { backgroundColor: "#151339" } : {}
-                    }
-                  >
-                    All ({holdings.length})
-                  </button>
-                  {presentTypes.map((t) => (
+          {/* ── Net Worth Breakdown + Holdings (side by side) ── */}
+          <motion.div
+            variants={mi}
+            className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]"
+          >
+            {/* Net Worth Breakdown */}
+            <div>
+              <SectionLabel>Net Worth</SectionLabel>
+              <NetWorthBreakdownCard netWorth={nwMetrics} freshness={[]} />
+            </div>
+
+            {/* Holdings list */}
+            <div>
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
+                <SectionLabel>Holdings</SectionLabel>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Type filter pills */}
+                  <div className="flex items-center gap-1 text-xs flex-wrap">
                     <button
-                      key={t}
-                      onClick={() => setFilterType(t)}
+                      onClick={() => setFilterType("all")}
                       className={`px-2.5 py-1 rounded-full border transition-all ${
-                        filterType === t
+                        filterType === "all"
                           ? "text-white border-transparent"
                           : "border-muted text-muted-foreground hover:border-foreground/30"
                       }`}
                       style={
-                        filterType === t ? { backgroundColor: "#151339" } : {}
+                        filterType === "all"
+                          ? { backgroundColor: "#151339" }
+                          : {}
                       }
                     >
-                      {assetTypeLabel(t)}
+                      All ({holdings.length})
                     </button>
+                    {presentTypes.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setFilterType(t)}
+                        className={`px-2.5 py-1 rounded-full border transition-all ${
+                          filterType === t
+                            ? "text-white border-transparent"
+                            : "border-muted text-muted-foreground hover:border-foreground/30"
+                        }`}
+                        style={
+                          filterType === t ? { backgroundColor: "#151339" } : {}
+                        }
+                      >
+                        {assetTypeLabel(t)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Sort */}
+                  <Select
+                    value={sortBy}
+                    onValueChange={(v) => setSortBy(v as "value" | "gain")}
+                  >
+                    <SelectTrigger className="h-7 text-xs w-36">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="value">Sort: Value</SelectItem>
+                      <SelectItem value="gain">Sort: Gain %</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-20 w-full rounded-xl" />
                   ))}
                 </div>
-
-                {/* Sort */}
-                <Select
-                  value={sortBy}
-                  onValueChange={(v) => setSortBy(v as "value" | "gain")}
-                >
-                  <SelectTrigger className="h-7 text-xs w-36">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="value">Sort: Value</SelectItem>
-                    <SelectItem value="gain">Sort: Gain %</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {loading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-20 w-full rounded-xl" />
-                ))}
-              </div>
-            ) : filteredHoldings.length === 0 ? (
-              <EmptyHoldings onAdd={() => setAddOpen(true)} />
-            ) : (
-              <div className="space-y-2">
-                {/* Column header */}
-                <div
-                  className="hidden md:grid gap-3 px-4 py-2 text-xs text-muted-foreground font-medium"
-                  style={{
-                    gridTemplateColumns: "1fr 120px 96px 96px 112px 16px",
-                  }}
-                >
-                  <span>Asset</span>
-                  <span className="text-right">Portfolio %</span>
-                  <span className="text-right">Gain / Loss</span>
-                  <span className="text-right">Return</span>
-                  <span className="text-right">Value</span>
-                  <span />
-                </div>
-                {filteredHoldings.map((h) => (
-                  <HoldingRow
-                    key={h.holding_id}
-                    holding={h}
-                    valuations={valuations}
-                    livePrices={livePrices}
-                    totalPortfolio={totalPortfolioValue}
-                    onEdit={() => {
-                      setEditHolding(h);
-                      setAddOpen(true);
+              ) : filteredHoldings.length === 0 ? (
+                <EmptyHoldings onAdd={() => setAddOpen(true)} />
+              ) : (
+                <div className="space-y-2">
+                  {/* Column header */}
+                  <div
+                    className="hidden md:grid gap-3 px-4 py-2 text-xs text-muted-foreground font-medium"
+                    style={{
+                      gridTemplateColumns: "1fr 120px 96px 96px 112px 16px",
                     }}
-                    onDelete={() => handleDelete(h.holding_id)}
-                  />
-                ))}
-              </div>
-            )}
+                  >
+                    <span>Asset</span>
+                    <span className="text-right">Portfolio %</span>
+                    <span className="text-right">Gain / Loss</span>
+                    <span className="text-right">Return</span>
+                    <span className="text-right">Value</span>
+                    <span />
+                  </div>
+                  {filteredHoldings.map((h) => (
+                    <HoldingRow
+                      key={h.holding_id}
+                      holding={h}
+                      valuations={valuations}
+                      livePrices={livePrices}
+                      totalPortfolio={totalPortfolioValue}
+                      onEdit={() => {
+                        setEditHolding(h);
+                        setAddOpen(true);
+                      }}
+                      onDelete={() => handleDelete(h.holding_id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </motion.div>
 
           {/* ── Accounts ── */}

@@ -854,9 +854,12 @@ export function currentValue(
   valuations: AssetValuation[],
 ): number {
   // Prefer explicitly entered current value
-  if (holding.current_value != null) return holding.current_value;
+  if (holding.current_value != null && Number.isFinite(holding.current_value))
+    return holding.current_value;
   const latest = latestValuation(holding.holding_id, valuations);
-  return latest ? latest.value : holding.cost_basis;
+  if (latest && Number.isFinite(latest.value)) return latest.value;
+  const basis = holding.cost_basis;
+  return Number.isFinite(basis) ? basis : 0;
 }
 
 export function gainLoss(

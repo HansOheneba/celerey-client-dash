@@ -924,21 +924,6 @@ export default function CashFlowPage() {
 
   const cashFlowKpis: KpiItem[] = [
     {
-      label: "Net Worth",
-      value: hasAssets ? formatCurrency(netWorth.netWorth) : "—",
-      subline: hasAssets
-        ? "Assets minus liabilities"
-        : "Add assets to see net worth",
-      tone: hasAssets
-        ? netWorth.netWorth >= 0
-          ? "good"
-          : "danger"
-        : "neutral",
-      onClick: hasAssets
-        ? undefined
-        : () => router.push("/dashboard/profile/setup"),
-    },
-    {
       label: "Monthly Income",
       value: formatCurrency(totalIncome),
       subline:
@@ -1225,7 +1210,7 @@ export default function CashFlowPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <KpiStrip items={cashFlowKpis} cols={6} loading={loading} />
+          <KpiStrip items={cashFlowKpis} cols={5} loading={loading} />
         </motion.div>
 
         {/* Cash Flow Chart */}

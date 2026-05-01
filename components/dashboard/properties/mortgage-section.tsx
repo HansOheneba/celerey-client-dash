@@ -444,7 +444,9 @@ export function MortgageSection({
               variant="ghost"
               size="sm"
               onClick={() => {
-                setForm(mortgage ? mortgageToForm(mortgage) : emptyMortgageForm);
+                setForm(
+                  mortgage ? mortgageToForm(mortgage) : emptyMortgageForm,
+                );
                 setEditing(false);
                 if (!mortgage) setShowForm(false);
               }}
