@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Sidebar,
@@ -42,8 +43,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronDown, Settings, LogOut, UserIcon } from "lucide-react";
+import { ChevronDown, Settings, LogOut, UserIcon, Loader2 } from "lucide-react";
 import {
   clearAuth,
   clearUserProfile,
@@ -80,6 +92,7 @@ export default function DashboardSidebar() {
   const displayName = getUserFullName(user ?? undefined);
   const userEmail = user?.email ?? "";
   const [mounted, setMounted] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const profileCompletionScore = useFinancialStore(
@@ -93,15 +106,20 @@ export default function DashboardSidebar() {
     const hrefs = new Set<string>();
     const s = useFinancialStore.getState();
     if (!s.goals.length) hrefs.add("/dashboard/goals");
-    if (!s.holdings.length && !s.accounts.length) hrefs.add("/dashboard/assets");
+    if (!s.holdings.length && !s.accounts.length)
+      hrefs.add("/dashboard/assets");
     if (!s.insurancePolicies.length) hrefs.add("/dashboard/insurance");
-    if (!s.incomeRows.length || !s.expenseCategories.length || !s.emergencyFund.currentCashBalance)
+    if (
+      !s.incomeRows.length ||
+      !s.expenseCategories.length ||
+      !s.emergencyFund.currentCashBalance
+    )
       hrefs.add("/dashboard/cash-flow");
     if (!s.liabilities.length) hrefs.add("/dashboard/liabilities");
     if (!s.retirement.desiredMonthlyIncome || !s.retirement.retirementAge)
       hrefs.add("/dashboard/retirement");
     return hrefs;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     store.goals,
     store.holdings,
@@ -120,115 +138,42 @@ export default function DashboardSidebar() {
       variant="sidebar"
       className="bg-white border-r border-gray-200 text-gray-700"
     >
-      {/* ── Header ── */}
-      <SidebarHeader className="px-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 w-full rounded-md px-2 hover:bg-gray-50 transition-colors text-left">
-              <Avatar className="h-6 w-6 shrink-0">
-                <AvatarFallback className="bg-[#1B1856] text-white text-xs">
-                  {mounted
-                    ? displayName
-                        .split(" ")
-                        .slice(0, 2)
-                        .map((n) => n[0])
-                        .join("")
-                    : ""}
-                </AvatarFallback>
-              </Avatar>
-
-              <AnimatePresence initial={false}>
-                {!collapsed && (
-                  <motion.div
-                    key="profile-text"
-                    initial={{ opacity: 0, x: -4 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -4 }}
-                    transition={{ duration: 0.14 }}
-                    className="flex flex-col min-w-0 flex-1"
-                  >
-                    <span className="text-sm font-medium text-gray-800 truncate">
-                      {mounted ? displayName : ""}
-                    </span>
-                    <span className="text-xs text-gray-500 truncate">
-                      {userEmail}
-                    </span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <AnimatePresence initial={false}>
-                {!collapsed && (
-                  <motion.div
-                    key="chevron"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.14 }}
-                    className="ml-auto shrink-0"
-                  >
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </button>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent side="right" align="start" className="w-56">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">
-                  {mounted ? displayName : ""}
-                </p>
-                <p className="text-xs text-muted-foreground">{userEmail}</p>
-              </div>
-            </DropdownMenuLabel>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/dashboard/account/profile"
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <UserIcon className="h-4 w-4" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/dashboard/account/settings"
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <Settings className="h-4 w-4" />
-                  Account Settings
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              className="text-destructive cursor-pointer"
-              onClick={async () => {
-                try {
-                  await fetch("/api/auth/sign-out", { method: "POST" });
-                } catch {
-                  // ignore network errors — still clear local state
-                }
-                clearAuth();
-                clearUserProfile();
-                router.replace("/");
-              }}
+      {/* ── Header: Logo ── */}
+      <SidebarHeader className="h-16 flex-row items-center justify-center p-0 px-3 border-b border-gray-200">
+        <Link href="/dashboard" className="flex items-center">
+          {/* Full logo and symbol overlap and crossfade simultaneously — no stutter */}
+          <div className="relative">
+            <motion.div
+              animate={{ opacity: collapsed ? 0 : 1 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+              className={collapsed ? "pointer-events-none" : ""}
             >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <Image
+                src="/logos/logoDark.png"
+                alt="Celerey"
+                width={150}
+                height={40}
+                priority
+                className="h-10 w-auto object-contain"
+              />
+            </motion.div>
+            <motion.div
+              animate={{ opacity: collapsed ? 1 : 0 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+              className="absolute inset-0 flex items-center"
+            >
+              <Image
+                src="/logos/Celerey-Secondary-Symbol-Dark.png"
+                alt="Celerey"
+                width={28}
+                height={28}
+                priority
+                className="h-7 w-auto object-contain"
+              />
+            </motion.div>
+          </div>
+        </Link>
       </SidebarHeader>
-      <SidebarSeparator className="my-2 bg-gray-200" />
 
       {/* ── Nav ── */}
       <SidebarContent className="px-2">
@@ -268,7 +213,11 @@ export default function DashboardSidebar() {
                             initial={{ scale: 0, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0, opacity: 0 }}
-                            transition={{ type: "spring", damping: 16, stiffness: 300 }}
+                            transition={{
+                              type: "spring",
+                              damping: 16,
+                              stiffness: 300,
+                            }}
                             className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500 ring-1 ring-white"
                           />
                         )}
@@ -354,7 +303,8 @@ export default function DashboardSidebar() {
       </AnimatePresence>
 
       {/* ── Footer ── */}
-      <SidebarFooter>
+      <SidebarFooter className="px-2 pb-3 space-y-1">
+        {/* Support */}
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -371,7 +321,20 @@ export default function DashboardSidebar() {
                   className="h-4 w-4 text-gray-400"
                   fixedWidth
                 />
-                <span className="text-sm text-gray-600">Support</span>
+                <AnimatePresence initial={false}>
+                  {!collapsed && (
+                    <motion.span
+                      key="support-label"
+                      initial={{ opacity: 0, x: -4 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -4 }}
+                      transition={{ duration: 0.14 }}
+                      className="text-sm text-gray-600"
+                    >
+                      Support
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
