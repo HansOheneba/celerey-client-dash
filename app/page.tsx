@@ -11,7 +11,12 @@ import { EmailForm } from "@/components/login/email-form";
 import { OtpForm } from "@/components/login/otp-form";
 import { CelereyLoader } from "@/components/login/celerey-loader";
 import type { AuthMode, AuthStep } from "@/components/login/types";
-import { setAuth, getSubscription, getUserType, setOnboarded } from "../lib/client-data";
+import {
+  setAuth,
+  getSubscription,
+  getUserType,
+  setOnboarded,
+} from "../lib/client-data";
 
 const OTP_MESSAGE_TYPE = "OTPAuthMessage:HTML";
 
