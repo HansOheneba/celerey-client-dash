@@ -1122,7 +1122,9 @@ export async function fetchLatestRiskAssessment(): Promise<RiskAssessmentResult 
 
 // ── Risk Assessment — additional endpoints ────────────────────────────────
 
-export async function fetchRiskAssessmentHistory(): Promise<RiskAssessmentResult[]> {
+export async function fetchRiskAssessmentHistory(): Promise<
+  RiskAssessmentResult[]
+> {
   console.log("[fetchRiskAssessmentHistory] ▶ calling risk.history");
   try {
     const res = await proxyCall<{

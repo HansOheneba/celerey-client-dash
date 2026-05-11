@@ -182,7 +182,11 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
     >
       {isAI && (
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#18163f] overflow-hidden mt-1">
-          <img src="https://i.ibb.co/mCs0QnX1/Celerey-Secondary-Symbol-Light-1.png" alt="Celerey" className="h-6 w-6 object-contain" />
+          <img
+            src="https://i.ibb.co/mCs0QnX1/Celerey-Secondary-Symbol-Light-1.png"
+            alt="Celerey"
+            className="h-6 w-6 object-contain"
+          />
         </div>
       )}
       <div
@@ -361,7 +365,11 @@ export default function AIInsightsPage() {
     }
 
     // Retirement trajectory
-    if (demo.currentInvested > 0 && demo.retirementAge > 0 && demo.currentAge > 0) {
+    if (
+      demo.currentInvested > 0 &&
+      demo.retirementAge > 0 &&
+      demo.currentAge > 0
+    ) {
       const yrs = demo.retirementAge - demo.currentAge;
       const projected = Math.round(
         demo.currentInvested * Math.pow(1.07, yrs) +
@@ -566,7 +574,11 @@ export default function AIInsightsPage() {
         {/* Header */}
         <div className="shrink-0 border-b border-muted/40 px-6 py-4 flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#18163f] overflow-hidden">
-            <img src="https://i.ibb.co/mCs0QnX1/Celerey-Secondary-Symbol-Light-1.png" alt="Celerey" className="h-7 w-7 object-contain" />
+            <img
+              src="https://i.ibb.co/mCs0QnX1/Celerey-Secondary-Symbol-Light-1.png"
+              alt="Celerey"
+              className="h-7 w-7 object-contain"
+            />
           </div>
           <div>
             <h1 className="text-base font-semibold">Celerey AI</h1>
@@ -595,7 +607,11 @@ export default function AIInsightsPage() {
                 className="flex gap-3 justify-start"
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#18163f] overflow-hidden mt-1">
-                  <img src="https://i.ibb.co/mCs0QnX1/Celerey-Secondary-Symbol-Light-1.png" alt="Celerey" className="h-6 w-6 object-contain" />
+                  <img
+                    src="https://i.ibb.co/mCs0QnX1/Celerey-Secondary-Symbol-Light-1.png"
+                    alt="Celerey"
+                    className="h-6 w-6 object-contain"
+                  />
                 </div>
                 <div className="bg-muted/50 rounded-2xl rounded-tl-sm px-4 py-3">
                   <div className="flex gap-1 items-center h-5">
