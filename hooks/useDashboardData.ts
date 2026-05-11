@@ -7,7 +7,12 @@
 
 import { useEffect, useRef } from "react";
 import { useFinancialStore } from "@/store/financialStore";
-import { fetchDashboardBootstrap, fetchUser } from "@/lib/dashboard-api";
+import {
+  fetchDashboardBootstrap,
+  fetchUser,
+  fetchSubscription,
+} from "@/lib/dashboard-api";
+import { setSubscription, type SubscriptionStatus } from "@/lib/client-data";
 
 export function useDashboardData() {
   const hydrated = useRef(false);
@@ -60,6 +65,28 @@ export function useDashboardData() {
       .catch(() => {
         // Non-fatal — store keeps whatever was in localStorage.
         // Silent: the user still sees their seeded onboarding data.
+      });
+
+    // Sync server-authoritative subscription status into localStorage so
+    // useClientGate / canAccessFeature always reflect the real entitlement.
+    fetchSubscription()
+      .then((sub) => {
+        if (sub?.status) {
+          const validStatuses: SubscriptionStatus[] = [
+            "none",
+            "trialing",
+            "active",
+          ];
+          const status = validStatuses.includes(
+            sub.status as SubscriptionStatus,
+          )
+            ? (sub.status as SubscriptionStatus)
+            : "none";
+          setSubscription(status);
+        }
+      })
+      .catch(() => {
+        // Non-fatal — keep whatever is in localStorage
       });
   }, [hydrateFromApi, setUser]);
 }

@@ -24,6 +24,7 @@ const ALLOWED_PATH_PREFIXES = [
   "liabilities.",
   "retirement.",
   "risk.",
+  "subscription.", // subscription.find, subscription.upgrade
   "auth.refresh-session",
   "auth.revoke-session",
 ] as const;

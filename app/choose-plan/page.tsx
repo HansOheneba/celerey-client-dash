@@ -11,6 +11,7 @@ import {
   setTrialStartedAt,
   isOnboarded,
 } from "../../lib/client-data";
+import { upgradeSubscription } from "../../lib/dashboard-api";
 import { CelereyLoader } from "../../components/login/celerey-loader";
 
 type FeatureRow = {
@@ -184,6 +185,7 @@ export default function ChoosePlanPage() {
   const { ready, auth, sub } = useClientGate();
   const [splashDone, setSplashDone] = useState(false);
   const [contentVisible, setContentVisible] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
 
   // Reveal content right after splash exits
   const handleSplashDone = React.useCallback(() => {
@@ -219,9 +221,17 @@ export default function ChoosePlanPage() {
     router.push("/dashboard");
   }
 
-  function goPremiumNow(): void {
-    setSubscription("active");
-    router.push("/dashboard");
+  async function goPremiumNow(): Promise<void> {
+    setUpgrading(true);
+    try {
+      await upgradeSubscription("pro");
+    } catch {
+      // Non-fatal — fall through and set active locally so the user isn't blocked
+    } finally {
+      setSubscription("active");
+      setUpgrading(false);
+      router.push("/dashboard");
+    }
   }
 
   const rows: FeatureRow[] = useMemo(
@@ -475,17 +485,19 @@ export default function ChoosePlanPage() {
                   <button
                     type="button"
                     onClick={goPremiumNow}
+                    disabled={upgrading}
                     className={cn(
                       "mt-4 relative inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3",
                       "text-white font-semibold shadow-sm",
                       "transition-transform translate-y-px active:translate-y-1",
+                      upgrading && "opacity-70 cursor-not-allowed",
                     )}
                     style={{
                       background: `linear-gradient(90deg, ${BRAND.navy} 0%, ${BRAND.navy2} 60%, ${BRAND.ink} 100%)`,
                     }}
                   >
-                    Go Premium now
-                    <ArrowRight className="h-4 w-4" />
+                    {upgrading ? "Processing…" : "Go Premium now"}
+                    {!upgrading && <ArrowRight className="h-4 w-4" />}
                   </button>
 
                   <p className="mt-2 text-center text-xs text-slate-500">
@@ -729,17 +741,19 @@ export default function ChoosePlanPage() {
                 <button
                   type="button"
                   onClick={goPremiumNow}
+                  disabled={upgrading}
                   className={cn(
                     "relative inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3",
                     "text-white font-semibold shadow-sm",
                     "transition-transform translate-y-px active:translate-y-1",
+                    upgrading && "opacity-70 cursor-not-allowed",
                   )}
                   style={{
                     background: `linear-gradient(90deg, ${BRAND.navy} 0%, ${BRAND.navy2} 60%, ${BRAND.ink} 100%)`,
                   }}
                 >
-                  Go Premium now
-                  <ArrowRight className="h-4 w-4" />
+                  {upgrading ? "Processing…" : "Go Premium now"}
+                  {!upgrading && <ArrowRight className="h-4 w-4" />}
                 </button>
 
                 <p className="mt-2 text-center text-xs text-slate-500">

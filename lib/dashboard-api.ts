@@ -1119,3 +1119,130 @@ export async function fetchLatestRiskAssessment(): Promise<RiskAssessmentResult 
     return null;
   }
 }
+
+// ── Risk Assessment — additional endpoints ────────────────────────────────
+
+export async function fetchRiskAssessmentHistory(): Promise<RiskAssessmentResult[]> {
+  console.log("[fetchRiskAssessmentHistory] ▶ calling risk.history");
+  try {
+    const res = await proxyCall<{
+      success?: boolean;
+      data?: RiskAssessmentResult[];
+    }>("risk.history");
+    console.log(
+      "[fetchRiskAssessmentHistory] ◀ raw response:",
+      JSON.stringify(res, null, 2),
+    );
+    const list: RiskAssessmentResult[] = Array.isArray((res as any)?.data)
+      ? (res as any).data
+      : Array.isArray(res)
+        ? (res as unknown as RiskAssessmentResult[])
+        : [];
+    return list;
+  } catch (err) {
+    console.error("[fetchRiskAssessmentHistory] ✗ error:", err);
+    return [];
+  }
+}
+
+export async function fetchRiskAssessmentById(
+  assessmentId: string,
+): Promise<RiskAssessmentResult | null> {
+  console.log(
+    "[fetchRiskAssessmentById] ▶ calling risk.result for",
+    assessmentId,
+  );
+  try {
+    const res = await proxyCall<{
+      success?: boolean;
+      data?: RiskAssessmentResult;
+    }>(`risk.result?assessment_id=${encodeURIComponent(assessmentId)}`);
+    console.log(
+      "[fetchRiskAssessmentById] ◀ raw response:",
+      JSON.stringify(res, null, 2),
+    );
+    return (res as any)?.data ?? null;
+  } catch (err) {
+    console.error("[fetchRiskAssessmentById] ✗ error:", err);
+    return null;
+  }
+}
+
+export async function updateRiskProfileFactors(payload: {
+  [key: string]: unknown;
+}): Promise<void> {
+  console.log("[updateRiskProfileFactors] ▶ payload:", payload);
+  try {
+    await proxyCall("risk.profile-factors", "PUT", payload);
+    console.log("[updateRiskProfileFactors] ◀ done");
+  } catch (err) {
+    console.error("[updateRiskProfileFactors] ✗ error:", err);
+    throw err;
+  }
+}
+
+export async function recalculateRiskScore(): Promise<RiskAssessmentResult | null> {
+  console.log("[recalculateRiskScore] ▶ calling risk.recalculate");
+  try {
+    const res = await proxyCall<{
+      success?: boolean;
+      data?: RiskAssessmentResult;
+    }>("risk.recalculate", "POST", {});
+    console.log(
+      "[recalculateRiskScore] ◀ raw response:",
+      JSON.stringify(res, null, 2),
+    );
+    return (res as any)?.data ?? null;
+  } catch (err) {
+    console.error("[recalculateRiskScore] ✗ error:", err);
+    return null;
+  }
+}
+
+// ── Subscription ──────────────────────────────────────────────────────────
+
+export interface SubscriptionApiData {
+  status: string; // "none" | "trialing" | "active"
+  plan?: string;
+  trial_started_at?: string;
+  trial_ends_at?: string;
+  renewed_at?: string;
+}
+
+export async function fetchSubscription(): Promise<SubscriptionApiData | null> {
+  console.log("[fetchSubscription] ▶ calling subscription.find");
+  try {
+    const res = await proxyCall<{
+      success?: boolean;
+      data?: SubscriptionApiData;
+    }>("subscription.find");
+    console.log(
+      "[fetchSubscription] ◀ raw response:",
+      JSON.stringify(res, null, 2),
+    );
+    return (res as any)?.data ?? (res as unknown as SubscriptionApiData);
+  } catch (err) {
+    console.warn("[fetchSubscription] failed (non-fatal):", err);
+    return null;
+  }
+}
+
+export async function upgradeSubscription(
+  plan: string,
+): Promise<SubscriptionApiData | null> {
+  console.log("[upgradeSubscription] ▶ payload:", { plan });
+  try {
+    const res = await proxyCall<{
+      success?: boolean;
+      data?: SubscriptionApiData;
+    }>("subscription.upgrade", "POST", { plan });
+    console.log(
+      "[upgradeSubscription] ◀ raw response:",
+      JSON.stringify(res, null, 2),
+    );
+    return (res as any)?.data ?? null;
+  } catch (err) {
+    console.error("[upgradeSubscription] ✗ error:", err);
+    throw err;
+  }
+}
