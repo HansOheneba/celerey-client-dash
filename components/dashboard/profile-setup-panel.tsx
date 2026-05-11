@@ -32,7 +32,8 @@ interface ChecklistItem {
   id: string;
   label: string;
   description: string;
-  href: string;
+  href?: string;
+  onAction?: () => void;
   actionLabel: string;
   icon: React.ReactNode;
   completed: boolean;
@@ -83,20 +84,34 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
         </p>
       </div>
 
-      {!item.completed && (
-        <Button
-          asChild
-          size="sm"
-          variant="outline"
-          className="shrink-0 gap-1 text-[11px] h-7 px-2"
-          onClick={dismiss}
-        >
-          <Link href={item.href}>
+      {!item.completed &&
+        (item.onAction ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0 gap-1 text-[11px] h-7 px-2"
+            onClick={() => {
+              dismiss();
+              item.onAction!();
+            }}
+          >
             {item.actionLabel}
             <ChevronRight className="h-3 w-3" />
-          </Link>
-        </Button>
-      )}
+          </Button>
+        ) : (
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="shrink-0 gap-1 text-[11px] h-7 px-2"
+            onClick={dismiss}
+          >
+            <Link href={item.href!}>
+              {item.actionLabel}
+              <ChevronRight className="h-3 w-3" />
+            </Link>
+          </Button>
+        ))}
     </div>
   );
 }
@@ -133,7 +148,7 @@ function ChecklistSection({
 // ─── Panel ────────────────────────────────────────────────────────────────────
 
 export function ProfileSetupPanel() {
-  const { isOpen, dismiss } = useProfilePanel();
+  const { isOpen, dismiss, openRiskQuiz } = useProfilePanel();
   const store = useFinancialStore();
 
   const identityComplete =
@@ -149,6 +164,7 @@ export function ProfileSetupPanel() {
   const retirementDetailComplete =
     store.retirement.currentInvested > 0 ||
     store.retirement.existingPensionBalance > 0;
+  const hasRiskProfile = !!store.user?.risk_profile;
   const hasLiabilities = store.liabilities.length > 0;
   const hasEmergencyFund = store.emergencyFund.currentCashBalance > 0;
   const hasAssets = store.holdings.length > 0 || store.accounts.length > 0;
@@ -205,6 +221,15 @@ export function ProfileSetupPanel() {
   ];
 
   const completePictureItems: ChecklistItem[] = [
+    {
+      id: "risk-assessment",
+      label: "Complete your risk assessment",
+      description: "Understand your risk tolerance and investment profile.",
+      onAction: openRiskQuiz,
+      actionLabel: "Take quiz",
+      icon: <ShieldCheck className="h-3.5 w-3.5" />,
+      completed: hasRiskProfile,
+    },
     {
       id: "retirement-detail",
       label: "Complete retirement details",

@@ -258,7 +258,7 @@ export default function DashboardSidebar() {
       {/* ── Profile Completion Widget ── */}
       {/* Hidden while the panel is open — they alternate */}
       <AnimatePresence initial={false}>
-        {!collapsed && !isOpen && (
+        {!collapsed && !isOpen && profileCompletionScore < 100 && (
           <motion.div
             key="profile-completion"
             initial={{ opacity: 0, height: 0 }}

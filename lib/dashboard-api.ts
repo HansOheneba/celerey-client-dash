@@ -860,6 +860,116 @@ export async function updatePropertyInsurance(payload: {
   await proxyCall("properties.insurance.update", "PUT", payload);
 }
 
+// ── Retirement ────────────────────────────────────────────────────────────
+
+// API shape: { success, data: { config: RetirementConfig, projections: ... } }
+type ApiRetirementResponse = {
+  success?: boolean;
+  data?: {
+    config?: RetirementConfig;
+    projections?: unknown;
+  };
+};
+
+function extractRetirementConfig(res: unknown): RetirementConfig | null {
+  const typed = res as ApiRetirementResponse;
+  // currentAge is intentionally excluded — it is always derived from the user's
+  // date_of_birth after extraction, never trusted from the API payload.
+
+  // Primary: { data: { config: {...} } }
+  if (typed?.data?.config) {
+    const c = typed.data.config;
+    return {
+      currentAge: 0, // will be overridden from DOB
+      retirementAge: Number(c.retirementAge) || 0,
+      lifeExpectancy: Number(c.lifeExpectancy) || 85,
+      currentInvested: Number(c.currentInvested) || 0,
+      monthlySavings: Number(c.monthlySavings) || 0,
+      existingPensionBalance: Number(c.existingPensionBalance) || 0,
+      monthlyPensionContribution: Number(c.monthlyPensionContribution) || 0,
+      expectedReturnPct: Number(c.expectedReturnPct) || 7,
+      inflationPct: Number(c.inflationPct) || 2,
+      safeWithdrawalRatePct: Number(c.safeWithdrawalRatePct) || 4,
+      desiredMonthlyIncome: Number(c.desiredMonthlyIncome) || 0,
+    };
+  }
+  // Fallback: data is the config directly
+  if (typed?.data && "retirementAge" in typed.data) {
+    const c = typed.data as unknown as RetirementConfig;
+    return {
+      currentAge: 0, // will be overridden from DOB
+      retirementAge: Number(c.retirementAge) || 0,
+      lifeExpectancy: Number(c.lifeExpectancy) || 85,
+      currentInvested: Number(c.currentInvested) || 0,
+      monthlySavings: Number(c.monthlySavings) || 0,
+      existingPensionBalance: Number(c.existingPensionBalance) || 0,
+      monthlyPensionContribution: Number(c.monthlyPensionContribution) || 0,
+      expectedReturnPct: Number(c.expectedReturnPct) || 7,
+      inflationPct: Number(c.inflationPct) || 2,
+      safeWithdrawalRatePct: Number(c.safeWithdrawalRatePct) || 4,
+      desiredMonthlyIncome: Number(c.desiredMonthlyIncome) || 0,
+    };
+  }
+  return null;
+}
+
+export async function fetchRetirement(): Promise<RetirementConfig | null> {
+  console.log("[fetchRetirement] ▶ calling retirement.find");
+  try {
+    const res = await proxyCall<ApiRetirementResponse>("retirement.find");
+    console.log(
+      "[fetchRetirement] ◀ raw response:",
+      JSON.stringify(res, null, 2),
+    );
+    const config = extractRetirementConfig(res);
+    console.log("[fetchRetirement] ◀ extracted config:", config);
+
+    // Always derive currentAge from the user's date_of_birth, never from the API
+    if (config) {
+      const dob = useFinancialStore.getState().user?.date_of_birth;
+      config.currentAge = dob ? calculateAge(dob) : 0;
+      console.log(
+        "[fetchRetirement] ◀ currentAge from DOB:",
+        config.currentAge,
+      );
+    }
+
+    return config;
+  } catch (err) {
+    console.error("[fetchRetirement] ✗ error:", err);
+    return null;
+  }
+}
+
+export async function updateRetirement(
+  config: RetirementConfig,
+): Promise<RetirementConfig | null> {
+  // Always inject the DOB-derived age — never send a user-supplied value
+  const dob = useFinancialStore.getState().user?.date_of_birth;
+  const payload: RetirementConfig = {
+    ...config,
+    currentAge: dob ? calculateAge(dob) : config.currentAge,
+  };
+  console.log("[updateRetirement] ▶ payload:", payload);
+  try {
+    const res = await proxyCall<ApiRetirementResponse>(
+      "retirement.update",
+      "PUT",
+      payload,
+    );
+    console.log(
+      "[updateRetirement] ◀ raw response:",
+      JSON.stringify(res, null, 2),
+    );
+    const updated = extractRetirementConfig(res);
+    console.log("[updateRetirement] ◀ extracted config:", updated);
+    return updated;
+  } catch (err) {
+    console.error("[updateRetirement] ✗ error:", err);
+    return null;
+  }
+}
+
 // ── Bootstrap: fetch everything in parallel ────────────────────────────────
 
 export interface DashboardBootstrapData {
@@ -872,7 +982,7 @@ export interface DashboardBootstrapData {
   insurancePolicies: InsurancePolicy[];
   propertyAssets: Property[];
   liabilities: Liability[];
-  retirementRaw: ApiRetirement | null;
+  retirement: RetirementConfig | null;
 }
 
 export async function fetchDashboardBootstrap(): Promise<DashboardBootstrapData> {
@@ -886,6 +996,7 @@ export async function fetchDashboardBootstrap(): Promise<DashboardBootstrapData>
     insurancePolicies,
     propertyAssets,
     liabilities,
+    retirement,
   ] = await Promise.allSettled([
     fetchGoals(),
     fetchIncome(),
@@ -896,6 +1007,7 @@ export async function fetchDashboardBootstrap(): Promise<DashboardBootstrapData>
     fetchInsurancePolicies(),
     fetchProperties(),
     fetchLiabilities(),
+    fetchRetirement(),
   ]);
 
   return {
@@ -913,9 +1025,97 @@ export async function fetchDashboardBootstrap(): Promise<DashboardBootstrapData>
     propertyAssets:
       propertyAssets.status === "fulfilled" ? propertyAssets.value : [],
     liabilities: liabilities.status === "fulfilled" ? liabilities.value : [],
-    retirementRaw: null, // retirement comes from the store (seeded at onboarding)
+    retirement: retirement.status === "fulfilled" ? retirement.value : null,
   };
 }
 
 // Re-export mapper so the store can use it when seeding retirement from API
 export { apiRetirementToStore };
+
+// ── Risk Assessment ────────────────────────────────────────────────────────
+
+export interface RiskQuestion {
+  id: string; // e.g. "q1"
+  question: string;
+  options: Array<{
+    score: number;
+    label: string;
+  }>;
+}
+
+export interface RiskAssessmentResult {
+  assessment_id: string;
+  score: number;
+  band: string; // "conservative" | "moderate" | "aggressive" etc.
+  risk_profile: string;
+  responses: Record<string, number>;
+  created_at?: string;
+}
+
+export async function fetchRiskQuestions(): Promise<RiskQuestion[]> {
+  console.log("[fetchRiskQuestions] ▶ calling risk.questions");
+  try {
+    const res = await proxyCall<{ success?: boolean; data?: RiskQuestion[] }>(
+      "risk.questions",
+    );
+    console.log(
+      "[fetchRiskQuestions] ◀ raw response:",
+      JSON.stringify(res, null, 2),
+    );
+    const data = (res as any)?.data;
+    // API shape: { data: { version, questions: [...] } }
+    const questions: RiskQuestion[] = Array.isArray(data?.questions)
+      ? data.questions
+      : Array.isArray(data)
+        ? data
+        : [];
+    console.log("[fetchRiskQuestions] ◀ questions count:", questions.length);
+    return questions;
+  } catch (err) {
+    console.error("[fetchRiskQuestions] ✗ error:", err);
+    return [];
+  }
+}
+
+export async function submitRiskAssessment(payload: {
+  questionnaire_version: string;
+  responses: Record<string, number>;
+}): Promise<RiskAssessmentResult | null> {
+  console.log("[submitRiskAssessment] ▶ payload:", payload);
+  try {
+    const res = await proxyCall<{
+      success?: boolean;
+      data?: RiskAssessmentResult;
+    }>("risk.submit", "POST", payload);
+    console.log(
+      "[submitRiskAssessment] ◀ raw response:",
+      JSON.stringify(res, null, 2),
+    );
+    const result = (res as any)?.data ?? null;
+    console.log("[submitRiskAssessment] ◀ result:", result);
+    return result;
+  } catch (err) {
+    console.error("[submitRiskAssessment] ✗ error:", err);
+    return null;
+  }
+}
+
+export async function fetchLatestRiskAssessment(): Promise<RiskAssessmentResult | null> {
+  console.log("[fetchLatestRiskAssessment] ▶ calling risk.latest");
+  try {
+    const res = await proxyCall<{
+      success?: boolean;
+      data?: RiskAssessmentResult;
+    }>("risk.latest");
+    console.log(
+      "[fetchLatestRiskAssessment] ◀ raw response:",
+      JSON.stringify(res, null, 2),
+    );
+    const result = (res as any)?.data ?? null;
+    console.log("[fetchLatestRiskAssessment] ◀ result:", result);
+    return result;
+  } catch (err) {
+    console.error("[fetchLatestRiskAssessment] ✗ error:", err);
+    return null;
+  }
+}

@@ -107,10 +107,10 @@ interface ScoreInput {
 function computeProfileCompletionScore(s: ScoreInput): number {
   return [
     !!s.user?.display_name && !!s.user?.email && !!s.user?.resident_country
-      ? 15
+      ? 10
       : 0,
     s.incomeRows.length > 0 ? 15 : 0,
-    s.expenseCategories.length > 0 ? 15 : 0,
+    s.expenseCategories.length > 0 ? 10 : 0,
     s.goals.length > 0 ? 10 : 0,
     s.retirement.desiredMonthlyIncome > 0 && s.retirement.retirementAge > 0
       ? 10
@@ -122,6 +122,7 @@ function computeProfileCompletionScore(s: ScoreInput): number {
     s.emergencyFund.currentCashBalance > 0 ? 5 : 0,
     s.holdings.length > 0 || s.accounts.length > 0 ? 10 : 0,
     s.insurancePolicies.length > 0 ? 5 : 0,
+    !!s.user?.risk_profile ? 10 : 0,
   ].reduce((a, b) => a + b, 0);
 }
 
@@ -773,6 +774,7 @@ export const useFinancialStore = create<FinancialState>()(
         insurancePolicies,
         propertyAssets,
         liabilities,
+        retirement,
       }) => {
         const timestamp = new Date().toISOString();
         set((s) => {
@@ -785,6 +787,17 @@ export const useFinancialStore = create<FinancialState>()(
               }
             : s.emergencyFund;
 
+          // Only overwrite retirement from API if we got a real response.
+          // Always recalculate currentAge from DOB — never trust the stored value.
+          let retirementConfig: RetirementConfig = retirement ?? s.retirement;
+          if (retirement) {
+            const dob = s.user?.date_of_birth;
+            retirementConfig = {
+              ...retirementConfig,
+              currentAge: dob ? calculateAge(dob) : retirementConfig.currentAge,
+            };
+          }
+
           const next = {
             ...s,
             goals,
@@ -796,6 +809,7 @@ export const useFinancialStore = create<FinancialState>()(
             insurancePolicies,
             propertyAssets,
             liabilities,
+            retirement: retirementConfig,
           };
           return {
             ...next,

@@ -14,6 +14,8 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { SessionExpiredError } from "@/lib/dashboard-api";
 import { ProfilePanelProvider } from "@/components/dashboard/ProfilePanelContext";
 import { ProfileSetupPanel } from "@/components/dashboard/profile-setup-panel";
+import { RiskQuizDialog } from "@/components/dashboard/risk/quizCard";
+import { useProfilePanel } from "@/components/dashboard/ProfilePanelContext";
 
 /** Triggers zustand-persist rehydration from localStorage after mount. */
 function StoreHydrator() {
@@ -92,6 +94,12 @@ function SessionExpiredBanner() {
   );
 }
 
+/** Renders the global risk quiz dialog, available on every dashboard page. */
+function GlobalRiskQuizDialog() {
+  const { riskQuizOpen, closeRiskQuiz } = useProfilePanel();
+  return <RiskQuizDialog open={riskQuizOpen} onClose={closeRiskQuiz} />;
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -119,6 +127,7 @@ export default function RootLayout({
         <CurrencySync />
         <DashboardGuard>
           <ProfilePanelProvider>
+            <GlobalRiskQuizDialog />
             <SidebarProvider defaultOpen>
               <div className="flex min-h-svh w-full overflow-x-hidden">
                 <AdminSidebar />

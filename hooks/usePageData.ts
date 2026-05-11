@@ -17,6 +17,7 @@ import {
   fetchInsurancePolicies,
   fetchProperties,
   fetchUser,
+  fetchRetirement,
 } from "@/lib/dashboard-api";
 
 export type PageDataKey =
@@ -26,6 +27,7 @@ export type PageDataKey =
   | "insurance"
   | "properties"
   | "profile"
+  | "retirement"
   | "overview"; // fetches goals + cashflow summary
 
 /**
@@ -126,6 +128,13 @@ export function usePageData(key: PageDataKey) {
                 updated_at: user.updated_at ?? "",
               });
             }
+            break;
+          }
+          case "retirement": {
+            console.log("[usePageData] fetching retirement...");
+            const retirement = await fetchRetirement();
+            console.log("[usePageData] retirement result:", retirement);
+            if (retirement) store.setRetirement(retirement);
             break;
           }
           case "overview": {

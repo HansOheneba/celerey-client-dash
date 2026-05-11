@@ -73,6 +73,9 @@ import {
   type RetirementConfig,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { updateRetirement } from "@/lib/dashboard-api";
+import { usePageData } from "@/hooks/usePageData";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 const NAVY = "#1e3a5f";
@@ -905,7 +908,9 @@ function SimulatorPanel({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function RetirementPage() {
   const router = useRouter();
+  const { loading } = usePageData("retirement");
   const storeUser = useFinancialStore((s) => s.user);
+  const storeRetirement = useFinancialStore((s) => s.retirement);
   const accountMode: AccountMode =
     (storeUser?.account_mode as AccountMode) ?? "solo";
   const isSolo = accountMode === "solo";
@@ -916,6 +921,11 @@ export default function RetirementPage() {
   const [config, setConfig] = React.useState<RetirementConfig>(
     () => useFinancialStore.getState().retirement,
   );
+
+  // Sync local config when the store is updated by the fetch
+  React.useEffect(() => {
+    setConfig(storeRetirement);
+  }, [storeRetirement]);
   const [editOpen, setEditOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<
     "overview" | "simulator" | "insights"
@@ -1128,7 +1138,7 @@ export default function RetirementPage() {
 
           {/* ── KPI Strip ── */}
           <motion.div variants={mi}>
-            <KpiStrip cols={4} items={kpiItems} />
+            <KpiStrip cols={4} items={kpiItems} loading={loading} />
           </motion.div>
 
           {/* ── Tabs ── */}
@@ -1152,488 +1162,505 @@ export default function RetirementPage() {
           </motion.div>
 
           {/* ── Tab Content ── */}
-          <AnimatePresence mode="wait">
-            {activeTab === "overview" && (
-              <motion.div
-                key="overview"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                {/* Projection Chart */}
-                <div>
-                  <SectionLabel>Wealth projection</SectionLabel>
+          {loading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-64 w-full rounded-xl" />
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-24 w-full rounded-xl" />
+                ))}
+              </div>
+              <Skeleton className="h-36 w-full rounded-xl" />
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              {activeTab === "overview" && (
+                <motion.div
+                  key="overview"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  {/* Projection Chart */}
+                  <div>
+                    <SectionLabel>Wealth projection</SectionLabel>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-base">
+                              Portfolio growth to retirement
+                            </CardTitle>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {isSolo
+                                ? `Age ${currentAge} → ${config.retirementAge}`
+                                : `${currentYear} → ${targetYear}`}{" "}
+                              · {config.expectedReturnPct}% annual return
+                              assumed
+                            </p>
+                          </div>
+                          <InfoTip content="Projection compounds your current balance plus monthly contributions at the assumed annual return rate. This is a model, not a guarantee." />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="px-2 sm:px-6 pt-2">
+                        <ResponsiveContainer width="100%" height={240}>
+                          <AreaChart
+                            data={projection}
+                            margin={{ left: 16, right: 16, top: 8, bottom: 0 }}
+                          >
+                            <defs>
+                              <linearGradient
+                                id="balGrad"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                              >
+                                <stop
+                                  offset="5%"
+                                  stopColor={NAVY}
+                                  stopOpacity={0.25}
+                                />
+                                <stop
+                                  offset="95%"
+                                  stopColor={NAVY}
+                                  stopOpacity={0.02}
+                                />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid
+                              vertical={false}
+                              strokeDasharray="3 3"
+                              stroke="currentColor"
+                              strokeOpacity={0.1}
+                            />
+                            <XAxis
+                              dataKey="age"
+                              tickLine={false}
+                              axisLine={false}
+                              tickMargin={8}
+                              tick={{ fontSize: 11 }}
+                              tickFormatter={(v) =>
+                                isSolo
+                                  ? `Age ${v}`
+                                  : `${currentYear + (v - currentAge)}`
+                              }
+                            />
+                            <YAxis
+                              tickLine={false}
+                              axisLine={false}
+                              tickMargin={8}
+                              tick={{ fontSize: 11 }}
+                              tickFormatter={(v) =>
+                                `$${(v / 1000000).toFixed(1)}M`
+                              }
+                              width={56}
+                            />
+                            <Tooltip content={<ChartTooltip />} />
+                            <ReferenceLine
+                              x={config.retirementAge}
+                              stroke={AMBER}
+                              strokeDasharray="4 3"
+                              label={{
+                                value: isSolo ? "Retire" : `${targetYear}`,
+                                position: "top",
+                                fontSize: 10,
+                                fill: AMBER,
+                              }}
+                            />
+                            <Area
+                              dataKey="balance"
+                              name="Portfolio balance"
+                              stroke={NAVY}
+                              strokeWidth={2}
+                              fill="url(#balGrad)"
+                              dot={false}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Progress + Details grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <Card className="lg:col-span-1">
+                      <CardContent className="pt-5 space-y-4">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-emerald-500/10">
+                            <FontAwesomeIcon
+                              icon={faShieldHalved}
+                              className="h-4 w-4 text-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold">
+                              Savings progress
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {progressPct.toFixed(0)}% of target
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Progress value={progressPct} className="h-2" />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>{formatCurrency(totalInvested)} today</span>
+                            <span>
+                              {formatCurrency(
+                                outputs.projectedBalanceAtRetirement,
+                              )}{" "}
+                              target
+                            </span>
+                          </div>
+                        </div>
+                        <Separator />
+                        <StatRow
+                          label="Current invested"
+                          value={formatCurrency(config.currentInvested)}
+                          tip="Value of your current investment portfolio today."
+                        />
+                        <StatRow
+                          label="Pension balance"
+                          value={formatCurrency(config.existingPensionBalance)}
+                          tip="Current balance in your pension or 401k."
+                        />
+                        <StatRow
+                          label={copy.monthlySavingsLabel}
+                          value={formatCurrency(totalMonthly)}
+                          tip="Combined monthly amount going into investments and pension."
+                        />
+                        <StatRow
+                          label="Contribution split"
+                          value={`${Math.round((config.monthlySavings / totalMonthly) * 100)}% inv / ${Math.round((config.monthlyPensionContribution / totalMonthly) * 100)}% pension`}
+                          tip="How your monthly contributions are split between personal investments and pension."
+                        />
+                      </CardContent>
+                    </Card>
+
+                    <Card className="lg:col-span-2">
+                      <CardContent className="pt-5 space-y-4">
+                        <div className="grid grid-cols-2 gap-6">
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                              Retirement income
+                            </p>
+                            <StatRow
+                              label={copy.desiredIncomeLabel}
+                              value={`${formatCurrency(config.desiredMonthlyIncome)}/mo`}
+                              tip={`${isSolo ? "Your" : "Your combined household"} target monthly income in retirement, in today's dollars.`}
+                            />
+                            <StatRow
+                              label="Sustainable income"
+                              value={`${formatCurrency(outputs.sustainableMonthlyIncome)}/mo`}
+                              tip={`Calculated using the ${config.safeWithdrawalRatePct}% safe withdrawal rate on your projected balance.`}
+                              valueClass={
+                                onTrack ? "text-emerald-600" : "text-red-500"
+                              }
+                            />
+                            <StatRow
+                              label="Inflation-adjusted"
+                              value={`${formatCurrency(outputs.inflationAdjustedSustainableMonthlyIncome)}/mo`}
+                              tip="Your sustainable income adjusted for inflation over the years to retirement."
+                            />
+                            <StatRow
+                              label={
+                                gapDirection === "shortfall"
+                                  ? "Income shortfall"
+                                  : "Income surplus"
+                              }
+                              value={formatCurrency(incomeGapAbs) + "/mo"}
+                              tip={`Difference between ${isSolo ? "your" : "your combined"} desired income and what your portfolio can sustainably provide.`}
+                              valueClass={
+                                onTrack ? "text-emerald-600" : "text-red-500"
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                              Assumptions
+                            </p>
+                            <StatRow
+                              label="Expected return"
+                              value={`${config.expectedReturnPct}%/yr`}
+                              tip="Annual investment return assumed for the projection."
+                            />
+                            <StatRow
+                              label="Inflation rate"
+                              value={`${config.inflationPct}%/yr`}
+                              tip="Expected annual inflation used to adjust future purchasing power."
+                            />
+                            <StatRow
+                              label="Safe withdrawal"
+                              value={`${config.safeWithdrawalRatePct}%/yr`}
+                              tip="The '4% rule' — percentage of portfolio withdrawn each year."
+                            />
+                            <StatRow
+                              label="Life expectancy"
+                              value={`Age ${config.lifeExpectancy}`}
+                              tip="Used to calculate how long your savings need to last in retirement."
+                            />
+                            <StatRow
+                              label="Retirement duration"
+                              value={`${config.lifeExpectancy - config.retirementAge} years`}
+                              tip="How long your retirement savings need to fund your lifestyle."
+                            />
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        <div
+                          className={`rounded-lg px-4 py-3 flex items-start gap-3 ${
+                            onTrack
+                              ? "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800"
+                              : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
+                          }`}
+                        >
+                          <FontAwesomeIcon
+                            icon={onTrack ? faCircleCheck : faCircleExclamation}
+                            className={`h-4 w-4 mt-0.5 shrink-0 ${onTrack ? "text-emerald-600" : "text-red-500"}`}
+                          />
+                          <div>
+                            <p
+                              className={`text-xs font-semibold ${onTrack ? "text-emerald-700 dark:text-emerald-300" : "text-red-600 dark:text-red-400"}`}
+                            >
+                              {onTrack
+                                ? `${isSolo ? "You're" : "You're both"} on track — projected surplus of ${formatCurrency(incomeGapAbs)}/mo`
+                                : `Shortfall of ${formatCurrency(incomeGapAbs)}/mo at current trajectory`}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {onTrack
+                                ? `${isSolo ? "Your" : "Your combined"} ${formatCurrency(totalMonthly)}/mo in contributions should grow to ${formatCurrency(outputs.projectedBalanceAtRetirement)} by ${isSolo ? `age ${config.retirementAge}` : targetYear}.`
+                                : `Try increasing ${isSolo ? "your" : "your combined"} monthly contributions or adjusting ${isSolo ? "your retirement age" : "your target retirement year"} in the Simulator tab.`}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === "simulator" && (
+                <motion.div
+                  key="simulator"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <SectionLabel>What-if simulator</SectionLabel>
                   <Card>
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
                         <div>
-                          <CardTitle className="text-base">
-                            Portfolio growth to retirement
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <FontAwesomeIcon
+                              icon={faSliders}
+                              className="h-4 w-4 text-primary"
+                            />
+                            Adjust the levers
                           </CardTitle>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {isSolo
-                              ? `Age ${currentAge} → ${config.retirementAge}`
-                              : `${currentYear} → ${targetYear}`}{" "}
-                            · {config.expectedReturnPct}% annual return assumed
+                            Slide to simulate changes — see the impact on{" "}
+                            {isSolo ? "your" : "your household's"} retirement
+                            balance in real time
                           </p>
                         </div>
-                        <InfoTip content="Projection compounds your current balance plus monthly contributions at the assumed annual return rate. This is a model, not a guarantee." />
                       </div>
                     </CardHeader>
-                    <CardContent className="px-2 sm:px-6 pt-2">
-                      <ResponsiveContainer width="100%" height={240}>
-                        <AreaChart
-                          data={projection}
-                          margin={{ left: 16, right: 16, top: 8, bottom: 0 }}
-                        >
-                          <defs>
-                            <linearGradient
-                              id="balGrad"
-                              x1="0"
-                              y1="0"
-                              x2="0"
-                              y2="1"
-                            >
-                              <stop
-                                offset="5%"
-                                stopColor={NAVY}
-                                stopOpacity={0.25}
-                              />
-                              <stop
-                                offset="95%"
-                                stopColor={NAVY}
-                                stopOpacity={0.02}
-                              />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid
-                            vertical={false}
-                            strokeDasharray="3 3"
-                            stroke="currentColor"
-                            strokeOpacity={0.1}
-                          />
-                          <XAxis
-                            dataKey="age"
-                            tickLine={false}
-                            axisLine={false}
-                            tickMargin={8}
-                            tick={{ fontSize: 11 }}
-                            tickFormatter={(v) =>
-                              isSolo
-                                ? `Age ${v}`
-                                : `${currentYear + (v - currentAge)}`
-                            }
-                          />
-                          <YAxis
-                            tickLine={false}
-                            axisLine={false}
-                            tickMargin={8}
-                            tick={{ fontSize: 11 }}
-                            tickFormatter={(v) =>
-                              `$${(v / 1000000).toFixed(1)}M`
-                            }
-                            width={56}
-                          />
-                          <Tooltip content={<ChartTooltip />} />
-                          <ReferenceLine
-                            x={config.retirementAge}
-                            stroke={AMBER}
-                            strokeDasharray="4 3"
-                            label={{
-                              value: isSolo ? "Retire" : `${targetYear}`,
-                              position: "top",
-                              fontSize: 10,
-                              fill: AMBER,
-                            }}
-                          />
-                          <Area
-                            dataKey="balance"
-                            name="Portfolio balance"
-                            stroke={NAVY}
-                            strokeWidth={2}
-                            fill="url(#balGrad)"
-                            dot={false}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Progress + Details grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <Card className="lg:col-span-1">
-                    <CardContent className="pt-5 space-y-4">
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-lg bg-emerald-500/10">
-                          <FontAwesomeIcon
-                            icon={faShieldHalved}
-                            className="h-4 w-4 text-emerald-500"
-                          />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold">
-                            Savings progress
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {progressPct.toFixed(0)}% of target
-                          </p>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Progress value={progressPct} className="h-2" />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>{formatCurrency(totalInvested)} today</span>
-                          <span>
-                            {formatCurrency(
-                              outputs.projectedBalanceAtRetirement,
-                            )}{" "}
-                            target
-                          </span>
-                        </div>
-                      </div>
-                      <Separator />
-                      <StatRow
-                        label="Current invested"
-                        value={formatCurrency(config.currentInvested)}
-                        tip="Value of your current investment portfolio today."
-                      />
-                      <StatRow
-                        label="Pension balance"
-                        value={formatCurrency(config.existingPensionBalance)}
-                        tip="Current balance in your pension or 401k."
-                      />
-                      <StatRow
-                        label={copy.monthlySavingsLabel}
-                        value={formatCurrency(totalMonthly)}
-                        tip="Combined monthly amount going into investments and pension."
-                      />
-                      <StatRow
-                        label="Contribution split"
-                        value={`${Math.round((config.monthlySavings / totalMonthly) * 100)}% inv / ${Math.round((config.monthlyPensionContribution / totalMonthly) * 100)}% pension`}
-                        tip="How your monthly contributions are split between personal investments and pension."
+                    <CardContent className="pt-2">
+                      <SimulatorPanel
+                        base={config}
+                        currentAge={currentAge}
+                        accountMode={accountMode}
                       />
                     </CardContent>
                   </Card>
+                </motion.div>
+              )}
 
-                  <Card className="lg:col-span-2">
-                    <CardContent className="pt-5 space-y-4">
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                            Retirement income
-                          </p>
-                          <StatRow
-                            label={copy.desiredIncomeLabel}
-                            value={`${formatCurrency(config.desiredMonthlyIncome)}/mo`}
-                            tip={`${isSolo ? "Your" : "Your combined household"} target monthly income in retirement, in today's dollars.`}
-                          />
-                          <StatRow
-                            label="Sustainable income"
-                            value={`${formatCurrency(outputs.sustainableMonthlyIncome)}/mo`}
-                            tip={`Calculated using the ${config.safeWithdrawalRatePct}% safe withdrawal rate on your projected balance.`}
-                            valueClass={
-                              onTrack ? "text-emerald-600" : "text-red-500"
-                            }
-                          />
-                          <StatRow
-                            label="Inflation-adjusted"
-                            value={`${formatCurrency(outputs.inflationAdjustedSustainableMonthlyIncome)}/mo`}
-                            tip="Your sustainable income adjusted for inflation over the years to retirement."
-                          />
-                          <StatRow
-                            label={
-                              gapDirection === "shortfall"
-                                ? "Income shortfall"
-                                : "Income surplus"
-                            }
-                            value={formatCurrency(incomeGapAbs) + "/mo"}
-                            tip={`Difference between ${isSolo ? "your" : "your combined"} desired income and what your portfolio can sustainably provide.`}
-                            valueClass={
-                              onTrack ? "text-emerald-600" : "text-red-500"
-                            }
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                            Assumptions
-                          </p>
-                          <StatRow
-                            label="Expected return"
-                            value={`${config.expectedReturnPct}%/yr`}
-                            tip="Annual investment return assumed for the projection."
-                          />
-                          <StatRow
-                            label="Inflation rate"
-                            value={`${config.inflationPct}%/yr`}
-                            tip="Expected annual inflation used to adjust future purchasing power."
-                          />
-                          <StatRow
-                            label="Safe withdrawal"
-                            value={`${config.safeWithdrawalRatePct}%/yr`}
-                            tip="The '4% rule' — percentage of portfolio withdrawn each year."
-                          />
-                          <StatRow
-                            label="Life expectancy"
-                            value={`Age ${config.lifeExpectancy}`}
-                            tip="Used to calculate how long your savings need to last in retirement."
-                          />
-                          <StatRow
-                            label="Retirement duration"
-                            value={`${config.lifeExpectancy - config.retirementAge} years`}
-                            tip="How long your retirement savings need to fund your lifestyle."
-                          />
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <div
-                        className={`rounded-lg px-4 py-3 flex items-start gap-3 ${
-                          onTrack
-                            ? "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800"
-                            : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
-                        }`}
-                      >
-                        <FontAwesomeIcon
-                          icon={onTrack ? faCircleCheck : faCircleExclamation}
-                          className={`h-4 w-4 mt-0.5 shrink-0 ${onTrack ? "text-emerald-600" : "text-red-500"}`}
-                        />
-                        <div>
-                          <p
-                            className={`text-xs font-semibold ${onTrack ? "text-emerald-700 dark:text-emerald-300" : "text-red-600 dark:text-red-400"}`}
+              {activeTab === "insights" && (
+                <motion.div
+                  key="insights"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  <div>
+                    <SectionLabel>Personalised insights</SectionLabel>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {insights.map((ins, i) => {
+                        const cfg = {
+                          good: {
+                            bg: "bg-emerald-50 dark:bg-emerald-950/30",
+                            border:
+                              "border-emerald-200 dark:border-emerald-800",
+                            text: "text-emerald-700 dark:text-emerald-300",
+                            iconColor: "text-emerald-500",
+                          },
+                          warning: {
+                            bg: "bg-amber-50 dark:bg-amber-950/30",
+                            border: "border-amber-200 dark:border-amber-800",
+                            text: "text-amber-700 dark:text-amber-300",
+                            iconColor: "text-amber-500",
+                          },
+                          danger: {
+                            bg: "bg-red-50 dark:bg-red-950/30",
+                            border: "border-red-200 dark:border-red-800",
+                            text: "text-red-700 dark:text-red-400",
+                            iconColor: "text-red-500",
+                          },
+                          info: {
+                            bg: "bg-blue-50 dark:bg-blue-950/30",
+                            border: "border-blue-200 dark:border-blue-800",
+                            text: "text-blue-700 dark:text-blue-300",
+                            iconColor: "text-blue-500",
+                          },
+                        }[ins.level];
+                        return (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.08 }}
+                            className={`rounded-lg border p-4 ${cfg.bg} ${cfg.border}`}
                           >
-                            {onTrack
-                              ? `${isSolo ? "You're" : "You're both"} on track — projected surplus of ${formatCurrency(incomeGapAbs)}/mo`
-                              : `Shortfall of ${formatCurrency(incomeGapAbs)}/mo at current trajectory`}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {onTrack
-                              ? `${isSolo ? "Your" : "Your combined"} ${formatCurrency(totalMonthly)}/mo in contributions should grow to ${formatCurrency(outputs.projectedBalanceAtRetirement)} by ${isSolo ? `age ${config.retirementAge}` : targetYear}.`
-                              : `Try increasing ${isSolo ? "your" : "your combined"} monthly contributions or adjusting ${isSolo ? "your retirement age" : "your target retirement year"} in the Simulator tab.`}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </motion.div>
-            )}
+                            <div className="flex items-start gap-3">
+                              <FontAwesomeIcon
+                                icon={ins.icon}
+                                className={`h-4 w-4 mt-0.5 shrink-0 ${cfg.iconColor}`}
+                              />
+                              <div>
+                                <p
+                                  className={`text-xs font-semibold ${cfg.text}`}
+                                >
+                                  {ins.title}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                  {ins.body}
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-            {activeTab === "simulator" && (
-              <motion.div
-                key="simulator"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
-              >
-                <SectionLabel>What-if simulator</SectionLabel>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-base flex items-center gap-2">
+                  <div>
+                    <SectionLabel>Key numbers at a glance</SectionLabel>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        {
+                          icon: faCalendarDays,
+                          label: copy.currentAgeLabel,
+                          value: copy.currentAgeValue(
+                            currentAge,
+                            outputs.yearsToRetirement,
+                          ),
+                          color: "text-blue-500",
+                          bg: "bg-blue-500/10",
+                        },
+                        {
+                          icon: faUserClock,
+                          label: copy.timelineLabel,
+                          value: copy.timelineValue(config, currentAge),
+                          color: "text-amber-500",
+                          bg: "bg-amber-500/10",
+                        },
+                        {
+                          icon: faSackDollar,
+                          label: "Total Contributions",
+                          value: formatCurrency(totalInvested),
+                          color: "text-emerald-500",
+                          bg: "bg-emerald-500/10",
+                        },
+                        {
+                          icon: faChartLine,
+                          label: "Projected Balance",
+                          value: formatCurrency(
+                            outputs.projectedBalanceAtRetirement,
+                          ),
+                          color: undefined,
+                          bg: "bg-primary/10",
+                        },
+                      ].map((item, i) => (
+                        <motion.div
+                          key={item.label}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.3 + i * 0.07 }}
+                        >
+                          <Card>
+                            <CardContent className="pt-4 pb-4">
+                              <div
+                                className={`p-2 rounded-lg w-fit mb-2 ${item.bg}`}
+                              >
+                                <FontAwesomeIcon
+                                  icon={item.icon}
+                                  className={`h-4 w-4 ${item.color ?? "text-primary"}`}
+                                />
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {item.label}
+                              </p>
+                              <p className="text-sm font-bold mt-0.5 tabular-nums">
+                                {item.value}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Card className="border-dashed">
+                    <CardContent className="pt-5">
+                      <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <FontAwesomeIcon
+                              icon={faFlaskVial}
+                              className="h-4 w-4 text-primary"
+                            />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold">
+                              Try the simulator
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              See how changing{" "}
+                              {isSolo
+                                ? "your retirement age"
+                                : "your target retirement year"}{" "}
+                              or contributions affects the outcome
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="gap-1.5 shrink-0"
+                          onClick={() => setActiveTab("simulator")}
+                        >
                           <FontAwesomeIcon
                             icon={faSliders}
-                            className="h-4 w-4 text-primary"
+                            className="h-3 w-3"
                           />
-                          Adjust the levers
-                        </CardTitle>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Slide to simulate changes — see the impact on{" "}
-                          {isSolo ? "your" : "your household's"} retirement
-                          balance in real time
-                        </p>
+                          Open simulator
+                        </Button>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-2">
-                    <SimulatorPanel
-                      base={config}
-                      currentAge={currentAge}
-                      accountMode={accountMode}
-                    />
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {activeTab === "insights" && (
-              <motion.div
-                key="insights"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <div>
-                  <SectionLabel>Personalised insights</SectionLabel>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {insights.map((ins, i) => {
-                      const cfg = {
-                        good: {
-                          bg: "bg-emerald-50 dark:bg-emerald-950/30",
-                          border: "border-emerald-200 dark:border-emerald-800",
-                          text: "text-emerald-700 dark:text-emerald-300",
-                          iconColor: "text-emerald-500",
-                        },
-                        warning: {
-                          bg: "bg-amber-50 dark:bg-amber-950/30",
-                          border: "border-amber-200 dark:border-amber-800",
-                          text: "text-amber-700 dark:text-amber-300",
-                          iconColor: "text-amber-500",
-                        },
-                        danger: {
-                          bg: "bg-red-50 dark:bg-red-950/30",
-                          border: "border-red-200 dark:border-red-800",
-                          text: "text-red-700 dark:text-red-400",
-                          iconColor: "text-red-500",
-                        },
-                        info: {
-                          bg: "bg-blue-50 dark:bg-blue-950/30",
-                          border: "border-blue-200 dark:border-blue-800",
-                          text: "text-blue-700 dark:text-blue-300",
-                          iconColor: "text-blue-500",
-                        },
-                      }[ins.level];
-                      return (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.08 }}
-                          className={`rounded-lg border p-4 ${cfg.bg} ${cfg.border}`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <FontAwesomeIcon
-                              icon={ins.icon}
-                              className={`h-4 w-4 mt-0.5 shrink-0 ${cfg.iconColor}`}
-                            />
-                            <div>
-                              <p
-                                className={`text-xs font-semibold ${cfg.text}`}
-                              >
-                                {ins.title}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                {ins.body}
-                              </p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <SectionLabel>Key numbers at a glance</SectionLabel>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[
-                      {
-                        icon: faCalendarDays,
-                        label: copy.currentAgeLabel,
-                        value: copy.currentAgeValue(
-                          currentAge,
-                          outputs.yearsToRetirement,
-                        ),
-                        color: "text-blue-500",
-                        bg: "bg-blue-500/10",
-                      },
-                      {
-                        icon: faUserClock,
-                        label: copy.timelineLabel,
-                        value: copy.timelineValue(config, currentAge),
-                        color: "text-amber-500",
-                        bg: "bg-amber-500/10",
-                      },
-                      {
-                        icon: faSackDollar,
-                        label: "Total Contributions",
-                        value: formatCurrency(totalInvested),
-                        color: "text-emerald-500",
-                        bg: "bg-emerald-500/10",
-                      },
-                      {
-                        icon: faChartLine,
-                        label: "Projected Balance",
-                        value: formatCurrency(
-                          outputs.projectedBalanceAtRetirement,
-                        ),
-                        color: undefined,
-                        bg: "bg-primary/10",
-                      },
-                    ].map((item, i) => (
-                      <motion.div
-                        key={item.label}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.3 + i * 0.07 }}
-                      >
-                        <Card>
-                          <CardContent className="pt-4 pb-4">
-                            <div
-                              className={`p-2 rounded-lg w-fit mb-2 ${item.bg}`}
-                            >
-                              <FontAwesomeIcon
-                                icon={item.icon}
-                                className={`h-4 w-4 ${item.color ?? "text-primary"}`}
-                              />
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {item.label}
-                            </p>
-                            <p className="text-sm font-bold mt-0.5 tabular-nums">
-                              {item.value}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-
-                <Card className="border-dashed">
-                  <CardContent className="pt-5">
-                    <div className="flex items-center justify-between gap-4 flex-wrap">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <FontAwesomeIcon
-                            icon={faFlaskVial}
-                            className="h-4 w-4 text-primary"
-                          />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold">
-                            Try the simulator
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            See how changing{" "}
-                            {isSolo
-                              ? "your retirement age"
-                              : "your target retirement year"}{" "}
-                            or contributions affects the outcome
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="gap-1.5 shrink-0"
-                        onClick={() => setActiveTab("simulator")}
-                      >
-                        <FontAwesomeIcon icon={faSliders} className="h-3 w-3" />
-                        Open simulator
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
         </div>
 
         <EditRetirementDialog
@@ -1643,6 +1670,12 @@ export default function RetirementPage() {
           onSave={(newConfig) => {
             setConfig(newConfig);
             useFinancialStore.getState().setRetirement(newConfig);
+            updateRetirement(newConfig).then((updated) => {
+              if (updated) {
+                useFinancialStore.getState().setRetirement(updated);
+                setConfig(updated);
+              }
+            });
           }}
           accountMode={accountMode}
           currentAge={currentAge}

@@ -2,82 +2,168 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import RiskAttitudeQuiz from "@/components/dashboard/risk/quiz";
+import {
+  fetchRiskQuestions,
+  fetchLatestRiskAssessment,
+  submitRiskAssessment,
+  type RiskQuestion,
+  type RiskAssessmentResult,
+} from "@/lib/dashboard-api";
+import { useFinancialStore } from "@/store/financialStore";
 
-type OptionScore = 1 | 2 | 3 | 4 | 5;
-type RiskBand =
-  | "Capital Preservation"
-  | "Conservative"
-  | "Balanced"
-  | "Growth"
-  | "Aggressive";
+// ─── Shared logic ─────────────────────────────────────────────────────────────
 
-type RiskResult = {
-  score: number;
-  band: RiskBand;
-  answers: Record<number, OptionScore>;
-};
+function useRiskQuiz(open: boolean) {
+  const [questions, setQuestions] = useState<RiskQuestion[]>([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-const STORAGE_KEY = "risk_attitude_result_v1";
+  useEffect(() => {
+    if (!open || questions.length > 0) return;
+    setQuestionsLoading(true);
+    fetchRiskQuestions()
+      .then((qs) => setQuestions(qs))
+      .finally(() => setQuestionsLoading(false));
+  }, [open, questions.length]);
 
-function safeParseResult(raw: string | null): RiskResult | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as RiskResult;
-  } catch {
-    return null;
+  async function handleSubmit(
+    responses: Record<string, number>,
+    onSuccess: (result: RiskAssessmentResult) => void,
+  ) {
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const submitted = await submitRiskAssessment({
+        questionnaire_version: "1.0",
+        responses,
+      });
+      if (submitted) {
+        const riskProfile = submitted.risk_profile ?? submitted.band;
+        if (riskProfile) {
+          const storeUser = useFinancialStore.getState().user;
+          if (storeUser) {
+            useFinancialStore.getState().setUser({
+              ...storeUser,
+              risk_profile: riskProfile as any,
+            });
+          }
+        }
+        onSuccess(submitted);
+      } else {
+        setSubmitError("Submission failed. Please try again.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
+
+  return { questions, questionsLoading, submitting, submitError, handleSubmit };
 }
+
+// ─── Standalone dialog (used globally from the layout) ────────────────────────
+
+export function RiskQuizDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { questions, questionsLoading, submitting, submitError, handleSubmit } =
+    useRiskQuiz(open);
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent
+        side="right"
+        className="p-0 w-full sm:max-w-lg flex flex-col overflow-hidden"
+        showCloseButton={true}
+      >
+        <SheetHeader className="sr-only">
+          <SheetTitle>Risk attitude quiz</SheetTitle>
+          <SheetDescription>
+            Answer honestly. There are no right or wrong answers.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-auto">
+          {questionsLoading ? (
+            <div className="p-10 space-y-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : questions.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              Could not load questions. Please close and try again.
+            </div>
+          ) : (
+            <>
+              {submitting && (
+                <div className="px-8 pt-6 text-sm text-muted-foreground">
+                  Submitting…
+                </div>
+              )}
+              {submitError && (
+                <div className="px-8 pt-6 text-sm text-red-500">
+                  {submitError}
+                </div>
+              )}
+              {!submitting && (
+                <RiskAttitudeQuiz
+                  questions={questions}
+                  onSubmit={(responses) =>
+                    handleSubmit(responses, () => onClose())
+                  }
+                />
+              )}
+            </>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// ─── Card (used on the overview page) ────────────────────────────────────────
 
 export default function QuizCard() {
   const [open, setOpen] = useState(false);
-  const [result, setResult] = useState<RiskResult | null>(null);
+  const [result, setResult] = useState<RiskAssessmentResult | null>(null);
+  const [resultLoading, setResultLoading] = useState(true);
+  const { questions, questionsLoading, submitting, submitError, handleSubmit } =
+    useRiskQuiz(open);
 
   useEffect(() => {
-    const saved = safeParseResult(localStorage.getItem(STORAGE_KEY));
-    if (saved) setResult(saved);
+    fetchLatestRiskAssessment()
+      .then((r) => {
+        if (r) setResult(r);
+      })
+      .finally(() => setResultLoading(false));
   }, []);
 
-  const header = useMemo(() => {
-    if (!result) {
-      return {
-        title: "Risk attitude quiz",
-        desc: "Take 10 quick questions to understand your investment comfort level.",
-        button: "Take quiz",
-      };
-    }
-
-    return {
-      title: "Your risk attitude",
-      desc: "Retake the quiz any time to update your profile.",
-      button: "Retake test",
-    };
-  }, [result]);
-
-  const handleSave = (next: RiskResult) => {
-    setResult(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    setOpen(false);
-  };
-
-  const handlePrimary = () => {
-    if (result) {
-      localStorage.removeItem(STORAGE_KEY);
-      setResult(null);
-    }
-    setOpen(true);
-  };
+  const profileLabel = result
+    ? (result.risk_profile ?? result.band ?? "Unknown")
+    : null;
 
   return (
     <>
@@ -85,46 +171,59 @@ export default function QuizCard() {
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <CardTitle className="text-base">{header.title}</CardTitle>
+              <CardTitle className="text-base">
+                {result ? "Your risk attitude" : "Risk attitude quiz"}
+              </CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                {header.desc}
+                {result
+                  ? "Retake the quiz any time to update your profile."
+                  : "Take 10 quick questions to understand your investment comfort level."}
               </p>
             </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-sm"
-              onClick={() => setOpen(true)}
-            >
-              View
-            </Button>
+            {result && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-sm"
+                onClick={() => setOpen(true)}
+              >
+                View
+              </Button>
+            )}
           </div>
         </CardHeader>
 
         <CardContent className="space-y-3">
-          {result ? (
+          {resultLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-16 w-full rounded-md" />
+              <Skeleton className="h-9 w-full rounded-md" />
+            </div>
+          ) : result ? (
             <div className="rounded-md border p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-xs text-muted-foreground">
                     Risk profile
                   </div>
-                  <div className="mt-1 text-sm font-semibold">
-                    {result.band}
+                  <div className="mt-1 text-sm font-semibold capitalize">
+                    {profileLabel}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-xs text-muted-foreground">
-                    Risk score
+                {typeof result.score === "number" && (
+                  <div className="text-right">
+                    <div className="text-xs text-muted-foreground">
+                      Risk score
+                    </div>
+                    <div className="mt-1 text-sm font-semibold">
+                      {result.score.toFixed(1)}{" "}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        / 5
+                      </span>
+                    </div>
                   </div>
-                  <div className="mt-1 text-sm font-semibold">
-                    {result.score.toFixed(1)}{" "}
-                    <span className="text-xs font-normal text-muted-foreground">
-                      / 5
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           ) : (
@@ -139,34 +238,70 @@ export default function QuizCard() {
             </div>
           )}
 
-          <Button className="w-full justify-between" onClick={handlePrimary}>
-            {header.button}
-            <span aria-hidden>→</span>
-          </Button>
+          {!resultLoading && (
+            <Button
+              className="w-full justify-between"
+              onClick={() => setOpen(true)}
+            >
+              {result ? "Retake test" : "Take quiz"}
+              <span aria-hidden>→</span>
+            </Button>
+          )}
         </CardContent>
       </DashCard>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          className={`
-            p-0 overflow-hidden
-            w-[calc(100vw-24px)] sm:w-[calc(100vw-48px)]
-            max-w-36
-            h-[92vh] sm:h-[88vh]
-          `}
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent
+          side="right"
+          className="p-0 w-full sm:max-w-lg flex flex-col overflow-hidden"
+          showCloseButton={true}
         >
-          <DialogHeader className="px-6 pt-6 pb-2">
-            <DialogTitle>Risk attitude</DialogTitle>
-            <DialogDescription>
+          <SheetHeader className="sr-only">
+            <SheetTitle>Risk attitude quiz</SheetTitle>
+            <SheetDescription>
               Answer honestly. There are no right or wrong answers.
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
 
-          <div className="h-[calc(92vh-92px)] sm:h-[calc(88vh-92px)] overflow-auto">
-            <RiskAttitudeQuiz onSave={handleSave} />
+          <div className="flex-1 overflow-auto">
+            {questionsLoading ? (
+              <div className="p-10 space-y-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-14 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : questions.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground text-sm">
+                Could not load questions. Please close and try again.
+              </div>
+            ) : (
+              <>
+                {submitting && (
+                  <div className="px-8 pt-6 text-sm text-muted-foreground">
+                    Submitting…
+                  </div>
+                )}
+                {submitError && (
+                  <div className="px-8 pt-6 text-sm text-red-500">
+                    {submitError}
+                  </div>
+                )}
+                {!submitting && (
+                  <RiskAttitudeQuiz
+                    questions={questions}
+                    onSubmit={(responses) =>
+                      handleSubmit(responses, (r) => {
+                        setResult(r);
+                        setOpen(false);
+                      })
+                    }
+                  />
+                )}
+              </>
+            )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

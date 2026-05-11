@@ -22,6 +22,8 @@ const ALLOWED_PATH_PREFIXES = [
   "insurance.",
   "properties.",
   "liabilities.",
+  "retirement.",
+  "risk.",
   "auth.refresh-session",
   "auth.revoke-session",
 ] as const;

@@ -1,12 +1,57 @@
 {
   "info": {
-    "_postman_id": "e8bbe48b-593a-4ed9-b82a-940611fded41",
+    "_postman_id": "e273535b-39e7-4cbe-a204-2500904f31df",
     "name": "Celerey UAT API",
-    "description": "Celerey API — auth, onboarding, cash flow, goals, insurance, properties, assets.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "13745917",
-    "_collection_link": "https://go.postman.co/collection/13745917-e8bbe48b-593a-4ed9-b82a-940611fded41?source=collection_link"
+    "description": "Celerey API \u2014 auth, onboarding, cash flow, goals, insurance, properties, assets, liabilities, retirement, subscriptions, risk assessment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api-uat.celerey.app/api/execute",
+      "type": "string"
+    },
+    {
+      "key": "session_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "onboarding_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "goal_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "policy_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "property_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "holding_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "liability_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assessment_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
   "item": [
     {
       "name": "Test",
@@ -238,7 +283,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\":          \"kybbrew@gmail.com\",\n    \"messageType\":    \"OTPAuthMessage:HTML\",\n    \"messageSubject\": \"Your Celerey Verification Code\"\n}",
+              "raw": "{\n    \"email\":          \"brewleyhab@gmail.com\",\n    \"messageType\":    \"OTPAuthMessage:HTML\",\n    \"messageSubject\": \"Your Celerey Verification Code\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -269,9 +314,7 @@
                   "    pm.collectionVariables.set('onboarding_token', res.data.onboarding_token);",
                   "}"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -285,7 +328,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"kybbrew@gmail.com\",\n    \"otp\":   \"238784\"\n}",
+              "raw": "{\n    \"email\": \"brewleyhab@gmail.com\",\n    \"otp\":   \"______\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -317,9 +360,7 @@
                   "    pm.collectionVariables.set('onboarding_token', '');",
                   "}"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -337,7 +378,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"identity\": {\n        \"account_mode\":      \"solo\",\n        \"email\":             \"kybbrew@gmail.com\",\n        \"first_name\":        \"Kingsley\",\n        \"last_name\":         \"Brew\",\n        \"phone_number\":      \"+233244000000\",\n        \"date_of_birth\":     \"1990-05-15\",\n        \"gender\":            \"M\",\n        \"prefix\":            \"Mr\",\n        \"occupation\":        \"Software Engineer\",\n        \"marital_status\":    \"single\",\n        \"resident_country\":  \"Ghana\",\n        \"resident_city\":     \"Accra\",\n        \"currency\":          \"USD\",\n        \"preferred_contact\": \"email\"\n    },\n    \"goals\": [\n        {\n            \"title\":          \"Buy a Home\",\n            \"target_amount\":  250000,\n            \"current_amount\": 0,\n            \"target_date\":    \"2030-12-31\",\n            \"priority\":       1,\n            \"icon\":           \"home\",\n            \"color\":          \"#0891B2\",\n            \"status\":         \"active\"\n        }\n    ],\n    \"incomes\": [\n        { \"name\": \"Salary\", \"amount_monthly\": 5000, \"category\": \"Salary\", \"is_recurring\": true }\n    ],\n    \"emergencyFund\": { \"cash_balance\": 5000, \"target_months\": 6 },\n    \"retirement\": {\n        \"retirement_age\":           60,\n        \"retirement_target_year\":   2050,\n        \"current_invested\":         25000,\n        \"monthly_savings\":          500,\n        \"existing_pension_balance\": 15000,\n        \"employer_contribution\":    200,\n        \"desired_monthly_income\":   4000\n    }\n}",
+              "raw": "{\n    \"identity\": {\n        \"account_mode\": \"solo\",\n        \"email\": \"brewleyhab@gmail.com\",\n        \"first_name\": \"Kingsley\",\n        \"last_name\": \"Brew\",\n        \"phone_number\": \"+233244000000\",\n        \"date_of_birth\": \"1990-05-15\",\n        \"gender\": \"M\",\n        \"prefix\": \"Mr\",\n        \"occupation\": \"Software Engineer\",\n        \"marital_status\": \"single\",\n        \"resident_country\": \"Ghana\",\n        \"resident_city\": \"Accra\",\n        \"citizenships\": \"Ghanaian\",\n        \"currency\": \"USD\",\n        \"preferred_contact\": \"email\",\n        \"risk_profile\": \"moderate\",\n        \"dependents\": 0,\n        \"bio\": null\n    },\n    \"goals\": [\n        {\n            \"title\": \"Buy a Home\",\n            \"target_amount\": 250000,\n            \"current_amount\": 0,\n            \"target_date\": \"2030-12-31\",\n            \"priority\": 1,\n            \"icon\": \"home\",\n            \"color\": \"#0891B2\",\n            \"status\": \"active\"\n        },\n        {\n            \"title\": \"Emergency Travel Fund\",\n            \"target_amount\": 10000,\n            \"current_amount\": 0,\n            \"target_date\": \"2026-12-31\",\n            \"priority\": 2,\n            \"icon\": \"shield\",\n            \"color\": \"#4F46E5\",\n            \"status\": \"active\"\n        }\n    ],\n    \"incomes\": [\n        {\n            \"name\": \"Salary\",\n            \"amount_monthly\": 5000,\n            \"category\": \"Salary\",\n            \"is_recurring\": true\n        },\n        {\n            \"name\": \"Freelance\",\n            \"amount_monthly\": 1500,\n            \"category\": \"Side Income\",\n            \"is_recurring\": false\n        }\n    ],\n    \"emergencyFund\": {\n        \"cash_balance\": 5000,\n        \"target_months\": 6\n    },\n    \"retirement\": {\n        \"current_age\": 34,\n        \"retirement_age\": 60,\n        \"life_expectancy\": 85,\n        \"current_invested\": 25000,\n        \"monthly_savings\": 500,\n        \"existing_pension_balance\": 15000,\n        \"monthly_pension_contribution\": 200,\n        \"expected_return_pct\": 7,\n        \"inflation_pct\": 2,\n        \"safe_withdrawal_rate_pct\": 4,\n        \"desired_monthly_income\": 4000\n    }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -387,7 +428,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"identity\": {\n        \"account_mode\":      \"partner\",\n        \"display_name\":      \"The Brew Household\",\n        \"email\":             \"brewleyhab@gmail.com\",\n        \"resident_country\":  \"Ghana\",\n        \"resident_city\":     \"Accra\",\n        \"currency\":          \"USD\",\n        \"preferred_contact\": \"email\"\n    },\n    \"goals\": [\n        {\n            \"title\":          \"Buy a Home\",\n            \"target_amount\":  350000,\n            \"current_amount\": 0,\n            \"target_date\":    \"2028-12-31\",\n            \"priority\":       1,\n            \"icon\":           \"home\",\n            \"color\":          \"#0891B2\",\n            \"status\":         \"active\"\n        }\n    ],\n    \"incomes\": [\n        { \"name\": \"Salary - Kingsley\", \"amount_monthly\": 5000, \"category\": \"Salary\", \"is_recurring\": true },\n        { \"name\": \"Salary - Partner\",  \"amount_monthly\": 4500, \"category\": \"Salary\", \"is_recurring\": true }\n    ],\n    \"emergencyFund\": { \"cash_balance\": 12000, \"target_months\": 6 },\n    \"retirement\": {\n        \"retirement_target_year\":   2055,\n        \"current_invested\":         50000,\n        \"monthly_savings\":          1000,\n        \"existing_pension_balance\": 30000,\n        \"employer_contribution\":    400,\n        \"desired_monthly_income\":   6000\n    }\n}",
+              "raw": "{\n    \"identity\": {\n        \"account_mode\": \"partner\",\n        \"display_name\": \"The Brew Household\",\n        \"email\": \"brewleyhab@gmail.com\",\n        \"resident_country\": \"Ghana\",\n        \"resident_city\": \"Accra\",\n        \"citizenships\": \"Ghanaian\",\n        \"currency\": \"USD\",\n        \"preferred_contact\": \"email\",\n        \"risk_profile\": \"moderate\",\n        \"dependents\": 2,\n        \"bio\": null\n    },\n    \"goals\": [\n        {\n            \"title\": \"Buy a Home\",\n            \"target_amount\": 350000,\n            \"current_amount\": 0,\n            \"target_date\": \"2028-12-31\",\n            \"priority\": 1,\n            \"icon\": \"home\",\n            \"color\": \"#0891B2\",\n            \"status\": \"active\"\n        }\n    ],\n    \"incomes\": [\n        {\n            \"name\": \"Salary - Kingsley\",\n            \"amount_monthly\": 5000,\n            \"category\": \"Salary\",\n            \"is_recurring\": true\n        },\n        {\n            \"name\": \"Salary - Partner\",\n            \"amount_monthly\": 4500,\n            \"category\": \"Salary\",\n            \"is_recurring\": true\n        }\n    ],\n    \"emergencyFund\": {\n        \"cash_balance\": 12000,\n        \"target_months\": 6\n    },\n    \"retirement\": {\n        \"current_age\": 35,\n        \"retirement_age\": 60,\n        \"life_expectancy\": 85,\n        \"current_invested\": 50000,\n        \"monthly_savings\": 1000,\n        \"existing_pension_balance\": 30000,\n        \"monthly_pension_contribution\": 400,\n        \"expected_return_pct\": 7,\n        \"inflation_pct\": 2,\n        \"safe_withdrawal_rate_pct\": 4,\n        \"desired_monthly_income\": 6000\n    }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -463,6 +504,68 @@
               ],
               "path": [
                 "user.update"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Retirement",
+      "item": [
+        {
+          "name": "Find Retirement Config + Projections",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/retirement.find",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "retirement.find"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Retirement Config",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"currentAge\": 34,\n    \"retirementAge\": 60,\n    \"lifeExpectancy\": 85,\n    \"currentInvested\": 25000.0,\n    \"monthlySavings\": 500.0,\n    \"existingPensionBalance\": 15000.0,\n    \"monthlyPensionContribution\": 200.0,\n    \"expectedReturnPct\": 7,\n    \"inflationPct\": 2,\n    \"safeWithdrawalRatePct\": 4,\n    \"desiredMonthlyIncome\": 4000.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/retirement.update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "retirement.update"
               ]
             }
           },
@@ -668,6 +771,7 @@
     },
     {
       "name": "Insurance",
+      "description": "Standalone policies only. 'home' category excluded \u2014 home insurance lives on Property.insurance[]",
       "item": [
         {
           "name": "Find Policies",
@@ -692,7 +796,7 @@
           "response": []
         },
         {
-          "name": "Create Policy — Life",
+          "name": "Create Policy \u2014 Life",
           "event": [
             {
               "listen": "test",
@@ -721,7 +825,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"category\":        \"life\",\n    \"provider\":        \"Prudential\",\n    \"name\":            \"Term Life — 20yr\",\n    \"policy_number\":   \"PRU-2024-441122\",\n    \"coverage_amount\": 500000.00,\n    \"premium_monthly\": 85.00,\n    \"deductible\":      0,\n    \"start_date\":      \"2024-01-01\",\n    \"renewal_date\":    \"2027-01-01\",\n    \"auto_renew\":      false,\n    \"beneficiary\":     \"Jane Doe\",\n    \"notes\":           \"Covers accidental death and critical illness riders.\"\n}",
+              "raw": "{\n    \"category\":        \"life\",\n    \"provider\":        \"Prudential\",\n    \"name\":            \"Term Life \u2014 20yr\",\n    \"policy_number\":   \"PRU-2024-441122\",\n    \"coverage_amount\": 500000.00,\n    \"premium_monthly\": 85.00,\n    \"deductible\":      0,\n    \"start_date\":      \"2024-01-01\",\n    \"renewal_date\":    \"2027-01-01\",\n    \"auto_renew\":      false,\n    \"beneficiary\":     \"Jane Doe\",\n    \"notes\":           \"Covers accidental death and critical illness riders.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -741,7 +845,7 @@
           "response": []
         },
         {
-          "name": "Create Policy — Health",
+          "name": "Create Policy \u2014 Health",
           "request": {
             "method": "POST",
             "header": [
@@ -776,7 +880,7 @@
           "response": []
         },
         {
-          "name": "Create Policy — Auto",
+          "name": "Create Policy \u2014 Auto",
           "request": {
             "method": "POST",
             "header": [
@@ -791,7 +895,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"category\":        \"auto\",\n    \"provider\":        \"Geico\",\n    \"name\":            \"Full Coverage — Tesla Model 3\",\n    \"policy_number\":   \"GCO-2025-334411\",\n    \"coverage_amount\": 60000.00,\n    \"premium_monthly\": 148.00,\n    \"deductible\":      1000.00,\n    \"start_date\":      \"2025-03-01\",\n    \"renewal_date\":    \"2026-03-01\",\n    \"auto_renew\":      true,\n    \"beneficiary\":     null,\n    \"notes\":           null\n}",
+              "raw": "{\n    \"category\":        \"auto\",\n    \"provider\":        \"Geico\",\n    \"name\":            \"Full Coverage \u2014 Tesla Model 3\",\n    \"policy_number\":   \"GCO-2025-334411\",\n    \"coverage_amount\": 60000.00,\n    \"premium_monthly\": 148.00,\n    \"deductible\":      1000.00,\n    \"start_date\":      \"2025-03-01\",\n    \"renewal_date\":    \"2026-03-01\",\n    \"auto_renew\":      true,\n    \"beneficiary\":     null,\n    \"notes\":           null\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -873,11 +977,11 @@
           },
           "response": []
         }
-      ],
-      "description": "Standalone policies only. 'home' category excluded — home insurance lives on Property.insurance[]"
+      ]
     },
     {
       "name": "Properties",
+      "description": "Real estate with nested mortgage, insurance[] and additional_liens[]. Property insurance lives here \u2014 not in the Insurance tab.",
       "item": [
         {
           "name": "Find Properties",
@@ -959,7 +1063,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\":            \"Home — Accra\",\n    \"property_type\":   \"house\",\n    \"country\":         \"Ghana\",\n    \"city\":            \"Accra\",\n    \"purchase_date\":   \"2021-03-01\",\n    \"purchase_price\":  120000.00,\n    \"market_value\":    185000.00,\n    \"value_uncertain\": false,\n    \"is_primary\":      true,\n    \"mortgage\": {\n        \"lender\":               \"Stanbic Bank\",\n        \"balance\":              90000.00,\n        \"interest_rate_pct\":    12.5,\n        \"min_payment_monthly\":  1200.00,\n        \"due_day\":              1,\n        \"original_loan_amount\": 110000.00,\n        \"expected_payoff_date\": \"2036-03-01\"\n    },\n    \"additional_liens\": [],\n    \"insurance\": [\n        {\n            \"insurance_type\":  \"homeowners\",\n            \"provider\":        \"Enterprise Insurance\",\n            \"policy_number\":   \"EI-2024-001122\",\n            \"coverage_amount\": 185000.00,\n            \"annual_premium\":  2400.00,\n            \"deductible\":      1000.00,\n            \"expiry_date\":     \"2025-03-01\"\n        }\n    ]\n}",
+              "raw": "{\n    \"name\":            \"Home \u2014 Accra\",\n    \"property_type\":   \"house\",\n    \"country\":         \"Ghana\",\n    \"city\":            \"Accra\",\n    \"purchase_date\":   \"2021-03-01\",\n    \"purchase_price\":  120000.00,\n    \"market_value\":    185000.00,\n    \"value_uncertain\": false,\n    \"is_primary\":      true,\n    \"mortgage\": {\n        \"lender\":               \"Stanbic Bank\",\n        \"balance\":              90000.00,\n        \"interest_rate_pct\":    12.5,\n        \"min_payment_monthly\":  1200.00,\n        \"due_day\":              1,\n        \"original_loan_amount\": 110000.00,\n        \"expected_payoff_date\": \"2036-03-01\"\n    },\n    \"additional_liens\": [],\n    \"insurance\": [\n        {\n            \"insurance_type\":  \"homeowners\",\n            \"provider\":        \"Enterprise Insurance\",\n            \"policy_number\":   \"EI-2024-001122\",\n            \"coverage_amount\": 185000.00,\n            \"annual_premium\":  2400.00,\n            \"deductible\":      1000.00,\n            \"expiry_date\":     \"2025-03-01\"\n        }\n    ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1008,7 +1112,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\":            \"Land — Kumasi\",\n    \"property_type\":   \"land\",\n    \"country\":         \"Ghana\",\n    \"city\":            \"Kumasi\",\n    \"purchase_date\":   \"2020-06-15\",\n    \"purchase_price\":  45000.00,\n    \"market_value\":    75000.00,\n    \"value_uncertain\": true,\n    \"is_primary\":      false,\n    \"mortgage\":        null,\n    \"additional_liens\": [],\n    \"insurance\":       []\n}",
+              "raw": "{\n    \"name\":            \"Land \u2014 Kumasi\",\n    \"property_type\":   \"land\",\n    \"country\":         \"Ghana\",\n    \"city\":            \"Kumasi\",\n    \"purchase_date\":   \"2020-06-15\",\n    \"purchase_price\":  45000.00,\n    \"market_value\":    75000.00,\n    \"value_uncertain\": true,\n    \"is_primary\":      false,\n    \"mortgage\":        null,\n    \"additional_liens\": [],\n    \"insurance\":       []\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1195,8 +1299,7 @@
           },
           "response": []
         }
-      ],
-      "description": "Real estate with nested mortgage, insurance[] and additional_liens[]. Property insurance lives here — not in the Insurance tab."
+      ]
     },
     {
       "name": "Assets",
@@ -1479,6 +1582,7 @@
     },
     {
       "name": "Liabilities",
+      "description": "Standalone liabilities only. Mortgages are NOT created here \u2014 they live on Property.mortgage.",
       "item": [
         {
           "name": "Find Liabilities",
@@ -1503,7 +1607,7 @@
           "response": []
         },
         {
-          "name": "Create Liability — Credit Card",
+          "name": "Create Liability \u2014 Credit Card",
           "event": [
             {
               "listen": "test",
@@ -1552,7 +1656,7 @@
           "response": []
         },
         {
-          "name": "Create Liability — Personal Loan",
+          "name": "Create Liability \u2014 Personal Loan",
           "request": {
             "method": "POST",
             "header": [
@@ -1587,7 +1691,7 @@
           "response": []
         },
         {
-          "name": "Create Liability — Student Loan",
+          "name": "Create Liability \u2014 Student Loan",
           "request": {
             "method": "POST",
             "header": [
@@ -1684,11 +1788,10 @@
           },
           "response": []
         }
-      ],
-      "description": "Standalone liabilities only. Mortgages are NOT created here — they live on Property.mortgage."
+      ]
     },
     {
-      "name": "Cash Flow — Income",
+      "name": "Cash Flow \u2014 Income",
       "item": [
         {
           "name": "Find Income",
@@ -1819,7 +1922,7 @@
       ]
     },
     {
-      "name": "Cash Flow — Expense",
+      "name": "Cash Flow \u2014 Expense",
       "item": [
         {
           "name": "Find Expenses",
@@ -1950,7 +2053,7 @@
       ]
     },
     {
-      "name": "Cash Flow — History",
+      "name": "Cash Flow \u2014 History",
       "item": [
         {
           "name": "Find History",
@@ -1983,7 +2086,7 @@
       ]
     },
     {
-      "name": "Cash Flow — Emergency Fund",
+      "name": "Cash Flow \u2014 Emergency Fund",
       "item": [
         {
           "name": "Find Emergency Fund",
@@ -2045,7 +2148,7 @@
       ]
     },
     {
-      "name": "Cash Flow — Summary",
+      "name": "Cash Flow \u2014 Summary",
       "item": [
         {
           "name": "Get Summary",
@@ -2070,48 +2173,302 @@
           "response": []
         }
       ]
-    }
-  ],
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "https://api-uat.celerey.app/api/execute",
-      "type": "string"
     },
     {
-      "key": "session_token",
-      "value": "",
-      "type": "string"
+      "name": "Subscription",
+      "description": "Section 1 \u2014 server-authoritative entitlement state and plan upgrades.",
+      "item": [
+        {
+          "name": "Find My Subscription",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscription.find",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "subscription.find"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upgrade Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"plan\": \"pro\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/subscription.upgrade",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "subscription.upgrade"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     },
     {
-      "key": "onboarding_token",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "goal_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "policy_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "property_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "holding_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "liability_id",
-      "value": "",
-      "type": "string"
+      "name": "Risk Assessment",
+      "description": "Section 3 \u2014 full risk scoring engine. Submit questionnaire \u2192 server scores it \u2192 updates user.risk_profile. Score 4 is valid for q2 and q7. All 10 responses required.",
+      "item": [
+        {
+          "name": "Get Questions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/risk.questions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "risk.questions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Assessment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.assessment_id) {",
+                  "    pm.collectionVariables.set('assessment_id', res.data.assessment_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"questionnaire_version\": \"1.0\",\n    \"responses\": {\n        \"q1\": 4,\n        \"q2\": 3,\n        \"q3\": 4,\n        \"q4\": 2,\n        \"q5\": 3,\n        \"q6\": 4,\n        \"q7\": 3,\n        \"q8\": 4,\n        \"q9\": 3,\n        \"q10\": 4\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/risk.submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "risk.submit"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Latest Assessment",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/risk.latest",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "risk.latest"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Assessment History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/risk.history",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "risk.history"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Assessment by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/risk.result?assessment_id={{assessment_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "risk.result"
+              ],
+              "query": [
+                {
+                  "key": "assessment_id",
+                  "value": "{{assessment_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile Factors",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"dependents\": 1,\n    \"debt_level\": \"low\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/risk.profile-factors",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "risk.profile-factors"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Recalculate Score",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.assessment_id) {",
+                  "    pm.collectionVariables.set('assessment_id', res.data.assessment_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{session_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/risk.recalculate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "risk.recalculate"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

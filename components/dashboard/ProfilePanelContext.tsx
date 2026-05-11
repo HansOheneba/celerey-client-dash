@@ -8,12 +8,18 @@ interface ProfilePanelContextValue {
   isOpen: boolean;
   open: () => void;
   dismiss: () => void;
+  riskQuizOpen: boolean;
+  openRiskQuiz: () => void;
+  closeRiskQuiz: () => void;
 }
 
 const ProfilePanelContext = createContext<ProfilePanelContextValue>({
   isOpen: false,
   open: () => {},
   dismiss: () => {},
+  riskQuizOpen: false,
+  openRiskQuiz: () => {},
+  closeRiskQuiz: () => {},
 });
 
 export function ProfilePanelProvider({
@@ -21,8 +27,8 @@ export function ProfilePanelProvider({
 }: {
   children: React.ReactNode;
 }) {
-  // Start closed to avoid flash; useEffect will open if not previously dismissed
   const [isOpen, setIsOpen] = useState(false);
+  const [riskQuizOpen, setRiskQuizOpen] = useState(false);
 
   useEffect(() => {
     const dismissed =
@@ -47,7 +53,16 @@ export function ProfilePanelProvider({
   }
 
   return (
-    <ProfilePanelContext.Provider value={{ isOpen, open, dismiss }}>
+    <ProfilePanelContext.Provider
+      value={{
+        isOpen,
+        open,
+        dismiss,
+        riskQuizOpen,
+        openRiskQuiz: () => setRiskQuizOpen(true),
+        closeRiskQuiz: () => setRiskQuizOpen(false),
+      }}
+    >
       {children}
     </ProfilePanelContext.Provider>
   );
