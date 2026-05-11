@@ -21,29 +21,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import RiskAttitudeQuiz from "@/components/dashboard/risk/quiz";
 import {
-  fetchRiskQuestions,
   fetchLatestRiskAssessment,
   submitRiskAssessment,
-  type RiskQuestion,
   type RiskAssessmentResult,
 } from "@/lib/dashboard-api";
 import { useFinancialStore } from "@/store/financialStore";
 
 // ─── Shared logic ─────────────────────────────────────────────────────────────
 
-function useRiskQuiz(open: boolean) {
-  const [questions, setQuestions] = useState<RiskQuestion[]>([]);
-  const [questionsLoading, setQuestionsLoading] = useState(false);
+function useRiskQuiz() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open || questions.length > 0) return;
-    setQuestionsLoading(true);
-    fetchRiskQuestions()
-      .then((qs) => setQuestions(qs))
-      .finally(() => setQuestionsLoading(false));
-  }, [open, questions.length]);
 
   async function handleSubmit(
     responses: Record<string, number>,
@@ -76,7 +64,7 @@ function useRiskQuiz(open: boolean) {
     }
   }
 
-  return { questions, questionsLoading, submitting, submitError, handleSubmit };
+  return { submitting, submitError, handleSubmit };
 }
 
 // ─── Standalone dialog (used globally from the layout) ────────────────────────
@@ -88,8 +76,7 @@ export function RiskQuizDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const { questions, questionsLoading, submitting, submitError, handleSubmit } =
-    useRiskQuiz(open);
+  const { submitting, submitError, handleSubmit } = useRiskQuiz();
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -106,37 +93,20 @@ export function RiskQuizDialog({
         </SheetHeader>
 
         <div className="flex-1 overflow-auto">
-          {questionsLoading ? (
-            <div className="p-10 space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-xl" />
-              ))}
+          {submitting && (
+            <div className="px-8 pt-6 text-sm text-muted-foreground">
+              Submitting…
             </div>
-          ) : questions.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground text-sm">
-              Could not load questions. Please close and try again.
-            </div>
-          ) : (
-            <>
-              {submitting && (
-                <div className="px-8 pt-6 text-sm text-muted-foreground">
-                  Submitting…
-                </div>
-              )}
-              {submitError && (
-                <div className="px-8 pt-6 text-sm text-red-500">
-                  {submitError}
-                </div>
-              )}
-              {!submitting && (
-                <RiskAttitudeQuiz
-                  questions={questions}
-                  onSubmit={(responses) =>
-                    handleSubmit(responses, () => onClose())
-                  }
-                />
-              )}
-            </>
+          )}
+          {submitError && (
+            <div className="px-8 pt-6 text-sm text-red-500">{submitError}</div>
+          )}
+          {!submitting && (
+            <RiskAttitudeQuiz
+              onSave={({ responses }) =>
+                handleSubmit(responses, () => onClose())
+              }
+            />
           )}
         </div>
       </SheetContent>
@@ -150,8 +120,7 @@ export default function QuizCard() {
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<RiskAssessmentResult | null>(null);
   const [resultLoading, setResultLoading] = useState(true);
-  const { questions, questionsLoading, submitting, submitError, handleSubmit } =
-    useRiskQuiz(open);
+  const { submitting, submitError, handleSubmit } = useRiskQuiz();
 
   useEffect(() => {
     fetchLatestRiskAssessment()
@@ -264,40 +233,25 @@ export default function QuizCard() {
           </SheetHeader>
 
           <div className="flex-1 overflow-auto">
-            {questionsLoading ? (
-              <div className="p-10 space-y-4">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-14 w-full rounded-xl" />
-                ))}
+            {submitting && (
+              <div className="px-8 pt-6 text-sm text-muted-foreground">
+                Submitting…
               </div>
-            ) : questions.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">
-                Could not load questions. Please close and try again.
+            )}
+            {submitError && (
+              <div className="px-8 pt-6 text-sm text-red-500">
+                {submitError}
               </div>
-            ) : (
-              <>
-                {submitting && (
-                  <div className="px-8 pt-6 text-sm text-muted-foreground">
-                    Submitting…
-                  </div>
-                )}
-                {submitError && (
-                  <div className="px-8 pt-6 text-sm text-red-500">
-                    {submitError}
-                  </div>
-                )}
-                {!submitting && (
-                  <RiskAttitudeQuiz
-                    questions={questions}
-                    onSubmit={(responses) =>
-                      handleSubmit(responses, (r) => {
-                        setResult(r);
-                        setOpen(false);
-                      })
-                    }
-                  />
-                )}
-              </>
+            )}
+            {!submitting && (
+              <RiskAttitudeQuiz
+                onSave={({ responses }) =>
+                  handleSubmit(responses, (r) => {
+                    setResult(r);
+                    setOpen(false);
+                  })
+                }
+              />
             )}
           </div>
         </SheetContent>

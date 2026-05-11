@@ -1,13 +1,25 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, ChevronLeft } from "lucide-react";
-import type { RiskQuestion } from "@/lib/dashboard-api";
+import { fetchRiskQuestions, type RiskQuestion } from "@/lib/dashboard-api";
+
+type OptionScore = 1 | 2 | 3 | 4 | 5;
+type RiskBand =
+  | "Capital Preservation"
+  | "Conservative"
+  | "Balanced"
+  | "Growth"
+  | "Aggressive";
 
 interface QuizProps {
-  questions: RiskQuestion[];
-  onSubmit: (responses: Record<string, number>) => void;
+  onSave: (result: {
+    score: number;
+    band: RiskBand;
+    answers: Record<number, OptionScore>;
+    responses: Record<string, number>;
+  }) => void;
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -23,17 +35,34 @@ const OPTION_COLORS = [
   "bg-amber-100 text-amber-600",
 ];
 
-export default function RiskAttitudeQuiz({ questions, onSubmit }: QuizProps) {
-  const totalSteps = questions.length;
+function scoreToBand(score: number, maxScore: number): RiskBand {
+  const pct = maxScore > 0 ? score / maxScore : 0;
+  if (pct <= 0.2) return "Capital Preservation";
+  if (pct <= 0.4) return "Conservative";
+  if (pct <= 0.6) return "Balanced";
+  if (pct <= 0.8) return "Growth";
+  return "Aggressive";
+}
+
+export default function RiskAttitudeQuiz({ onSave }: QuizProps) {
+  const [questions, setQuestions] = useState<RiskQuestion[]>([]);
+  const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(1);
   const [answers, setAnswers] = useState<Record<string, number>>({});
 
+  useEffect(() => {
+    fetchRiskQuestions().then((qs) => {
+      setQuestions(qs);
+      setLoading(false);
+    });
+  }, []);
+
+  const totalSteps = questions.length;
   const currentQuestion = questions[step - 1];
   const currentId = currentQuestion?.id ?? `q${step}`;
   const selectedScore = answers[currentId];
   const canGoNext = selectedScore !== undefined;
-
-  const progressPct = (step / totalSteps) * 100;
+  const progressPct = totalSteps > 0 ? (step / totalSteps) * 100 : 0;
 
   function handleSelect(score: number) {
     setAnswers((prev) => ({ ...prev, [currentId]: score }));
@@ -47,10 +76,41 @@ export default function RiskAttitudeQuiz({ questions, onSubmit }: QuizProps) {
   function handleNext() {
     if (!canGoNext) return;
     if (step >= totalSteps) {
-      onSubmit(answers);
+      const score = Object.values(answers).reduce((s, v) => s + v, 0);
+      const maxScore = questions.reduce(
+        (s, q) => s + Math.max(...q.options.map((o) => o.score)),
+        0,
+      );
+      const band = scoreToBand(score, maxScore);
+      // Build Record<number, OptionScore> keyed by 1-based question index
+      const indexedAnswers: Record<number, OptionScore> = {};
+      questions.forEach((q, i) => {
+        const val = answers[q.id];
+        if (val !== undefined) indexedAnswers[i + 1] = val as OptionScore;
+      });
+      onSave({ score, band, answers: indexedAnswers, responses: answers });
       return;
     }
     setStep((s) => s + 1);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-full py-24 gap-4">
+        <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+        <p className="text-sm text-slate-500">Loading questions…</p>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-full py-24">
+        <p className="text-sm text-slate-500">
+          Unable to load quiz questions. Please try again.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -58,12 +118,10 @@ export default function RiskAttitudeQuiz({ questions, onSubmit }: QuizProps) {
       {/* ── Progress bar ── */}
       <div className="mx-auto w-full my-5 max-w-lg">
         <div className="flex gap-2 h-1.5">
-          {/* filled segment */}
           <div
             className="h-full rounded-full bg-primary transition-all duration-300"
             style={{ width: `${progressPct}%` }}
           />
-          {/* remaining segment */}
           <div
             className="h-full rounded-full bg-gray-200 transition-all duration-300"
             style={{ width: `${100 - progressPct}%` }}
@@ -96,12 +154,9 @@ export default function RiskAttitudeQuiz({ questions, onSubmit }: QuizProps) {
                     : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/60",
                 )}
               >
-               
-
                 <span className="flex-1 text-sm md:text-[15px] font-medium text-slate-700">
                   {option.label}
                 </span>
-
                 <span
                   className={cn(
                     "h-5 w-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all",
@@ -124,7 +179,7 @@ export default function RiskAttitudeQuiz({ questions, onSubmit }: QuizProps) {
           variant="outline"
           onClick={handlePrevious}
           disabled={step === 1}
-          className=" flex-1 gap-1 disabled:opacity-30 border-gray-300"
+          className="flex-1 gap-1 disabled:opacity-30 border-gray-300"
         >
           <ChevronLeft className="h-4 w-4" />
           Back
@@ -132,7 +187,7 @@ export default function RiskAttitudeQuiz({ questions, onSubmit }: QuizProps) {
         <Button
           onClick={handleNext}
           disabled={!canGoNext}
-          className=" flex-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground"
+          className="flex-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground"
         >
           {step >= totalSteps ? "Submit" : "Continue"}
         </Button>
