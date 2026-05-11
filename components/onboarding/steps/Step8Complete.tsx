@@ -110,7 +110,7 @@ export function Step8Complete({
       {/* Logo */}
       <div className="mt-12 opacity-30">
         <Image
-          src="https://i.ibb.co/PGVKSsV1/image.png"
+          src="https://i.ibb.co/d0v22fZp/logo-Dark.png"
           alt="Celerey"
           width={50}
           height={50}

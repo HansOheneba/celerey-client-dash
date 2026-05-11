@@ -253,7 +253,7 @@ export default function Home() {
               {/* Logo */}
               <div className="mb-10 flex items-center justify-start gap-2 md:mb-12">
                 <Image
-                  src="https://i.ibb.co/PGVKSsV1/image.png"
+                  src="https://i.ibb.co/d0v22fZp/logo-Dark.png"
                   alt="Celerey logo"
                   width={100}
                   height={100}
