@@ -25,6 +25,7 @@ import {
   submitRiskAssessment,
   type RiskAssessmentResult,
 } from "@/lib/dashboard-api";
+import { getAuth } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 
 // ─── Shared logic ─────────────────────────────────────────────────────────────
@@ -123,6 +124,10 @@ export default function QuizCard() {
   const { submitting, submitError, handleSubmit } = useRiskQuiz();
 
   useEffect(() => {
+    if (!getAuth().loggedIn) {
+      setResultLoading(false);
+      return;
+    }
     fetchLatestRiskAssessment()
       .then((r) => {
         if (r) setResult(r);

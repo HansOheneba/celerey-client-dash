@@ -5,7 +5,6 @@ import type {
   LocationDistributionItem,
 } from "@/components/dashboard/assets/wealth-distribution";
 import { toLocationKey } from "@/components/dashboard/assets/wealth-distribution";
-import { portfolioData, locationDistributionData } from "@/lib/client-data";
 
 // ── Shared types ────────────────────────────────────────────────
 export type AllocationItem = {
@@ -30,33 +29,15 @@ export function sum(nums: number[]): number {
 }
 
 // ── Static data ─────────────────────────────────────────────────
-// LOCATIONS is derived from locationDistributionData in lib/client-data.ts.
-// To add or change locations, update that array — this list updates automatically.
 export const LOCATIONS: LocationOption[] = [
   { key: "all", label: "All locations" },
-  ...locationDistributionData.map((d) => ({
-    key: toLocationKey(d.country, d.city),
-    label: `${d.city}, ${d.country}`,
-  })),
 ];
 
 export const DEFAULT_ALLOCATIONS: AllocationItem[] = [
-  {
-    key: "equities",
-    label: "Equities",
-    value: portfolioData.allocation.stocks.value,
-  },
-  {
-    key: "fixed_income",
-    label: "Fixed Income",
-    value: portfolioData.allocation.bonds.value,
-  },
-  {
-    key: "alternatives",
-    label: "Alternatives",
-    value: portfolioData.allocation.alternatives.value,
-  },
-  { key: "cash", label: "Cash", value: portfolioData.allocation.cash.value },
+  { key: "equities", label: "Equities", value: 0 },
+  { key: "fixed_income", label: "Fixed Income", value: 0 },
+  { key: "alternatives", label: "Alternatives", value: 0 },
+  { key: "cash", label: "Cash", value: 0 },
   { key: "crypto", label: "Crypto", value: 0 },
 ];
 
@@ -77,10 +58,8 @@ export const DEFAULT_INSIGHTS: Insight[] = [
 
 // Properties now live in lib/property-data.ts
 
-// DEFAULT_LOCATION_DISTRIBUTION comes from lib/client-data.ts (locationDistributionData).
-// When integrating the backend, update locationDistributionData there.
-export const DEFAULT_LOCATION_DISTRIBUTION: LocationDistributionItem[] =
-  locationDistributionData;
+// DEFAULT_LOCATION_DISTRIBUTION is populated from real API data once loaded.
+export const DEFAULT_LOCATION_DISTRIBUTION: LocationDistributionItem[] = [];
 
 // Re-export types that tabs need from child components
 export type { Insight, LocationKey, LocationOption, LocationDistributionItem };

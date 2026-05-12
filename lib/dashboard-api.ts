@@ -15,6 +15,8 @@ import type {
   CashFlowPoint,
   Liability,
   LiabilityType,
+  SubscriptionEntitlements,
+  SubscriptionRecordLimits,
 } from "@/lib/client-data";
 import { calculateAge } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
@@ -1204,11 +1206,13 @@ export async function recalculateRiskScore(): Promise<RiskAssessmentResult | nul
 // ── Subscription ──────────────────────────────────────────────────────────
 
 export interface SubscriptionApiData {
-  status: string; // "none" | "trialing" | "active"
-  plan?: string;
+  subscription_status: string; // "none" | "trialing" | "active"
+  subscription_plan?: string;
   trial_started_at?: string;
   trial_ends_at?: string;
-  renewed_at?: string;
+  is_enterprise?: boolean;
+  entitlements?: SubscriptionEntitlements;
+  record_limits?: SubscriptionRecordLimits;
 }
 
 export async function fetchSubscription(): Promise<SubscriptionApiData | null> {
@@ -1245,6 +1249,30 @@ export async function upgradeSubscription(
     return (res as any)?.data ?? null;
   } catch (err) {
     console.error("[upgradeSubscription] ✗ error:", err);
+    throw err;
+  }
+}
+
+// Asks the backend to create a Stripe Checkout Session and returns the URL.
+// Frontend redirects to that URL — Stripe handles all card/payment UI.
+// plan "trial" → 7-day free trial, card captured but not charged until trial ends
+// plan "pro"   → immediate charge, no trial
+export async function createCheckoutSession(
+  plan: "trial" | "pro",
+): Promise<{ url: string } | null> {
+  console.log("[createCheckoutSession] ▶ plan:", plan);
+  try {
+    const res = await proxyCall<{
+      success?: boolean;
+      data?: { url: string };
+    }>("subscription.create-checkout", "POST", { plan });
+    console.log(
+      "[createCheckoutSession] ◀ raw response:",
+      JSON.stringify(res, null, 2),
+    );
+    return (res as any)?.data ?? null;
+  } catch (err) {
+    console.error("[createCheckoutSession] ✗ error:", err);
     throw err;
   }
 }

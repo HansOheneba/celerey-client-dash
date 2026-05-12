@@ -36,13 +36,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   formatCurrency,
   GOAL_CATEGORY_OPTIONS,
   type Goal,
   type GoalCategory,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
-import { updateGoal as apiUpdateGoal } from "@/lib/dashboard-api";
+import { updateGoal as apiUpdateGoal, fetchGoals } from "@/lib/dashboard-api";
 import { toast } from "sonner";
 import { DateInput } from "@/components/ui/date-input";
 
@@ -127,8 +133,9 @@ export default function EditGoalPage() {
   const params = useParams<{ id: string }>();
   const goalId = params?.id ?? "goal_123"; // fallback for dev
   const activeCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
+  const storeGoals = useFinancialStore((s) => s.goals);
 
-  // ---- Load existing goal (replace with real fetch) ----
+  // ---- Load existing goal from store, falling back to API fetch ----
   const [isLoading, setIsLoading] = React.useState(true);
 
   const [form, setForm] = React.useState<GoalForm>({
@@ -172,60 +179,55 @@ export default function EditGoalPage() {
     async function load() {
       setIsLoading(true);
 
-      // Replace this with:
-      // const res = await fetch(`/api/goals/${goalId}`);
-      // const data = await res.json();
+      // Try the Zustand store first (already loaded if coming from goals page)
+      let goal: Goal | undefined = storeGoals.find((g) => g.id === goalId);
 
-      // Demo seed
-      const seed = {
-        title: "Emergency fund",
-        category: "emergency" as GoalCategory,
-        priority: 1,
-        description: "Six months of living expenses as a safety net.",
-        target: 500000,
-        current: 120000,
-        targetDate: "2031-03-31",
-        timeline: { value: 5, unit: "years" as const },
-        log: [
-          {
-            id: "l1",
-            type: "contribution" as const,
-            amount: 20000,
-            date: "2026-01-10",
-            note: "Monthly transfer",
-          },
-          {
-            id: "l2",
-            type: "milestone" as const,
-            title: "Reached first 100k",
-            date: "2026-01-22",
-            note: "Consistency is working",
-          },
-          {
-            id: "l3",
-            type: "contribution" as const,
-            amount: 15000,
-            date: "2026-02-05",
-            note: "Bonus top-up",
-          },
-        ],
-      };
+      // If not in store (e.g. direct navigation), fetch from API
+      if (!goal) {
+        try {
+          const fetched = await fetchGoals();
+          goal = fetched.find((g) => g.id === goalId);
+        } catch {
+          // goal stays undefined
+        }
+      }
 
       if (!mounted) return;
 
+      if (!goal) {
+        setIsLoading(false);
+        toast.error("Goal not found.");
+        router.replace("/dashboard/goals");
+        return;
+      }
+
+      // Derive timeline from yearsRemaining
+      let timelineValue: string;
+      let timelineUnit: "months" | "years";
+      if (goal.yearsRemaining >= 1) {
+        timelineValue = String(Math.round(goal.yearsRemaining));
+        timelineUnit = "years";
+      } else if (goal.yearsRemaining > 0) {
+        timelineValue = String(Math.round(goal.yearsRemaining * 12));
+        timelineUnit = "months";
+      } else {
+        timelineValue = "1";
+        timelineUnit = "years";
+      }
+
       setForm({
-        title: seed.title,
-        category: seed.category,
-        description: seed.description,
-        target: currency(seed.target),
-        current: currency(seed.current),
-        timelineValue: String(seed.timeline.value),
-        timelineUnit: seed.timeline.unit,
-        targetDate: seed.targetDate,
+        title: goal.title,
+        category: goal.category,
+        description: goal.description ?? "",
+        target: currency(goal.target),
+        current: currency(goal.current),
+        timelineValue,
+        timelineUnit,
+        targetDate: goal.targetDate ?? "",
       });
 
-      setOriginalCurrent(seed.current);
-      setLog(seed.log);
+      setOriginalCurrent(goal.current);
+      setLog([]);
       setIsLoading(false);
     }
 
@@ -233,7 +235,7 @@ export default function EditGoalPage() {
     return () => {
       mounted = false;
     };
-  }, [goalId]);
+  }, [goalId, storeGoals]);
 
   function update<K extends keyof GoalForm>(key: K, value: GoalForm[K]): void {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -497,24 +499,42 @@ export default function EditGoalPage() {
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
-            <div
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs",
-                statusPillClass,
-              )}
-            >
-              {tone === "complete" ? (
-                <CheckCircle2 className="h-4 w-4" />
-              ) : (
-                <TrendingUp className="h-4 w-4" />
-              )}
-              <span className="font-medium">{statusLabel}</span>
-              {targetNum > 0 && timelineValueNum > 0 ? (
-                <span className="text-muted-foreground">
-                  • {Math.round(progress)}%
-                </span>
-              ) : null}
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      "inline-flex cursor-default items-center gap-2 rounded-full border px-3 py-1 text-xs",
+                      statusPillClass,
+                    )}
+                  >
+                    {tone === "complete" ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      <TrendingUp className="h-4 w-4" />
+                    )}
+                    <span className="font-medium">{statusLabel}</span>
+                    {targetNum > 0 && timelineValueNum > 0 ? (
+                      <span className="text-muted-foreground">
+                        • {Math.round(progress)}%
+                      </span>
+                    ) : null}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-55 text-xs leading-relaxed">
+                  {tone === "complete" &&
+                    "You've reached your target. Nothing more needed here — great work."}
+                  {tone === "good" &&
+                    "You're on track. Your current savings and timeline line up well with your goal."}
+                  {tone === "ok" &&
+                    "You're making progress but slightly behind. Consider increasing your monthly contribution or extending your timeline."}
+                  {tone === "risk" &&
+                    "Your current savings are significantly behind where they need to be for this timeline. Add a contribution or adjust the target date to get back on track."}
+                  {tone === "neutral" &&
+                    "Fill in your target amount and timeline to see a status."}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
@@ -531,24 +551,42 @@ export default function EditGoalPage() {
             <CardContent className="space-y-6">
               {/* Mobile status pill */}
               <div className="md:hidden">
-                <div
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs",
-                    statusPillClass,
-                  )}
-                >
-                  {tone === "complete" ? (
-                    <CheckCircle2 className="h-4 w-4" />
-                  ) : (
-                    <TrendingUp className="h-4 w-4" />
-                  )}
-                  <span className="font-medium">{statusLabel}</span>
-                  {targetNum > 0 && timelineValueNum > 0 ? (
-                    <span className="text-muted-foreground">
-                      • {Math.round(progress)}%
-                    </span>
-                  ) : null}
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={cn(
+                          "inline-flex cursor-default items-center gap-2 rounded-full border px-3 py-1 text-xs",
+                          statusPillClass,
+                        )}
+                      >
+                        {tone === "complete" ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <TrendingUp className="h-4 w-4" />
+                        )}
+                        <span className="font-medium">{statusLabel}</span>
+                        {targetNum > 0 && timelineValueNum > 0 ? (
+                          <span className="text-muted-foreground">
+                            • {Math.round(progress)}%
+                          </span>
+                        ) : null}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-55 text-xs leading-relaxed">
+                      {tone === "complete" &&
+                        "You've reached your target. Nothing more needed here — great work."}
+                      {tone === "good" &&
+                        "You're on track. Your current savings and timeline line up well with your goal."}
+                      {tone === "ok" &&
+                        "You're making progress but slightly behind. Consider increasing your monthly contribution or extending your timeline."}
+                      {tone === "risk" &&
+                        "Your current savings are significantly behind where they need to be for this timeline. Add a contribution or adjust the target date to get back on track."}
+                      {tone === "neutral" &&
+                        "Fill in your target amount and timeline to see a status."}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
 
               {/* Title */}

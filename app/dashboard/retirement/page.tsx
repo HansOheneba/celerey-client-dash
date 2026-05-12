@@ -69,7 +69,6 @@ import {
   selectRetirementOutputs,
   formatCurrency,
   getUserAge,
-  mockUser,
   type RetirementConfig,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
@@ -145,7 +144,8 @@ function futureValue(
 }
 
 function buildProjectionCurve(config: RetirementConfig) {
-  const currentAge = getUserAge(useFinancialStore.getState().user ?? mockUser);
+  const storeUser0 = useFinancialStore.getState().user;
+  const currentAge = storeUser0?.date_of_birth ? getUserAge(storeUser0) : 0;
   const yearsToRetirement = config.retirementAge - currentAge;
 
   if (yearsToRetirement <= 0) {
@@ -914,7 +914,7 @@ export default function RetirementPage() {
   const accountMode: AccountMode =
     (storeUser?.account_mode as AccountMode) ?? "solo";
   const isSolo = accountMode === "solo";
-  const currentAge = getUserAge(storeUser ?? mockUser);
+  const currentAge = storeUser?.date_of_birth ? getUserAge(storeUser) : 0;
   const currentYear = new Date().getFullYear();
   const copy = getRetirementCopy(accountMode);
 

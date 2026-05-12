@@ -7,6 +7,8 @@ import {
   getUserType,
   AuthState,
   SubState,
+  DEFAULT_ENTITLEMENTS,
+  DEFAULT_RECORD_LIMITS,
 } from "@/lib/client-data";
 
 export function useClientGate(): {
@@ -22,18 +24,30 @@ export function useClientGate(): {
   });
   const [sub, setSubState] = useState<SubState>({
     status: "none",
+    plan: null,
     trialStartedAt: null,
+    trialEndsAt: null,
+    isEnterprise: false,
+    entitlements: DEFAULT_ENTITLEMENTS,
+    recordLimits: DEFAULT_RECORD_LIMITS,
   });
   const [userType, setUserType] = useState<"regular" | "enterprise">("regular");
 
   useEffect(() => {
-    const a = getAuth();
-    const s = getSubscription();
-    const t = getUserType();
-    setAuthState(a);
-    setSubState(s);
-    setUserType(t);
-    setReady(true);
+    const read = () => {
+      const a = getAuth();
+      const s = getSubscription();
+      const t = getUserType();
+      setAuthState(a);
+      setSubState(s);
+      setUserType(t);
+      setReady(true);
+    };
+
+    read();
+    // Re-read whenever subscription data is written (e.g. after API fetch)
+    window.addEventListener("celerey:sub-updated", read);
+    return () => window.removeEventListener("celerey:sub-updated", read);
   }, []);
 
   return { ready, auth, sub, userType };

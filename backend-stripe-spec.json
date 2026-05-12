@@ -1,0 +1,218 @@
+{
+  "env_vars_you_will_receive_from_hans": {
+    "STRIPE_SECRET_KEY": "rk_live_...",
+    "STRIPE_WEBHOOK_SECRET": "whsec_...",
+    "STRIPE_PRICE_ID": "price_1T3uSxImREXRGUaFogOWhnic"
+  },
+
+  "stripe_api_calls_you_will_make": {
+    "_note": "All calls go to https://api.stripe.com. Authenticate with: Authorization: Bearer $STRIPE_SECRET_KEY",
+
+    "step_A_look_up_or_create_customer": {
+      "_when": "Every time create-checkout is called — find the user's existing Stripe Customer or create one",
+      "stripe_docs": "https://docs.stripe.com/api/customers",
+      "search_existing": {
+        "method": "GET",
+        "url": "https://api.stripe.com/v1/customers/search?query=email:'<user_email>'&limit=1",
+        "stripe_docs": "https://docs.stripe.com/api/customers/search",
+        "headers": {
+          "Authorization": "Bearer $STRIPE_SECRET_KEY"
+        },
+        "on_result": "If data array is non-empty, use data[0].id as the customer ID. If empty, go to create_new."
+      },
+      "create_new": {
+        "method": "POST",
+        "url": "https://api.stripe.com/v1/customers",
+        "stripe_docs": "https://docs.stripe.com/api/customers/create",
+        "headers": {
+          "Authorization": "Bearer $STRIPE_SECRET_KEY",
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "body": {
+          "email": "<user_email>",
+          "metadata[user_id]": "<your internal user ID>"
+        },
+        "key_response_fields": {
+          "id": "The Stripe Customer ID (cus_...) — store this on your user record",
+          "email": "Echoed back for confirmation"
+        },
+        "on_result": "Store the returned id (cus_...) on the user record in your DB. Use it for all future calls."
+      }
+    },
+
+    "step_B_create_checkout_session": {
+      "method": "POST",
+      "url": "https://api.stripe.com/v1/checkout/sessions",
+      "stripe_docs": "https://docs.stripe.com/api/checkout/sessions/create",
+      "headers": {
+        "Authorization": "Bearer $STRIPE_SECRET_KEY",
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      "body_for_trial_plan": {
+        "mode": "subscription",
+        "customer": "<cus_... from step A>",
+        "line_items[0][price]": "price_1T3uSxImREXRGUaFogOWhnic",
+        "line_items[0][quantity]": 1,
+        "subscription_data[trial_period_days]": 7,
+        "metadata[user_id]": "<your internal user ID>",
+        "metadata[plan]": "trial",
+        "success_url": "https://celerey-client-dash.vercel.app/dashboard?sub=success",
+        "cancel_url": "https://celerey-client-dash.vercel.app/choose-plan"
+      },
+      "body_for_pro_plan": {
+        "mode": "subscription",
+        "customer": "<cus_... from step A>",
+        "line_items[0][price]": "price_1T3uSxImREXRGUaFogOWhnic",
+        "line_items[0][quantity]": 1,
+        "metadata[user_id]": "<your internal user ID>",
+        "metadata[plan]": "pro",
+        "success_url": "https://celerey-client-dash.vercel.app/dashboard?sub=success",
+        "cancel_url": "https://celerey-client-dash.vercel.app/choose-plan"
+      },
+      "key_response_fields": {
+        "url": "The hosted Stripe checkout page URL — return this to the frontend",
+        "id": "Session ID (cs_...) — you can store this if needed"
+      }
+    },
+
+    "step_C_retrieve_subscription_in_webhook": {
+      "_when": "Inside the checkout.session.completed webhook handler, after you get the subscription ID from the session object",
+      "stripe_docs": "https://docs.stripe.com/api/subscriptions/retrieve",
+      "method": "GET",
+      "url": "https://api.stripe.com/v1/subscriptions/<subscription_id>",
+      "headers": {
+        "Authorization": "Bearer $STRIPE_SECRET_KEY"
+      },
+      "how_to_get_subscription_id": "event.data.object.subscription from the checkout.session.completed event",
+      "key_response_fields": {
+        "status": "trialing | active | past_due | canceled | etc.",
+        "trial_end": "Unix timestamp if on trial, null if not. Use this to decide whether to set user status = 'trialing' or 'active'.",
+        "current_period_end": "Unix timestamp for when the current billing period ends",
+        "customer": "Stripe Customer ID (cus_...) — should match what you already stored"
+      },
+      "decision_logic": "If subscription.trial_end is not null → set user status = 'trialing'. If null → set user status = 'active'."
+    }
+  },
+
+  "endpoints_to_implement": {
+    "create_checkout_session": {
+      "path": "POST /api/execute/subscription.create-checkout",
+      "authenticated": true,
+      "request_body": {
+        "plan": "trial | pro"
+      },
+      "what_to_do": [
+        "1. Look up or create a Stripe Customer for the authenticated user (see stripe_api_calls_you_will_make.step_A)",
+        "2. Store the Stripe Customer ID (cus_...) on the user record if it didn't exist yet",
+        "3. Create a Stripe Checkout Session (see stripe_api_calls_you_will_make.step_B) using the correct body for the plan",
+        "4. Return the session URL from the Stripe response"
+      ],
+      "success_response": {
+        "success": true,
+        "data": { "url": "https://checkout.stripe.com/pay/cs_live_..." }
+      },
+      "error_response": {
+        "success": false,
+        "message": "Human-readable error string"
+      }
+    },
+
+    "find_subscription": {
+      "path": "GET /api/execute/subscription.find",
+      "authenticated": true,
+      "request_body": null,
+      "description": "Returns the authenticated user's current subscription status. Frontend calls this immediately after Stripe redirects back to /dashboard?sub=success.",
+      "success_response": {
+        "success": true,
+        "data": {
+          "status": "none | trialing | active",
+          "plan": "trial | pro | null",
+          "trial_started_at": "ISO datetime or null",
+          "trial_ends_at": "ISO datetime or null",
+          "renewed_at": "ISO datetime or null"
+        }
+      }
+    }
+  },
+
+  "webhook": {
+    "register_at_url": "https://api-uat.celerey.app/stripe-webhook",
+    "method": "POST",
+    "auth": "None — verified by Stripe signature header instead",
+    "signature_verification": {
+      "example": "const event = stripe.webhooks.constructEvent(req.rawBody, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);",
+      "critical": "Use the raw unparsed request body. Parsing JSON first breaks the signature check."
+    },
+    "stripe_docs": "https://docs.stripe.com/api/subscriptions",
+    "events_to_handle": [
+      {
+        "event": "checkout.session.completed",
+        "stripe_docs": "https://docs.stripe.com/api/checkout/sessions",
+        "action": "Find user via event.data.object.metadata.user_id. Store stripe_customer_id and stripe_subscription_id on the user. Call GET /v1/subscriptions/:id (see stripe_api_calls_you_will_make.step_C) to check trial_end. If trial_end is not null set status = 'trialing', else 'active'."
+      },
+      {
+        "event": "invoice.paid",
+        "action": "Set status = 'active'. Update renewed_at to now."
+      },
+      {
+        "event": "invoice.payment_failed",
+        "action": "Email user to update payment method. Set status = 'none' after grace period."
+      },
+      {
+        "event": "customer.subscription.trial_will_end",
+        "stripe_docs": "https://docs.stripe.com/api/subscriptions",
+        "action": "Fires 3 days before trial ends. Email user: trial ending in 3 days, they will be charged."
+      },
+      {
+        "event": "customer.subscription.updated",
+        "stripe_docs": "https://docs.stripe.com/api/subscriptions",
+        "action": "Fires when subscription status changes (e.g. trial → active). Sync status using the map below."
+      },
+      {
+        "event": "customer.subscription.deleted",
+        "stripe_docs": "https://docs.stripe.com/api/subscriptions",
+        "action": "Set status = 'none'."
+      }
+    ],
+    "stripe_to_internal_status_map": {
+      "trialing": "trialing",
+      "active": "active",
+      "past_due": "none",
+      "canceled": "none",
+      "unpaid": "none",
+      "paused": "none",
+      "incomplete": "none",
+      "incomplete_expired": "none"
+    }
+  },
+
+  "how_the_full_flow_works": {
+    "trial": [
+      "1. Frontend POSTs { plan: 'trial' } to subscription.create-checkout",
+      "2. Backend creates/finds Stripe Customer, creates Checkout Session with trial_period_days:7",
+      "3. Backend returns { data: { url } }",
+      "4. Frontend redirects browser to that URL — Stripe handles card capture",
+      "5. User enters card, NOT charged yet, trial starts",
+      "6. Stripe redirects to /dashboard?sub=success",
+      "7. Frontend GETs subscription.find, stores status='trialing', user is in"
+    ],
+    "pro": [
+      "1. Frontend POSTs { plan: 'pro' } to subscription.create-checkout",
+      "2. Backend creates/finds Stripe Customer, creates Checkout Session (no trial)",
+      "3. Backend returns { data: { url } }",
+      "4. Frontend redirects browser to that URL — Stripe handles payment",
+      "5. User enters card, charged immediately",
+      "6. Stripe redirects to /dashboard?sub=success",
+      "7. Frontend GETs subscription.find, stores status='active', user is in"
+    ],
+    "cancel": [
+      "User presses back/cancel on Stripe page → redirected to /choose-plan, nothing changed"
+    ]
+  },
+
+  "what_frontend_has_already_done": [
+    "Both plan buttons call createCheckoutSession('trial'|'pro') and redirect to result.url",
+    "On /dashboard?sub=success: calls subscription.find, syncs status to localStorage, hard-reloads to /dashboard",
+    "The proxy route already whitelists 'subscription.*' paths — no proxy changes needed"
+  ]
+}

@@ -545,7 +545,7 @@ export default function AIInsightsPage() {
     router.replace("/");
     return null;
   }
-  if (!canAccessFeature(sub.status, "premiumInsights")) {
+  if (!canAccessFeature(sub, "premiumInsights")) {
     return (
       <div className="flex min-h-screen items-center justify-center p-8">
         <div className="max-w-sm text-center space-y-4">

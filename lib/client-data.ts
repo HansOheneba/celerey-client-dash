@@ -444,16 +444,63 @@ export interface FinancialDomainData {
 // ============================================================================
 
 export type SubscriptionStatus = "none" | "trialing" | "active";
+
+export interface SubscriptionEntitlements {
+  insights_full: boolean;
+  advisor_chat: boolean;
+  concierge_requests: boolean;
+  export_data: boolean;
+  retirement_scenarios: boolean;
+  live_market_data: boolean;
+  portfolio_charts: boolean;
+  cash_flow_projections: boolean;
+  goal_scenarios: boolean;
+}
+
+export interface SubscriptionRecordLimits {
+  goals: number;
+  assets: number;
+  properties: number;
+  liabilities: number;
+  insurance_policies: number;
+}
+
+export const DEFAULT_ENTITLEMENTS: SubscriptionEntitlements = {
+  insights_full: false,
+  advisor_chat: false,
+  concierge_requests: false,
+  export_data: false,
+  retirement_scenarios: false,
+  live_market_data: false,
+  portfolio_charts: false,
+  cash_flow_projections: false,
+  goal_scenarios: false,
+};
+
+export const DEFAULT_RECORD_LIMITS: SubscriptionRecordLimits = {
+  goals: 3,
+  assets: 5,
+  properties: 1,
+  liabilities: 5,
+  insurance_policies: 2,
+};
+
 export type AuthState = { loggedIn: boolean; email: string | null };
 export type SubState = {
   status: SubscriptionStatus;
+  plan: string | null;
   trialStartedAt: string | null;
+  trialEndsAt: string | null;
+  isEnterprise: boolean;
+  entitlements: SubscriptionEntitlements;
+  recordLimits: SubscriptionRecordLimits;
 };
 
 const AUTH_EMAIL_KEY = "auth_email";
 const AUTH_LOGGED_IN_KEY = "auth_logged_in";
 const SUB_STATUS_KEY = "sub_status";
 const TRIAL_STARTED_AT_KEY = "trial_started_at";
+const SUB_DATA_KEY = "sub_data_v2";
 
 function safeGetItem(key: string): string | null {
   if (typeof window === "undefined") return null;
@@ -500,17 +547,82 @@ export function clearAuth(): void {
 }
 
 export function getSubscription(): SubState {
+  // Try new format first (written by setSubscriptionData)
+  const raw = safeGetItem(SUB_DATA_KEY);
+  if (raw) {
+    try {
+      const d = JSON.parse(raw) as {
+        subscription_status?: string;
+        subscription_plan?: string;
+        trial_started_at?: string;
+        trial_ends_at?: string;
+        is_enterprise?: boolean;
+        entitlements?: Partial<SubscriptionEntitlements>;
+        record_limits?: Partial<SubscriptionRecordLimits>;
+      };
+      const statusRaw = d.subscription_status ?? "none";
+      const status: SubscriptionStatus =
+        statusRaw === "trialing" || statusRaw === "active" ? statusRaw : "none";
+      return {
+        status,
+        plan: d.subscription_plan ?? null,
+        trialStartedAt: d.trial_started_at ?? null,
+        trialEndsAt: d.trial_ends_at ?? null,
+        isEnterprise: d.is_enterprise ?? false,
+        entitlements: { ...DEFAULT_ENTITLEMENTS, ...d.entitlements },
+        recordLimits: { ...DEFAULT_RECORD_LIMITS, ...d.record_limits },
+      };
+    } catch {
+      /* fall through to legacy */
+    }
+  }
+  // Legacy fallback
   const statusRaw = safeGetItem(SUB_STATUS_KEY) ?? "none";
   const status =
     statusRaw === "trialing" || statusRaw === "active"
       ? (statusRaw as SubscriptionStatus)
       : "none";
-  return { status, trialStartedAt: safeGetItem(TRIAL_STARTED_AT_KEY) ?? null };
+  return {
+    status,
+    plan: null,
+    trialStartedAt: safeGetItem(TRIAL_STARTED_AT_KEY) ?? null,
+    trialEndsAt: null,
+    isEnterprise: false,
+    entitlements: DEFAULT_ENTITLEMENTS,
+    recordLimits: DEFAULT_RECORD_LIMITS,
+  };
 }
 
 export function setSubscription(status: SubscriptionStatus): void {
   safeSetItem(SUB_STATUS_KEY, status);
   if (status !== "trialing") safeRemoveItem(TRIAL_STARTED_AT_KEY);
+}
+
+/**
+ * Persists the full subscription payload returned by subscription.find / subscription.upgrade.
+ * Replaces the legacy setSubscription(status) approach.
+ */
+export function setSubscriptionData(data: {
+  subscription_status: string;
+  subscription_plan?: string;
+  trial_started_at?: string;
+  trial_ends_at?: string;
+  is_enterprise?: boolean;
+  entitlements?: Partial<SubscriptionEntitlements>;
+  record_limits?: Partial<SubscriptionRecordLimits>;
+}): void {
+  safeSetItem(SUB_DATA_KEY, JSON.stringify(data));
+  // Keep legacy key in sync
+  const status =
+    data.subscription_status === "trialing" ||
+    data.subscription_status === "active"
+      ? data.subscription_status
+      : "none";
+  safeSetItem(SUB_STATUS_KEY, status);
+  // Notify any listeners (e.g. useClientGate) that subscription state changed
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("celerey:sub-updated"));
+  }
 }
 
 export function setTrialStartedAt(iso: string): void {
@@ -520,6 +632,7 @@ export function setTrialStartedAt(iso: string): void {
 export function clearSubscription(): void {
   safeSetItem(SUB_STATUS_KEY, "none");
   safeRemoveItem(TRIAL_STARTED_AT_KEY);
+  safeRemoveItem(SUB_DATA_KEY);
 }
 
 // ── Enterprise user-type helpers ──────────────────────────────────────────────
@@ -645,20 +758,21 @@ export function pushNetWorthSnapshot(
 
 export type FeatureKey = "premiumInsights" | "exportData" | "advisorChat";
 
-export const trialDisabledFeatures: FeatureKey[] = [
-  "premiumInsights",
-  "exportData",
-  "advisorChat",
-];
-
-export function canAccessFeature(
-  status: SubscriptionStatus,
-  feature: FeatureKey,
-  isEnterprise = false,
-): boolean {
-  if (isEnterprise) return true;
-  if (status === "active") return true;
-  if (status === "trialing") return !trialDisabledFeatures.includes(feature);
+export function canAccessFeature(sub: SubState, feature: FeatureKey): boolean {
+  if (sub.isEnterprise) return true;
+  // Full paid plan — all features unlocked
+  if (sub.status === "active") return true;
+  // Trial — check server-authoritative entitlements
+  if (sub.status === "trialing") {
+    switch (feature) {
+      case "premiumInsights":
+        return sub.entitlements.insights_full;
+      case "exportData":
+        return sub.entitlements.export_data;
+      case "advisorChat":
+        return sub.entitlements.advisor_chat;
+    }
+  }
   return false;
 }
 

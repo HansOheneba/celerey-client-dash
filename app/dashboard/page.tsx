@@ -32,12 +32,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useClientGate } from "../../lib/useClientGate";
+import { setSubscriptionData } from "../../lib/client-data";
+import { fetchSubscription } from "../../lib/dashboard-api";
 import { useMonthlySnapshot } from "@/hooks/useMonthlySnapshot";
 import { usePageData } from "@/hooks/usePageData";
 import {
   canAccessFeature,
   type FeatureKey,
-  advisorData,
   currentValue,
   recordNetWorthSnapshot,
   getLatestNetWorthChange,
@@ -339,14 +340,37 @@ export default function DashboardPage() {
   const { ready, auth, sub, userType } = useClientGate();
   useMonthlySnapshot();
 
+  // ── Stripe return: sync real subscription status then hard-reload ──────────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("sub") !== "success") return;
+    fetchSubscription()
+      .then((data) => {
+        if (data) {
+          setSubscriptionData(data);
+        }
+      })
+      .finally(() => {
+        // Hard reload strips the query param and re-reads localStorage
+        window.location.replace("/dashboard");
+      });
+  }, []);
+
   useEffect(() => {
     if (!ready) return;
     if (!auth.loggedIn) {
       router.replace("/");
       return;
     }
-    // Enterprise users have their subscription covered by their company — skip paywall
+    // Enterprise users bypass the paywall
     if (userType === "enterprise") return;
+    // Skip paywall redirect while Stripe is returning — sync effect handles it
+    if (
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("sub") === "success"
+    )
+      return;
     if (auth.loggedIn && sub.status === "none") {
       router.replace("/choose-plan");
       return;
@@ -365,14 +389,17 @@ export default function DashboardPage() {
   }
 
   const access = useMemo(() => {
-    const has = (k: FeatureKey) =>
-      canAccessFeature(sub.status, k, userType === "enterprise");
+    const effectiveSub = {
+      ...sub,
+      isEnterprise: sub.isEnterprise || userType === "enterprise",
+    };
+    const has = (k: FeatureKey) => canAccessFeature(effectiveSub, k);
     return {
       premiumInsights: has("premiumInsights"),
       exportData: has("exportData"),
       advisorChat: has("advisorChat"),
     };
-  }, [sub.status, userType]);
+  }, [sub, userType]);
 
   // ── Store ─────────────────────────────────────────────────────────────────
 
@@ -614,23 +641,6 @@ export default function DashboardPage() {
 
   const upcoming: UpcomingItem[] = useMemo(() => {
     const items: UpcomingItem[] = [];
-    if (advisorData.upcomingMeeting) {
-      items.push({
-        id: "advisor-1",
-        title: advisorData.upcomingMeeting.title,
-        time: advisorData.upcomingMeeting.dateLabel,
-        meta: "Advisor",
-      });
-    }
-    if (advisorData.actionItems.length > 0) {
-      const ai = advisorData.actionItems[0];
-      items.push({
-        id: `action-${ai.id}`,
-        title: ai.label,
-        time: ai.dueLabel,
-        meta: "Action",
-      });
-    }
     if (items.length === 0)
       items.push({ id: "u-fallback", title: "No upcoming items", time: "—" });
     return items;
@@ -654,15 +664,6 @@ export default function DashboardPage() {
         category: "Cash Flow",
         date: new Date().toLocaleDateString(),
         status: "Completed",
-      }),
-    );
-    advisorData.actionItems.slice(0, 2).forEach((a) =>
-      rows.push({
-        id: `a-${a.id}`,
-        title: a.label,
-        category: "Insurance",
-        date: a.dueLabel,
-        status: a.done ? "Completed" : "Pending",
       }),
     );
     return rows;
@@ -1443,20 +1444,6 @@ export default function DashboardPage() {
                     </Button>
                   </CardContent>
                 </Card>
-              </motion.div>
-
-              {/* Advisor */}
-              <motion.div variants={mi}>
-                <LockedFeatureCard
-                  title="Advisor"
-                  description="Talk to an advisor for guidance and planning."
-                  icon={
-                    <FontAwesomeIcon icon={faCommentDots} className="h-5 w-5" />
-                  }
-                  hasAccess={access.advisorChat}
-                  onOpen={() => router.push("/advisor")}
-                  onUpgrade={handleUpgradeIntent}
-                />
               </motion.div>
 
               {/* Risk quiz */}

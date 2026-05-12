@@ -32,9 +32,28 @@ export function Step6Retirement({
   const accountMode = store.accountMode;
   const isSolo = accountMode === "solo";
 
+  // Derive current age from DOB so we can enforce a meaningful minimum
+  const currentAge = React.useMemo(() => {
+    const dob = store.identity?.date_of_birth;
+    if (!dob) return null;
+    const birth = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const hasBirthdayPassed =
+      today.getMonth() > birth.getMonth() ||
+      (today.getMonth() === birth.getMonth() &&
+        today.getDate() >= birth.getDate());
+    if (!hasBirthdayPassed) age -= 1;
+    return age;
+  }, [store.identity?.date_of_birth]);
+
+  // Minimum allowed retirement age = current age + 1
+  const minRetirementAge = currentAge !== null ? currentAge + 1 : 18;
+
   const {
     register,
     control,
+    watch,
     handleSubmit,
     formState: { errors },
   } = useForm<RetirementFormValues>({
@@ -49,6 +68,14 @@ export function Step6Retirement({
       desired_monthly_income: defaultValues?.desired_monthly_income ?? 0,
     },
   });
+
+  // Reactively compute years until retirement for the hint label
+  const watchedRetirementAge = watch("retirement_age");
+  const yearsUntilRetirement = React.useMemo(() => {
+    if (!isSolo || !watchedRetirementAge || currentAge === null) return null;
+    const years = (watchedRetirementAge as number) - currentAge;
+    return years > 0 ? years : null;
+  }, [isSolo, watchedRetirementAge, currentAge]);
 
   function onSubmit(data: RetirementFormValues) {
     let retirement_target_year = data.retirement_target_year as
@@ -101,13 +128,33 @@ export function Step6Retirement({
               {isSolo ? "Target retirement age" : "Target retirement year"}
             </Label>
             {isSolo ? (
-              <Input
-                type="number"
-                min={18}
-                max={100}
-                placeholder="e.g. 60"
-                {...register("retirement_age", { valueAsNumber: true })}
-              />
+              <>
+                <Input
+                  type="number"
+                  min={minRetirementAge}
+                  max={100}
+                  placeholder="e.g. 60"
+                  {...register("retirement_age", {
+                    valueAsNumber: true,
+                    validate: (v) => {
+                      const n = v as number | undefined;
+                      if (!n || isNaN(n)) return true;
+                      if (currentAge !== null && n <= currentAge)
+                        return `Must be greater than your current age (${currentAge})`;
+                      return true;
+                    },
+                  })}
+                />
+                {yearsUntilRetirement !== null && (
+                  <p className="text-[11px] text-slate-400">
+                    That&apos;s in{" "}
+                    <span className="font-medium text-slate-600">
+                      {yearsUntilRetirement} year
+                      {yearsUntilRetirement !== 1 ? "s" : ""}
+                    </span>
+                  </p>
+                )}
+              </>
             ) : (
               <Input
                 type="number"

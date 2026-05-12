@@ -7,20 +7,20 @@ import { canAccessFeature } from "@/lib/client-data";
 import { motion } from "framer-motion";
 import { ActionItemsCard } from "@/components/dashboard/advisor/action-items-card";
 import { AdvisorHeader } from "@/components/dashboard/advisor/advisor-header";
-import { AdvisorProfileCard } from "@/components/dashboard/advisor/advisor-profile-card";
 import { NotesCard } from "@/components/dashboard/advisor/notes-card";
 import { RequestDialog } from "@/components/dashboard/advisor/request-dialog";
 import { RequestQueueCard } from "@/components/dashboard/advisor/request-queue-card";
-import { UpcomingMeetingCard } from "@/components/dashboard/advisor/upcoming-card";
 import {
   ActionItem,
-  Advisor,
-  Meeting,
-  Note,
   RequestTopic,
   RequestUrgency,
 } from "@/components/dashboard/advisor/types";
-import { advisorData } from "@/lib/client-data";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 
 const pageEnter = {
   hidden: { opacity: 0, y: 8 },
@@ -46,9 +46,7 @@ export default function AdvisorPage() {
   const { ready, auth, sub } = useClientGate();
 
   // ✅ All hooks before any early returns
-  const [items, setItems] = React.useState<ActionItem[]>(
-    advisorData.actionItems,
-  );
+  const [items, setItems] = React.useState<ActionItem[]>([]);
   const [open, setOpen] = React.useState(false);
   const [topic, setTopic] = React.useState<RequestTopic>("portfolio");
   const [urgency, setUrgency] = React.useState<RequestUrgency>("standard");
@@ -78,7 +76,7 @@ export default function AdvisorPage() {
     return <div />;
   }
 
-  if (!canAccessFeature(sub.status, "advisorChat")) {
+  if (!canAccessFeature(sub, "advisorChat")) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-lg text-center">
@@ -104,10 +102,6 @@ export default function AdvisorPage() {
     );
   }
 
-  const advisor = advisorData.advisor;
-  const upcoming = advisorData.upcomingMeeting;
-  const notes = advisorData.notes;
-
   return (
     <div className="min-h-screen from-background to-muted/20">
       <div className="mx-auto w-full px-4 py-8 md:px-6">
@@ -126,10 +120,26 @@ export default function AdvisorPage() {
             className="lg:col-span-4 space-y-4"
           >
             <motion.div variants={item}>
-              <AdvisorProfileCard
-                advisor={advisor}
-                onRequestConversation={() => setOpen(true)}
-              />
+              <DashCard>
+                <CardHeader>
+                  <CardTitle className="text-base">Your Advisor</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center text-center py-10 gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted text-muted-foreground text-2xl font-semibold">
+                    ?
+                  </div>
+                  <p className="text-sm text-muted-foreground max-w-xs">
+                    Your dedicated advisor will appear here once assigned. In
+                    the meantime, you can submit a request below.
+                  </p>
+                  <button
+                    onClick={() => setOpen(true)}
+                    className="inline-flex h-9 items-center justify-center rounded-md px-4 text-sm bg-[#0B102A] text-white"
+                  >
+                    Request a conversation
+                  </button>
+                </CardContent>
+              </DashCard>
             </motion.div>
           </motion.div>
 
@@ -142,7 +152,20 @@ export default function AdvisorPage() {
           >
             {/* Upcoming */}
             <motion.div variants={item}>
-              <UpcomingMeetingCard meeting={upcoming} />
+              <DashCard>
+                <CardHeader>
+                  <CardTitle className="text-base">Upcoming Meeting</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Scheduled sessions are created after requests are reviewed
+                    and confirmed.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    No upcoming meetings scheduled.
+                  </p>
+                </CardContent>
+              </DashCard>
             </motion.div>
 
             {/* Action items */}
@@ -161,7 +184,7 @@ export default function AdvisorPage() {
 
             {/* Notes */}
             <motion.div variants={item}>
-              <NotesCard notes={notes} />
+              <NotesCard notes={[]} />
             </motion.div>
           </motion.div>
         </div>

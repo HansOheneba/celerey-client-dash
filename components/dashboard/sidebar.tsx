@@ -55,12 +55,20 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronDown, Settings, LogOut, UserIcon, Loader2 } from "lucide-react";
+import {
+  ChevronDown,
+  Settings,
+  LogOut,
+  UserIcon,
+  Loader2,
+  Zap,
+} from "lucide-react";
 import {
   clearAuth,
   clearUserProfile,
   getUserFullName,
 } from "@/lib/client-data";
+import { useClientGate } from "@/lib/useClientGate";
 import { useEffect, useMemo, useState } from "react";
 import { useProfilePanel } from "./ProfilePanelContext";
 
@@ -94,6 +102,20 @@ export default function DashboardSidebar() {
   const [mounted, setMounted] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  const { sub } = useClientGate();
+
+  // Trial end date, formatted for display
+  const trialEndsLabel = useMemo(() => {
+    if (!sub.trialEndsAt) return null;
+    return new Date(sub.trialEndsAt).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, [sub.trialEndsAt]);
+
+  const showUpgradeWidget = !collapsed && mounted && sub.status === "trialing";
 
   const profileCompletionScore = useFinancialStore(
     (s) => s.profileCompletionScore,
@@ -298,6 +320,52 @@ export default function DashboardSidebar() {
                 </p>
               )}
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Upgrade to Premium Widget ── */}
+      <AnimatePresence initial={false}>
+        {showUpgradeWidget && (
+          <motion.div
+            key="upgrade-widget"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden px-3 pb-2"
+          >
+            <div
+              className="rounded-lg px-3 py-3 space-y-2 relative overflow-hidden"
+              style={{
+                background:
+                  "linear-gradient(135deg, #3b1fa8 0%, #18163f 40%, #7c3aed 65%, #18163f 100%)",
+              }}
+            >
+              {/* subtle radial glow to mimic the logo orb */}
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "radial-gradient(ellipse at 70% 30%, rgba(168,85,247,0.45) 0%, transparent 70%)",
+                }}
+              />
+              <div className="relative flex items-center gap-1.5">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-wide">
+                  Trial account
+                </p>
+              </div>
+              <p className="relative text-[11px] text-white/80 leading-snug">
+                Upgrade to Premium for full access to all Celerey features.
+              </p>
+
+              <button
+                type="button"
+                className="relative w-full rounded-md bg-white/15 backdrop-blur-sm border border-white/25 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-white/25 transition-colors"
+              >
+                Upgrade to Premium
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

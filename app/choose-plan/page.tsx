@@ -6,12 +6,11 @@ import { useRouter } from "next/navigation";
 import { Info, ArrowRight } from "lucide-react";
 
 import { useClientGate } from "../../lib/useClientGate";
+import { isOnboarded, setSubscriptionData } from "../../lib/client-data";
 import {
-  setSubscription,
-  setTrialStartedAt,
-  isOnboarded,
-} from "../../lib/client-data";
-import { upgradeSubscription } from "../../lib/dashboard-api";
+  createCheckoutSession,
+  upgradeSubscription,
+} from "../../lib/dashboard-api";
 import { CelereyLoader } from "../../components/login/celerey-loader";
 
 type FeatureRow = {
@@ -185,7 +184,8 @@ export default function ChoosePlanPage() {
   const { ready, auth, sub } = useClientGate();
   const [splashDone, setSplashDone] = useState(false);
   const [contentVisible, setContentVisible] = useState(false);
-  const [upgrading, setUpgrading] = useState(false);
+  const [trialUpgrading, setTrialUpgrading] = useState(false);
+  const [premiumUpgrading, setPremiumUpgrading] = useState(false);
 
   // Reveal content right after splash exits
   const handleSplashDone = React.useCallback(() => {
@@ -215,22 +215,30 @@ export default function ChoosePlanPage() {
     }
   }, [ready, auth, sub, router]);
 
-  function startTrial(): void {
-    setSubscription("trialing");
-    setTrialStartedAt(new Date().toISOString());
-    router.push("/dashboard");
+  async function startTrial(): Promise<void> {
+    setTrialUpgrading(true);
+    try {
+      const result = await upgradeSubscription("starter");
+      if (result) {
+        setSubscriptionData(result);
+      }
+      router.replace("/dashboard");
+    } catch {
+      setTrialUpgrading(false);
+    }
   }
 
   async function goPremiumNow(): Promise<void> {
-    setUpgrading(true);
+    setPremiumUpgrading(true);
     try {
-      await upgradeSubscription("pro");
+      const result = await createCheckoutSession("pro");
+      if (result?.url) {
+        window.location.href = result.url;
+      } else {
+        setPremiumUpgrading(false);
+      }
     } catch {
-      // Non-fatal — fall through and set active locally so the user isn't blocked
-    } finally {
-      setSubscription("active");
-      setUpgrading(false);
-      router.push("/dashboard");
+      setPremiumUpgrading(false);
     }
   }
 
@@ -430,14 +438,16 @@ export default function ChoosePlanPage() {
                 <button
                   type="button"
                   onClick={startTrial}
+                  disabled={trialUpgrading}
                   className={cn(
                     "mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3",
                     "text-slate-600 font-semibold border border-slate-200 bg-white",
                     "transition-transform hover:bg-slate-50 active:translate-y-0",
+                    trialUpgrading && "opacity-70 cursor-not-allowed",
                   )}
                 >
-                  Start free trial
-                  <ArrowRight className="h-4 w-4" />
+                  {trialUpgrading ? "Starting trial…" : "Start free trial"}
+                  {!trialUpgrading && <ArrowRight className="h-4 w-4" />}
                 </button>
 
                 <p className="mt-2 text-center text-xs text-slate-500">
@@ -485,19 +495,19 @@ export default function ChoosePlanPage() {
                   <button
                     type="button"
                     onClick={goPremiumNow}
-                    disabled={upgrading}
+                    disabled={premiumUpgrading}
                     className={cn(
                       "mt-4 relative inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3",
                       "text-white font-semibold shadow-sm",
                       "transition-transform translate-y-px active:translate-y-1",
-                      upgrading && "opacity-70 cursor-not-allowed",
+                      premiumUpgrading && "opacity-70 cursor-not-allowed",
                     )}
                     style={{
                       background: `linear-gradient(90deg, ${BRAND.navy} 0%, ${BRAND.navy2} 60%, ${BRAND.ink} 100%)`,
                     }}
                   >
-                    {upgrading ? "Processing…" : "Go Premium now"}
-                    {!upgrading && <ArrowRight className="h-4 w-4" />}
+                    {premiumUpgrading ? "Processing…" : "Go Premium now"}
+                    {!premiumUpgrading && <ArrowRight className="h-4 w-4" />}
                   </button>
 
                   <p className="mt-2 text-center text-xs text-slate-500">
@@ -722,14 +732,16 @@ export default function ChoosePlanPage() {
                 <button
                   type="button"
                   onClick={startTrial}
+                  disabled={trialUpgrading}
                   className={cn(
                     "inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3",
                     "text-slate-600 font-semibold border border-slate-200 bg-white",
                     "transition-transform hover:bg-slate-50 active:translate-y-0",
+                    trialUpgrading && "opacity-70 cursor-not-allowed",
                   )}
                 >
-                  Start free trial
-                  <ArrowRight className="h-4 w-4" />
+                  {trialUpgrading ? "Starting trial…" : "Start free trial"}
+                  {!trialUpgrading && <ArrowRight className="h-4 w-4" />}
                 </button>
 
                 <p className="mt-2 text-center text-xs text-slate-500">
@@ -741,19 +753,19 @@ export default function ChoosePlanPage() {
                 <button
                   type="button"
                   onClick={goPremiumNow}
-                  disabled={upgrading}
+                  disabled={premiumUpgrading}
                   className={cn(
                     "relative inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3",
                     "text-white font-semibold shadow-sm",
                     "transition-transform translate-y-px active:translate-y-1",
-                    upgrading && "opacity-70 cursor-not-allowed",
+                    premiumUpgrading && "opacity-70 cursor-not-allowed",
                   )}
                   style={{
                     background: `linear-gradient(90deg, ${BRAND.navy} 0%, ${BRAND.navy2} 60%, ${BRAND.ink} 100%)`,
                   }}
                 >
-                  {upgrading ? "Processing…" : "Go Premium now"}
-                  {!upgrading && <ArrowRight className="h-4 w-4" />}
+                  {premiumUpgrading ? "Processing…" : "Go Premium now"}
+                  {!premiumUpgrading && <ArrowRight className="h-4 w-4" />}
                 </button>
 
                 <p className="mt-2 text-center text-xs text-slate-500">

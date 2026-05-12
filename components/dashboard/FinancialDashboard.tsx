@@ -17,7 +17,7 @@ import {
   selectDashboardMetrics,
   type FinancialDomainData,
 } from "@/lib/client-data";
-import { advisorData } from "@/lib/client-data";
+
 import { useFinancialStore } from "@/store/financialStore";
 
 import { OverviewCards } from "./financial/OverviewCards";
@@ -27,7 +27,7 @@ import { CashFlowSection } from "./financial/CashFlowSection";
 import { GoalsSection } from "./financial/GoalsSection";
 import { RetirementSection } from "./financial/RetirementSection";
 import { ProtectionSection } from "./financial/ProtectionSection";
-import { AdvisorSection } from "./financial/AdvisorSection";
+import { DashCard, CardContent, CardHeader, CardTitle } from "./dash-card";
 import { PerformanceChart } from "./financial/PerformanceChart";
 
 export function FinancialDashboard() {
@@ -139,22 +139,13 @@ export function FinancialDashboard() {
 
       <Separator />
 
-      {/* 6. Protection + Advisor row */}
+      {/* 6. Protection row */}
       <section>
-        <SectionHeading>Protection and Advisor</SectionHeading>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <ProtectionSection
-            insurance={metrics.insurance}
-            freshness={data.freshness}
-          />
-          <AdvisorSection
-            advisor={advisorData.advisor}
-            upcomingMeeting={advisorData.upcomingMeeting}
-            actionItems={advisorData.actionItems}
-            notes={advisorData.notes}
-            freshness={data.freshness}
-          />
-        </div>
+        <SectionHeading>Protection</SectionHeading>
+        <ProtectionSection
+          insurance={metrics.insurance}
+          freshness={data.freshness}
+        />
       </section>
     </div>
   );

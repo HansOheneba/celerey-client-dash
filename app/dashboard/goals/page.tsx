@@ -4,7 +4,6 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
-import { goalsData } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 import { usePageData } from "@/hooks/usePageData";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,7 +28,7 @@ import type {
   FilterType,
 } from "@/components/dashboard/goals/types";
 
-const FALLBACK_SCENARIOS: Scenario[] = goalsData.scenarios;
+const FALLBACK_SCENARIOS: Scenario[] = [];
 
 export default function GoalsDashboard() {
   const router = useRouter();
@@ -170,7 +169,7 @@ export default function GoalsDashboard() {
         />
 
         {/* Grid */}
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {loading
             ? Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-36 w-full rounded-xl" />

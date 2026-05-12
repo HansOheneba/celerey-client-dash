@@ -12,7 +12,7 @@ import {
   fetchUser,
   fetchSubscription,
 } from "@/lib/dashboard-api";
-import { setSubscription, type SubscriptionStatus } from "@/lib/client-data";
+import { setSubscriptionData, getAuth } from "@/lib/client-data";
 
 export function useDashboardData() {
   const hydrated = useRef(false);
@@ -21,6 +21,8 @@ export function useDashboardData() {
 
   useEffect(() => {
     if (hydrated.current) return;
+    // Skip all API calls if there's no valid session — DashboardGuard will redirect.
+    if (!getAuth().loggedIn) return;
     hydrated.current = true;
 
     // Fetch user profile first so the sidebar email is always populated
@@ -67,22 +69,12 @@ export function useDashboardData() {
         // Silent: the user still sees their seeded onboarding data.
       });
 
-    // Sync server-authoritative subscription status into localStorage so
+    // Sync server-authoritative subscription state into localStorage so
     // useClientGate / canAccessFeature always reflect the real entitlement.
     fetchSubscription()
       .then((sub) => {
-        if (sub?.status) {
-          const validStatuses: SubscriptionStatus[] = [
-            "none",
-            "trialing",
-            "active",
-          ];
-          const status = validStatuses.includes(
-            sub.status as SubscriptionStatus,
-          )
-            ? (sub.status as SubscriptionStatus)
-            : "none";
-          setSubscription(status);
+        if (sub?.subscription_status) {
+          setSubscriptionData(sub);
         }
       })
       .catch(() => {
