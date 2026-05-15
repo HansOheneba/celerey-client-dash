@@ -138,20 +138,28 @@ export function usePageData(key: PageDataKey) {
             break;
           }
           case "overview": {
-            const [goals, income, expenses, history] = await Promise.allSettled(
-              [
+            const [goals, income, expenses, history, holdings, properties, insurance] =
+              await Promise.allSettled([
                 fetchGoals(),
                 fetchIncome(),
                 fetchExpenses(),
                 fetchCashFlowHistory(),
-              ],
-            );
+                fetchAssets(),
+                fetchProperties(),
+                fetchInsurancePolicies(),
+              ]);
             if (goals.status === "fulfilled") store.setGoals(goals.value);
             if (income.status === "fulfilled") store.setIncome(income.value);
             if (expenses.status === "fulfilled")
               store.setExpenses(expenses.value);
             if (history.status === "fulfilled")
               store.setCashFlowHistory(history.value);
+            if (holdings.status === "fulfilled")
+              store.setHoldings(holdings.value);
+            if (properties.status === "fulfilled")
+              store.setPropertyAssets(properties.value);
+            if (insurance.status === "fulfilled")
+              store.setInsurancePolicies(insurance.value);
             break;
           }
         }

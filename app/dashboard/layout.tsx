@@ -74,7 +74,7 @@ function SessionExpiredBanner() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center space-y-4">
         <div className="text-4xl">🔒</div>
         <h2 className="text-lg font-semibold text-gray-900">Session expired</h2>

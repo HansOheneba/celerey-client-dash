@@ -137,7 +137,7 @@ function InfoTip({ content }: { content: string }) {
           />
         </span>
       </TooltipTrigger>
-      <TooltipContent className="max-w-[220px] text-xs">
+      <TooltipContent className="max-w-55 text-xs">
         {content}
       </TooltipContent>
     </UITooltip>
@@ -770,7 +770,7 @@ function PropertyPolicyCard({
             </p>
             <Badge
               variant="outline"
-              className="text-[10px] py-0 gap-1 shrink-0 text-muted-foreground border-muted-foreground/30 bg-background"
+              className="text-2.5 py-0 gap-1 shrink-0 text-muted-foreground border-muted-foreground/30 bg-background"
             >
               <FontAwesomeIcon icon={faHouse} className="h-2.5 w-2.5" />
               Managed via Property

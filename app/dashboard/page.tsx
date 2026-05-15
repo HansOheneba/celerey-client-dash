@@ -138,7 +138,7 @@ function InfoTip({ content }: { content: string }) {
           />
         </span>
       </TooltipTrigger>
-      <TooltipContent className="max-w-[220px] text-xs">
+      <TooltipContent className="max-w-55 text-xs">
         {content}
       </TooltipContent>
     </UITooltip>
@@ -214,7 +214,7 @@ function CashFlowTooltip({ active, payload, label }: any) {
     payload.some((p: any) => p.dataKey === "projIncome" && p.value != null) &&
     !payload.some((p: any) => p.dataKey === "income" && p.value != null);
   return (
-    <div className="rounded-lg border bg-background px-3 py-2.5 text-xs space-y-1.5 min-w-[160px]">
+    <div className="rounded-lg border bg-background px-3 py-2.5 text-xs space-y-1.5 min-w-40">
       <p className="font-semibold text-foreground mb-1">
         {label}
         {isProjected && (
@@ -268,7 +268,7 @@ function EmptyNudge({
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
-      <p className="text-sm text-muted-foreground max-w-[260px]">{message}</p>
+      <p className="text-sm text-muted-foreground max-w-65">{message}</p>
       <Button size="sm" variant="outline" onClick={onAction}>
         {buttonLabel}
       </Button>
@@ -948,7 +948,7 @@ export default function DashboardPage() {
                     ) : (
                       <ChartContainer
                         config={cashFlowChartConfig}
-                        className="aspect-auto h-[220px] w-full"
+                        className="aspect-auto h-55 w-full"
                       >
                         <LineChart
                           data={cashFlowChartData}

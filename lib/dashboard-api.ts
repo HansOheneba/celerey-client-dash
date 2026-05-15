@@ -600,12 +600,28 @@ export async function fetchCashFlowHistory(): Promise<CashFlowPoint[]> {
   }
 }
 
+function mapApiHolding(raw: Record<string, unknown>): AssetHolding {
+  return {
+    ...(raw as unknown as AssetHolding),
+    cost_basis: Number(raw.cost_basis) || 0,
+    initial_value:
+      raw.initial_value != null ? Number(raw.initial_value) : undefined,
+    amount_invested:
+      raw.amount_invested != null ? Number(raw.amount_invested) : undefined,
+    current_value:
+      raw.current_value != null ? Number(raw.current_value) || undefined : undefined,
+    quantity: raw.quantity != null ? Number(raw.quantity) : undefined,
+    coupon_rate:
+      raw.coupon_rate != null ? Number(raw.coupon_rate) || undefined : undefined,
+  };
+}
+
 export async function fetchAssets(): Promise<AssetHolding[]> {
   const res = await proxyCall<{ data?: AssetHolding[] }>("assets.find");
-  const list = Array.isArray(res)
-    ? (res as unknown as AssetHolding[])
-    : ((res as { data?: AssetHolding[] }).data ?? []);
-  return list;
+  const list: Record<string, unknown>[] = Array.isArray(res)
+    ? (res as unknown as Record<string, unknown>[])
+    : (((res as { data?: unknown[] }).data ?? []) as Record<string, unknown>[]);
+  return list.map(mapApiHolding);
 }
 
 export async function createAsset(
@@ -658,12 +674,21 @@ export async function createAssetValuation(payload: {
   );
 }
 
+function mapApiInsurancePolicy(raw: Record<string, unknown>): InsurancePolicy {
+  return {
+    ...(raw as unknown as InsurancePolicy),
+    coverage_amount: Number(raw.coverage_amount) || 0,
+    premium_monthly: Number(raw.premium_monthly) || 0,
+    deductible: Number(raw.deductible) || 0,
+  };
+}
+
 export async function fetchInsurancePolicies(): Promise<InsurancePolicy[]> {
   const res = await proxyCall<{ data?: InsurancePolicy[] }>("insurance.find");
-  const list = Array.isArray(res)
-    ? (res as unknown as InsurancePolicy[])
-    : ((res as { data?: InsurancePolicy[] }).data ?? []);
-  return list;
+  const list: Record<string, unknown>[] = Array.isArray(res)
+    ? (res as unknown as Record<string, unknown>[])
+    : (((res as { data?: unknown[] }).data ?? []) as Record<string, unknown>[]);
+  return list.map(mapApiInsurancePolicy);
 }
 
 export async function createInsurancePolicy(

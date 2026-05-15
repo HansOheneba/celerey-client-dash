@@ -1850,7 +1850,7 @@ export default function AssetsPage() {
               className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(340px,460px)_minmax(0,1fr)]"
             >
               {/* Allocation donut */}
-              <div className="xl:max-w-[460px]">
+              <div className="xl:max-w-115">
                 <SectionLabel>Allocation</SectionLabel>
                 <Card>
                   <CardHeader className="pb-2">
