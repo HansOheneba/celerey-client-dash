@@ -260,14 +260,18 @@ export default function QuizCard() {
           <div className="rounded-md border p-3 space-y-2">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs text-muted-foreground">Risk profile</div>
+                <div className="text-xs text-muted-foreground">
+                  Risk profile
+                </div>
                 <div className="mt-1 text-sm font-semibold capitalize">
                   {profileLabel}
                 </div>
               </div>
               {typeof result.score === "number" && (
                 <div className="text-right">
-                  <div className="text-xs text-muted-foreground">Risk score</div>
+                  <div className="text-xs text-muted-foreground">
+                    Risk score
+                  </div>
                   <div className="mt-1 text-sm font-semibold">
                     {result.score.toFixed(1)}{" "}
                     <span className="text-xs font-normal text-muted-foreground">

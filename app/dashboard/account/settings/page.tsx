@@ -29,9 +29,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import {
-  Dialog as DialogPrimitive,
-} from "radix-ui";
+import { Dialog as DialogPrimitive } from "radix-ui";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -816,7 +814,9 @@ export default function AccountSettingsPage() {
                   : "hidden",
             ].join(" ")}
           >
-            <DialogPrimitive.Title className="sr-only">Risk Assessment</DialogPrimitive.Title>
+            <DialogPrimitive.Title className="sr-only">
+              Risk Assessment
+            </DialogPrimitive.Title>
             <DialogPrimitive.Description className="sr-only">
               Answer honestly — there are no right or wrong answers.
             </DialogPrimitive.Description>
