@@ -2,10 +2,7 @@
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import Breadcrumbs from "./breadcrumbs";
-import {
-  Popover,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { Popover as PopoverPrimitive } from "radix-ui";
 import { Bell, UserCheck, Clock } from "lucide-react";
 import { useFinancialStore } from "@/store/financialStore";
@@ -139,79 +136,79 @@ export default function DashboardTopbar() {
                     : "hidden",
               ].join(" ")}
             >
-            <div className="px-4 py-3 border-b">
-              <p className="text-sm font-semibold text-gray-800">
-                Notifications
-              </p>
-            </div>
+              <div className="px-4 py-3 border-b">
+                <p className="text-sm font-semibold text-gray-800">
+                  Notifications
+                </p>
+              </div>
 
-            {/* Profile completion notification */}
-            {incomplete && (
-              <div className="flex items-start gap-3 px-4 py-4 border-b bg-white">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                  <UserCheck className="h-4 w-4" />
-                </span>
-                <div className="flex-1 min-w-0 space-y-2">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-800 leading-snug">
-                      Complete your profile
-                    </p>
-                    <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
-                      Your profile is {profileCompletionScore}% complete. Finish
-                      setting up to unlock deeper insights.
-                    </p>
+              {/* Profile completion notification */}
+              {incomplete && (
+                <div className="flex items-start gap-3 px-4 py-4 border-b bg-white">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                    <UserCheck className="h-4 w-4" />
+                  </span>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-800 leading-snug">
+                        Complete your profile
+                      </p>
+                      <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
+                        Your profile is {profileCompletionScore}% complete.
+                        Finish setting up to unlock deeper insights.
+                      </p>
+                    </div>
+                    <Progress value={profileCompletionScore} className="h-1" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNotifOpen(false);
+                        openProfilePanel();
+                      }}
+                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                    >
+                      Complete profile →
+                    </button>
                   </div>
-                  <Progress value={profileCompletionScore} className="h-1" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNotifOpen(false);
-                      openProfilePanel();
-                    }}
-                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-                  >
-                    Complete profile →
-                  </button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Trial notification */}
-            {isTrialing && (
-              <div className="flex items-start gap-3 px-4 py-4 border-b bg-white">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-                  <Clock className="h-4 w-4" />
-                </span>
-                <div className="flex-1 min-w-0 space-y-2">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-800 leading-snug">
-                      {trialDaysLeft === 0
-                        ? "Trial expires today"
-                        : `${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} left in trial`}
-                    </p>
-                    <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
-                      Upgrade to Premium for full access to all Celerey
-                      features.
-                    </p>
+              {/* Trial notification */}
+              {isTrialing && (
+                <div className="flex items-start gap-3 px-4 py-4 border-b bg-white">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                    <Clock className="h-4 w-4" />
+                  </span>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-800 leading-snug">
+                        {trialDaysLeft === 0
+                          ? "Trial expires today"
+                          : `${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} left in trial`}
+                      </p>
+                      <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
+                        Upgrade to Premium for full access to all Celerey
+                        features.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleUpgradeFromNotif}
+                      className="text-[11px] font-semibold text-amber-600 hover:text-amber-700 transition-colors"
+                    >
+                      Upgrade to Premium →
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleUpgradeFromNotif}
-                    className="text-[11px] font-semibold text-amber-600 hover:text-amber-700 transition-colors"
-                  >
-                    Upgrade to Premium →
-                  </button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Empty state */}
-            {!hasNotifications && (
-              <div className="flex flex-col items-center gap-2 py-6 text-center">
-                <Bell className="h-7 w-7 text-gray-200" />
-                <p className="text-xs text-gray-400">No notifications</p>
-              </div>
-            )}
+              {/* Empty state */}
+              {!hasNotifications && (
+                <div className="flex flex-col items-center gap-2 py-6 text-center">
+                  <Bell className="h-7 w-7 text-gray-200" />
+                  <p className="text-xs text-gray-400">No notifications</p>
+                </div>
+              )}
             </PopoverPrimitive.Content>
           </PopoverPrimitive.Portal>
         </Popover>
@@ -280,49 +277,49 @@ export default function DashboardTopbar() {
                       : "hidden",
                 ].join(" ")}
               >
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-0.5">
-                  <p className="text-sm font-medium">
-                    {mounted ? displayName : ""}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{userEmail}</p>
-                </div>
-              </DropdownMenuLabel>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-0.5">
+                    <p className="text-sm font-medium">
+                      {mounted ? displayName : ""}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{userEmail}</p>
+                  </div>
+                </DropdownMenuLabel>
 
-              <DropdownMenuSeparator />
+                <DropdownMenuSeparator />
 
-              <DropdownMenuGroup>
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/dashboard/account/profile"
-                    className="flex items-center gap-2 cursor-pointer"
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/dashboard/account/profile"
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <UserIcon className="h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/dashboard/account/settings"
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Account Settings
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+
+                <DropdownMenuSeparator />
+
+                <AlertDialogTrigger asChild>
+                  <DropdownMenuItem
+                    className="text-destructive cursor-pointer focus:text-destructive"
+                    onSelect={(e) => e.preventDefault()}
                   >
-                    <UserIcon className="h-4 w-4" />
-                    Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/dashboard/account/settings"
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <Settings className="h-4 w-4" />
-                    Account Settings
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-
-              <DropdownMenuSeparator />
-
-              <AlertDialogTrigger asChild>
-                <DropdownMenuItem
-                  className="text-destructive cursor-pointer focus:text-destructive"
-                  onSelect={(e) => e.preventDefault()}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign out
-                </DropdownMenuItem>
-              </AlertDialogTrigger>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign out
+                  </DropdownMenuItem>
+                </AlertDialogTrigger>
               </DropdownMenuRadix.Content>
             </DropdownMenuRadix.Portal>
           </DropdownMenu>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { getUserFullName, type User } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
@@ -30,12 +30,18 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Dialog as DialogPrimitive,
+} from "radix-ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Save,
   UserIcon,
@@ -43,6 +49,7 @@ import {
   ShieldCheck,
   Building2,
   ClipboardList,
+  XIcon,
 } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import {
@@ -121,6 +128,12 @@ export default function AccountSettingsPage() {
 
   const [saving, setSaving] = useState(false);
   const [quizOpen, setQuizOpen] = useState(false);
+  const [quizEverOpened, setQuizEverOpened] = useState(false);
+  const [quizConfirmOpen, setQuizConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    if (quizOpen) setQuizEverOpened(true);
+  }, [quizOpen]);
 
   const baseUser: User = storeUser ?? {
     user_id: "",
@@ -766,21 +779,84 @@ export default function AccountSettingsPage() {
         </Card>
       )}
 
-      {/* Risk quiz dialog */}
-      <Dialog open={quizOpen} onOpenChange={setQuizOpen}>
-        <DialogContent className="p-0 overflow-hidden w-[calc(100vw-24px)] sm:w-[calc(100vw-48px)] max-w-5xl h-[92vh] sm:h-[88vh]">
-          <DialogHeader className="px-6 pt-6 pb-2">
-            <DialogTitle>Risk Assessment</DialogTitle>
-            <DialogDescription>
-              Answer honestly — there are no right or wrong answers. Your result
-              will be saved to your profile.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="h-[calc(92vh-92px)] sm:h-[calc(88vh-92px)] overflow-auto">
-            <RiskAttitudeQuiz onSave={handleQuizSave} />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Risk quiz — right-side sheet */}
+      <DialogPrimitive.Root
+        open={quizOpen}
+        onOpenChange={(v) => {
+          if (v) setQuizEverOpened(true);
+        }}
+      >
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay
+            forceMount
+            onClick={() => setQuizConfirmOpen(true)}
+            className={[
+              "fixed inset-0 z-50 bg-black/50",
+              quizOpen
+                ? "animate-fade animate-duration-200"
+                : quizEverOpened
+                  ? "animate-fade animate-reverse animate-duration-150 animate-fill-forwards pointer-events-none"
+                  : "hidden",
+            ].join(" ")}
+          />
+          <DialogPrimitive.Content
+            forceMount
+            aria-describedby={undefined}
+            onInteractOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => {
+              e.preventDefault();
+              setQuizConfirmOpen(true);
+            }}
+            className={[
+              "fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col overflow-hidden border-l bg-background shadow-lg outline-none sm:max-w-lg",
+              quizOpen
+                ? "animate-fade-left animate-duration-300 animate-ease-out"
+                : quizEverOpened
+                  ? "animate-fade-left animate-reverse animate-duration-200 animate-ease-in animate-fill-forwards pointer-events-none"
+                  : "hidden",
+            ].join(" ")}
+          >
+            <DialogPrimitive.Title className="sr-only">Risk Assessment</DialogPrimitive.Title>
+            <DialogPrimitive.Description className="sr-only">
+              Answer honestly — there are no right or wrong answers.
+            </DialogPrimitive.Description>
+            <button
+              type="button"
+              onClick={() => setQuizConfirmOpen(true)}
+              className="absolute right-4 top-4 z-10 rounded-sm p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
+            <div className="flex-1 overflow-auto">
+              <RiskAttitudeQuiz onSave={handleQuizSave} />
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+
+      {/* Confirm exit */}
+      <AlertDialog open={quizConfirmOpen} onOpenChange={setQuizConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Exit the quiz?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your progress won&apos;t be saved. Are you sure you want to leave?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep going</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-white"
+              onClick={() => {
+                setQuizConfirmOpen(false);
+                setQuizOpen(false);
+              }}
+            >
+              Exit quiz
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 }
