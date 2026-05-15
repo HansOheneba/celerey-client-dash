@@ -4,9 +4,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import Breadcrumbs from "./breadcrumbs";
 import {
   Popover,
-  PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Popover as PopoverPrimitive } from "radix-ui";
 import { Bell, UserCheck, Clock } from "lucide-react";
 import { useFinancialStore } from "@/store/financialStore";
 import { useProfilePanel } from "./ProfilePanelContext";
@@ -16,13 +16,13 @@ import { useEffect, useState } from "react";
 
 import {
   DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DropdownMenu as DropdownMenuRadix } from "radix-ui";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +57,9 @@ export default function DashboardTopbar() {
   const [mounted, setMounted] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifEverOpened, setNotifEverOpened] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownEverOpened, setDropdownEverOpened] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const { sub } = useClientGate();
@@ -103,7 +106,13 @@ export default function DashboardTopbar() {
       {/* RIGHT SIDE */}
       <div className="flex items-center gap-3">
         {/* Bell / Notifications */}
-        <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+        <Popover
+          open={notifOpen}
+          onOpenChange={(v) => {
+            if (v) setNotifEverOpened(true);
+            setNotifOpen(v);
+          }}
+        >
           <PopoverTrigger asChild>
             <button className="relative rounded-md p-2 hover:bg-muted transition-colors">
               <Bell className="h-5 w-5 text-gray-500" />
@@ -116,10 +125,20 @@ export default function DashboardTopbar() {
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent
-            align="end"
-            className="w-80 p-0 overflow-hidden data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-top-3 data-[state=closed]:slide-out-to-top-3 duration-200"
-          >
+          <PopoverPrimitive.Portal>
+            <PopoverPrimitive.Content
+              forceMount
+              align="end"
+              sideOffset={4}
+              className={[
+                "z-50 w-80 overflow-hidden rounded-xl border bg-white p-0 text-popover-foreground shadow-md outline-none",
+                notifOpen
+                  ? "animate-fade-down animate-duration-200 animate-ease-out"
+                  : notifEverOpened
+                    ? "animate-fade-down animate-reverse animate-duration-150 animate-ease-in animate-fill-forwards pointer-events-none"
+                    : "hidden",
+              ].join(" ")}
+            >
             <div className="px-4 py-3 border-b">
               <p className="text-sm font-semibold text-gray-800">
                 Notifications
@@ -193,7 +212,8 @@ export default function DashboardTopbar() {
                 <p className="text-xs text-gray-400">No notifications</p>
               </div>
             )}
-          </PopoverContent>
+            </PopoverPrimitive.Content>
+          </PopoverPrimitive.Portal>
         </Popover>
 
         {/* Divider */}
@@ -201,7 +221,13 @@ export default function DashboardTopbar() {
 
         {/* User profile dropdown */}
         <AlertDialog>
-          <DropdownMenu>
+          <DropdownMenu
+            open={dropdownOpen}
+            onOpenChange={(v) => {
+              if (v) setDropdownEverOpened(true);
+              setDropdownOpen(v);
+            }}
+          >
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-gray-100 transition-colors text-left">
                 <div className="flex flex-col text-right">
@@ -239,7 +265,21 @@ export default function DashboardTopbar() {
               </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent side="bottom" align="end" className="w-56">
+            <DropdownMenuRadix.Portal>
+              <DropdownMenuRadix.Content
+                forceMount
+                side="bottom"
+                align="end"
+                sideOffset={4}
+                className={[
+                  "z-50 w-56 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
+                  dropdownOpen
+                    ? "animate-fade-down animate-duration-200 animate-ease-out"
+                    : dropdownEverOpened
+                      ? "animate-fade-down animate-reverse animate-duration-150 animate-ease-in animate-fill-forwards pointer-events-none"
+                      : "hidden",
+                ].join(" ")}
+              >
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-0.5">
                   <p className="text-sm font-medium">
@@ -283,7 +323,8 @@ export default function DashboardTopbar() {
                   Sign out
                 </DropdownMenuItem>
               </AlertDialogTrigger>
-            </DropdownMenuContent>
+              </DropdownMenuRadix.Content>
+            </DropdownMenuRadix.Portal>
           </DropdownMenu>
 
           <AlertDialogContent>
