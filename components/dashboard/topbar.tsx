@@ -7,7 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Bell, UserCheck } from "lucide-react";
+import { Bell, UserCheck, Clock } from "lucide-react";
 import { useFinancialStore } from "@/store/financialStore";
 import { useProfilePanel } from "./ProfilePanelContext";
 import { Progress } from "@/components/ui/progress";
@@ -38,7 +38,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Settings, LogOut, UserIcon, Loader2, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { clearAuth, clearUserProfile } from "@/lib/client-data";
+import {
+  clearAuth,
+  clearUserProfile,
+  setSubscriptionData,
+} from "@/lib/client-data";
+import { useClientGate } from "@/lib/useClientGate";
+import { toast } from "sonner";
 
 export default function DashboardTopbar() {
   const profileCompletionScore = useFinancialStore(
@@ -50,7 +56,31 @@ export default function DashboardTopbar() {
   const incomplete = profileCompletionScore < 100;
   const [mounted, setMounted] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  const { sub } = useClientGate();
+  const isPro = mounted && sub.status === "active" && sub.plan === "pro";
+  const isTrialing = mounted && sub.status === "trialing";
+  const trialDaysLeft =
+    isTrialing && sub.trialEndsAt
+      ? Math.max(
+          0,
+          Math.ceil(
+            (new Date(sub.trialEndsAt).getTime() - Date.now()) / 86_400_000,
+          ),
+        )
+      : null;
+  const hasNotifications = incomplete || isTrialing;
+
+  function handleUpgradeFromNotif() {
+    setNotifOpen(false);
+    setSubscriptionData({
+      subscription_status: "active",
+      subscription_plan: "pro",
+    });
+    toast.success("You're now on Premium!");
+  }
 
   const displayName = getUserFullName(user ?? undefined);
   const userEmail = user?.email ?? "";
@@ -73,17 +103,23 @@ export default function DashboardTopbar() {
       {/* RIGHT SIDE */}
       <div className="flex items-center gap-3">
         {/* Bell / Notifications */}
-        <Popover>
+        <Popover open={notifOpen} onOpenChange={setNotifOpen}>
           <PopoverTrigger asChild>
             <button className="relative rounded-md p-2 hover:bg-muted transition-colors">
               <Bell className="h-5 w-5 text-gray-500" />
-              {/* Pulsing dot when profile is incomplete */}
-              {incomplete && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-blue-500 ring-1 ring-white animate-pulse" />
+              {/* Pulsing dot when there are notifications */}
+              {hasNotifications && (
+                <span className="absolute top-1 right-1 flex size-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                  <span className="relative inline-flex size-2 rounded-full bg-blue-500" />
+                </span>
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 p-0 overflow-hidden">
+          <PopoverContent
+            align="end"
+            className="w-80 p-0 overflow-hidden data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-top-3 data-[state=closed]:slide-out-to-top-3 duration-200"
+          >
             <div className="px-4 py-3 border-b">
               <p className="text-sm font-semibold text-gray-800">
                 Notifications
@@ -92,32 +128,71 @@ export default function DashboardTopbar() {
 
             {/* Profile completion notification */}
             {incomplete && (
-              <button
-                type="button"
-                onClick={openProfilePanel}
-                className="w-full flex items-start gap-3 px-4 py-3 hover:bg-blue-50/60 transition-colors border-b text-left"
-              >
+              <div className="flex items-start gap-3 px-4 py-4 border-b bg-white">
                 <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
                   <UserCheck className="h-4 w-4" />
                 </span>
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  <p className="text-xs font-semibold text-gray-800 leading-snug">
-                    Complete your profile
-                  </p>
-                  <p className="text-[11px] text-gray-500 leading-snug">
-                    Your profile is {profileCompletionScore}% complete. Finish
-                    setting up to unlock deeper insights.
-                  </p>
-                  <Progress value={profileCompletionScore} className="h-1.5" />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800 leading-snug">
+                      Complete your profile
+                    </p>
+                    <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
+                      Your profile is {profileCompletionScore}% complete. Finish
+                      setting up to unlock deeper insights.
+                    </p>
+                  </div>
+                  <Progress value={profileCompletionScore} className="h-1" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotifOpen(false);
+                      openProfilePanel();
+                    }}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    Complete profile →
+                  </button>
                 </div>
-              </button>
+              </div>
+            )}
+
+            {/* Trial notification */}
+            {isTrialing && (
+              <div className="flex items-start gap-3 px-4 py-4 border-b bg-white">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                  <Clock className="h-4 w-4" />
+                </span>
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800 leading-snug">
+                      {trialDaysLeft === 0
+                        ? "Trial expires today"
+                        : `${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} left in trial`}
+                    </p>
+                    <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
+                      Upgrade to Premium for full access to all Celerey
+                      features.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleUpgradeFromNotif}
+                    className="text-[11px] font-semibold text-amber-600 hover:text-amber-700 transition-colors"
+                  >
+                    Upgrade to Premium →
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Empty state */}
-            <div className="flex flex-col items-center gap-2 py-6 text-center">
-              <Bell className="h-7 w-7 text-gray-200" />
-              <p className="text-xs text-gray-400">No other notifications</p>
-            </div>
+            {!hasNotifications && (
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <Bell className="h-7 w-7 text-gray-200" />
+                <p className="text-xs text-gray-400">No notifications</p>
+              </div>
+            )}
           </PopoverContent>
         </Popover>
 
@@ -137,17 +212,29 @@ export default function DashboardTopbar() {
                     {userEmail}
                   </span>
                 </div>
-                <Avatar className="h-9 w-9 shrink-0">
-                  <AvatarFallback className="bg-[#1B1856] text-white text-sm font-semibold">
-                    {mounted
-                      ? displayName
-                          .split(" ")
-                          .slice(0, 2)
-                          .map((n) => n[0])
-                          .join("")
-                      : ""}
-                  </AvatarFallback>
-                </Avatar>
+                <div
+                  className="relative shrink-0 rounded-full p-0.5"
+                  style={
+                    isPro
+                      ? {
+                          background:
+                            "linear-gradient(135deg, #7c3aed, #3b1fa8)",
+                        }
+                      : { background: "transparent" }
+                  }
+                >
+                  <Avatar className="h-9 w-9 ring-2 ring-white">
+                    <AvatarFallback className="bg-[#1B1856] text-white text-sm font-semibold">
+                      {mounted
+                        ? displayName
+                            .split(" ")
+                            .slice(0, 2)
+                            .map((n) => n[0])
+                            .join("")
+                        : ""}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
                 <ChevronDown className="h-3.5 w-3.5 text-gray-400 shrink-0" />
               </button>
             </DropdownMenuTrigger>
@@ -213,7 +300,7 @@ export default function DashboardTopbar() {
               </AlertDialogCancel>
               <AlertDialogAction
                 disabled={loggingOut}
-                className="bg-destructive hover:bg-destructive/90 text-white min-w-[100px]"
+                className="bg-destructive hover:bg-destructive/90 text-white min-w-25"
                 onClick={async (e) => {
                   e.preventDefault();
                   setLoggingOut(true);

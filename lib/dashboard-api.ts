@@ -609,10 +609,14 @@ function mapApiHolding(raw: Record<string, unknown>): AssetHolding {
     amount_invested:
       raw.amount_invested != null ? Number(raw.amount_invested) : undefined,
     current_value:
-      raw.current_value != null ? Number(raw.current_value) || undefined : undefined,
+      raw.current_value != null
+        ? Number(raw.current_value) || undefined
+        : undefined,
     quantity: raw.quantity != null ? Number(raw.quantity) : undefined,
     coupon_rate:
-      raw.coupon_rate != null ? Number(raw.coupon_rate) || undefined : undefined,
+      raw.coupon_rate != null
+        ? Number(raw.coupon_rate) || undefined
+        : undefined,
   };
 }
 
@@ -1013,29 +1017,25 @@ export interface DashboardBootstrapData {
 }
 
 export async function fetchDashboardBootstrap(): Promise<DashboardBootstrapData> {
-  const [
-    goals,
-    incomeRows,
-    expenseCategories,
-    emergencyFund,
-    cashFlowHistory,
-    holdings,
-    insurancePolicies,
-    propertyAssets,
-    liabilities,
-    retirement,
-  ] = await Promise.allSettled([
-    fetchGoals(),
-    fetchIncome(),
-    fetchExpenses(),
-    fetchEmergencyFund(),
-    fetchCashFlowHistory(),
-    fetchAssets(),
-    fetchInsurancePolicies(),
-    fetchProperties(),
-    fetchLiabilities(),
-    fetchRetirement(),
-  ]);
+  // Batch 1: core financial data
+  const [goals, incomeRows, expenseCategories, emergencyFund, cashFlowHistory] =
+    await Promise.allSettled([
+      fetchGoals(),
+      fetchIncome(),
+      fetchExpenses(),
+      fetchEmergencyFund(),
+      fetchCashFlowHistory(),
+    ]);
+
+  // Batch 2: asset data — fired after batch 1 settles to avoid rate-limit bursts
+  const [holdings, insurancePolicies, propertyAssets, liabilities, retirement] =
+    await Promise.allSettled([
+      fetchAssets(),
+      fetchInsurancePolicies(),
+      fetchProperties(),
+      fetchLiabilities(),
+      fetchRetirement(),
+    ]);
 
   return {
     goals: goals.status === "fulfilled" ? goals.value : [],

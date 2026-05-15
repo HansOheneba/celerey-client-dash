@@ -55,14 +55,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  ChevronDown,
-  Settings,
-  LogOut,
-  UserIcon,
-  Loader2,
-  Zap,
-} from "lucide-react";
+import { ChevronDown, Settings, LogOut, UserIcon, Zap } from "lucide-react";
 import {
   clearAuth,
   clearUserProfile,
@@ -71,6 +64,8 @@ import {
 import { useClientGate } from "@/lib/useClientGate";
 import { useEffect, useMemo, useState } from "react";
 import { useProfilePanel } from "./ProfilePanelContext";
+import { setSubscriptionData } from "@/lib/client-data";
+import { toast } from "sonner";
 
 const nav = [
   { label: "Overview", href: "/dashboard", icon: faChartPie },
@@ -104,6 +99,14 @@ export default function DashboardSidebar() {
   useEffect(() => setMounted(true), []);
 
   const { sub } = useClientGate();
+
+  function handleUpgrade() {
+    setSubscriptionData({
+      subscription_status: "active",
+      subscription_plan: "pro",
+    });
+    toast.success("You're now on Premium!");
+  }
 
   // Trial end date, formatted for display
   const trialEndsLabel = useMemo(() => {
@@ -240,8 +243,11 @@ export default function DashboardSidebar() {
                               damping: 16,
                               stiffness: 300,
                             }}
-                            className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500 ring-1 ring-white"
-                          />
+                            className="absolute -top-1 -right-1 flex size-2"
+                          >
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                            <span className="relative inline-flex size-2 rounded-full bg-blue-500" />
+                          </motion.span>
                         )}
                       </AnimatePresence>
                     </span>
@@ -361,6 +367,7 @@ export default function DashboardSidebar() {
 
               <button
                 type="button"
+                onClick={handleUpgrade}
                 className="relative w-full rounded-md bg-white/15 backdrop-blur-sm border border-white/25 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-white/25 transition-colors"
               >
                 Upgrade to Premium

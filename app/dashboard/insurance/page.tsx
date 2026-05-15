@@ -137,9 +137,7 @@ function InfoTip({ content }: { content: string }) {
           />
         </span>
       </TooltipTrigger>
-      <TooltipContent className="max-w-55 text-xs">
-        {content}
-      </TooltipContent>
+      <TooltipContent className="max-w-55 text-xs">{content}</TooltipContent>
     </UITooltip>
   );
 }

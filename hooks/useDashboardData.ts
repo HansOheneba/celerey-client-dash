@@ -1,11 +1,12 @@
 // hooks/useDashboardData.ts
 //
 // Fetches all live dashboard data from the API on mount and populates
-// the financial store. Safe to call multiple times — deduped by a flag.
+// the financial store. Safe to call multiple times — deduped by a module-level
+// flag so it only ever fires once per browser session regardless of remounts.
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useFinancialStore } from "@/store/financialStore";
 import {
   fetchDashboardBootstrap,
@@ -13,17 +14,21 @@ import {
   fetchSubscription,
 } from "@/lib/dashboard-api";
 import { setSubscriptionData, getAuth } from "@/lib/client-data";
+import { markPageKeysFetched } from "@/hooks/usePageData";
+
+// Module-level — survives component remounts (e.g. React StrictMode double-fire,
+// layout re-renders). Resets only on a hard page reload.
+let _bootstrapped = false;
 
 export function useDashboardData() {
-  const hydrated = useRef(false);
   const hydrateFromApi = useFinancialStore((s) => s.hydrateFromApi);
   const setUser = useFinancialStore((s) => s.setUser);
 
   useEffect(() => {
-    if (hydrated.current) return;
+    if (_bootstrapped) return;
     // Skip all API calls if there's no valid session — DashboardGuard will redirect.
     if (!getAuth().loggedIn) return;
-    hydrated.current = true;
+    _bootstrapped = true;
 
     // Fetch user profile first so the sidebar email is always populated
     fetchUser()
@@ -63,6 +68,17 @@ export function useDashboardData() {
     fetchDashboardBootstrap()
       .then((data) => {
         hydrateFromApi(data);
+        // Mark all page keys as fresh so usePageData skips re-fetching
+        // endpoints that bootstrap already covered.
+        markPageKeysFetched(
+          "overview",
+          "goals",
+          "cash-flow",
+          "assets",
+          "insurance",
+          "properties",
+          "retirement",
+        );
       })
       .catch(() => {
         // Non-fatal — store keeps whatever was in localStorage.

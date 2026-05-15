@@ -11,6 +11,8 @@ import { Building2 } from "lucide-react";
 import { useFinancialStore } from "@/store/financialStore";
 import { usePageData } from "@/hooks/usePageData";
 import { getUserFullName, getUserAge } from "@/lib/client-data";
+import { useClientGate } from "@/lib/useClientGate";
+import { useProfilePanel } from "@/components/dashboard/ProfilePanelContext";
 
 type ProfileField = { label: string; value: string };
 
@@ -83,6 +85,21 @@ export default function ProfilePage() {
   const isSolo = mode === "solo";
   const fullName = getUserFullName(user ?? undefined);
   const isEnterprise = user?.user_type === "enterprise";
+
+  const { sub, ready: subReady } = useClientGate();
+  const { openRiskQuiz } = useProfilePanel();
+  const isPro = subReady && sub.status === "active" && sub.plan === "pro";
+  const isTrialing = subReady && sub.status === "trialing";
+
+  const trialDaysLeft =
+    isTrialing && sub.trialEndsAt
+      ? Math.max(
+          0,
+          Math.ceil(
+            (new Date(sub.trialEndsAt).getTime() - Date.now()) / 86_400_000,
+          ),
+        )
+      : null;
 
   // ── Personal / Household Information ──────────────────────────────────────
   const personalFields: ProfileField[] = [
@@ -226,8 +243,35 @@ export default function ProfilePage() {
                     Enterprise
                   </Badge>
                 )}
+                {isPro && (
+                  <Badge
+                    className="text-xs text-white border-0 gap-1"
+                    style={{
+                      background: "linear-gradient(135deg, #7c3aed, #3b1fa8)",
+                    }}
+                  >
+                    Pro
+                  </Badge>
+                )}
+                {isTrialing && (
+                  <Badge className="text-xs bg-amber-100 text-amber-700 border-amber-200 gap-1">
+                    Trial
+                  </Badge>
+                )}
               </div>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
+              {isPro && (
+                <p className="text-xs text-violet-600 font-medium mt-0.5">
+                  Premium member
+                </p>
+              )}
+              {isTrialing && trialDaysLeft !== null && (
+                <p className="text-xs text-amber-600 font-medium mt-0.5">
+                  {trialDaysLeft === 0
+                    ? "Trial expires today"
+                    : `${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} left in trial`}
+                </p>
+              )}
             </>
           )}
         </div>
@@ -251,9 +295,28 @@ export default function ProfilePage() {
       />
       <Section
         title="Financial Profile"
-        fields={financialFields}
+        fields={user?.bio ? [{ label: "Bio", value: user.bio }] : []}
         loading={loading}
       />
+      {/* Risk profile row — rendered separately so we can attach the quiz button */}
+      {!loading && (
+        <div className="rounded-xl border bg-white">
+          <div className="border-b px-6 py-4">
+            <h3 className="text-sm font-semibold">Risk Profile</h3>
+          </div>
+          <div className="flex items-center justify-between px-6 py-5">
+            <div>
+              <p className="text-xs text-muted-foreground">Risk appetite</p>
+              <p className="text-sm font-medium">
+                {riskLabel(user?.risk_profile)}
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={openRiskQuiz}>
+              {user?.risk_profile ? "Retake quiz" : "Take quiz"}
+            </Button>
+          </div>
+        </div>
+      )}
       {isEnterprise && (
         <Section
           title="Enterprise Account"

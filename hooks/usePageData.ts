@@ -2,6 +2,9 @@
 //
 // Lightweight hook that each dashboard page calls on mount to fetch its own
 // data slice and hydrate the store. Falls back gracefully on error.
+//
+// Uses a module-level TTL cache so navigating quickly between pages doesn't
+// spam the API — each key can only re-fetch after CACHE_TTL_MS.
 
 "use client";
 
@@ -30,10 +33,24 @@ export type PageDataKey =
   | "retirement"
   | "overview"; // fetches goals + cashflow summary
 
+// Module-level cache: key → timestamp of last successful fetch
+// Prevents re-fetching the same data within CACHE_TTL_MS milliseconds.
+const _lastFetched = new Map<PageDataKey, number>();
+const CACHE_TTL_MS = 30_000;
+
+/**
+ * Called by useDashboardData after bootstrap completes so usePageData
+ * doesn't double-fetch the same endpoints that bootstrap already covered.
+ */
+export function markPageKeysFetched(...keys: PageDataKey[]) {
+  const now = Date.now();
+  for (const key of keys) _lastFetched.set(key, now);
+}
+
 /**
  * Call this hook at the top of each dashboard page.
- * It refetches the relevant data slice every time the page mounts
- * and writes the result into the financial store.
+ * It refetches the relevant data slice on mount, but skips the fetch if the
+ * same key was already fetched within the last 30 seconds.
  *
  * Returns `{ loading }` so the page can show a skeleton while data loads.
  */
@@ -46,8 +63,14 @@ export function usePageData(key: PageDataKey) {
     if (mounted.current) return;
     mounted.current = true;
 
-    setLoading(true);
+    // Skip if this key was already fetched recently
+    const lastFetch = _lastFetched.get(key) ?? 0;
+    if (Date.now() - lastFetch < CACHE_TTL_MS) {
+      setLoading(false);
+      return;
+    }
 
+    setLoading(true);
     const store = useFinancialStore.getState();
 
     const run = async () => {
@@ -138,16 +161,23 @@ export function usePageData(key: PageDataKey) {
             break;
           }
           case "overview": {
-            const [goals, income, expenses, history, holdings, properties, insurance] =
-              await Promise.allSettled([
-                fetchGoals(),
-                fetchIncome(),
-                fetchExpenses(),
-                fetchCashFlowHistory(),
-                fetchAssets(),
-                fetchProperties(),
-                fetchInsurancePolicies(),
-              ]);
+            const [
+              goals,
+              income,
+              expenses,
+              history,
+              holdings,
+              properties,
+              insurance,
+            ] = await Promise.allSettled([
+              fetchGoals(),
+              fetchIncome(),
+              fetchExpenses(),
+              fetchCashFlowHistory(),
+              fetchAssets(),
+              fetchProperties(),
+              fetchInsurancePolicies(),
+            ]);
             if (goals.status === "fulfilled") store.setGoals(goals.value);
             if (income.status === "fulfilled") store.setIncome(income.value);
             if (expenses.status === "fulfilled")
@@ -166,6 +196,7 @@ export function usePageData(key: PageDataKey) {
       } catch (err) {
         console.error(`[usePageData] error fetching "${key}":`, err);
       } finally {
+        _lastFetched.set(key, Date.now());
         setLoading(false);
       }
     };
