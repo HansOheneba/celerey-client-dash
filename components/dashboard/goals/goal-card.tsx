@@ -1,18 +1,18 @@
 import React from "react";
-import {
-  Pencil,
-  Trash2,
-  CheckCircle2,
-  CalendarDays,
-  Wallet,
-} from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, CheckCircle2 } from "lucide-react";
 
 import { DashCard, CardContent } from "@/components/dashboard/dash-card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { GOAL_CATEGORY_META } from "@/lib/client-data";
 
 import { EnrichedGoal, Scenario } from "./types";
-import { ProgressBar } from "./progress-bar";
 import { formatCurrency, progressPercent } from "./utils";
 
 export function GoalCard({
@@ -28,119 +28,94 @@ export function GoalCard({
 }) {
   const baseProgress = progressPercent(goal.current, goal.target);
   const remaining = Math.max(0, goal.target - goal.current);
-
-  const adjustedMonthly = React.useMemo(() => {
-    if (!scenario || goal.completed) return goal.monthlyContributionNeeded;
-    const realFactor =
-      (1 + scenario.monthlyReturnRate) / (1 + scenario.inflationRate / 12);
-    return Math.round(goal.monthlyContributionNeeded / realFactor);
-  }, [scenario, goal]);
+  const meta = GOAL_CATEGORY_META[goal.category];
 
   return (
-    <DashCard
-      className={cn(
-        "group relative flex flex-col overflow-hidden",
-        goal.completed && "border-emerald-500/30",
-      )}
-    >
+    <DashCard className={cn("group relative flex flex-col overflow-hidden")}>
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
-        {/* Header: title + progress % + actions */}
+        {/* Pill + actions */}
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <p
-              className="truncate text-[15px] font-semibold leading-5 text-foreground"
+          {goal.completed ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {goal.title}
+            </span>
+          ) : (
+            <span
+              className="max-w-[72%] truncate rounded-full px-3 py-1 text-[13px] font-semibold text-white"
+              style={{ backgroundColor: meta.color }}
               title={goal.title}
             >
               {goal.title}
-            </p>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Goal: {formatCurrency(goal.target)}
-            </p>
-          </div>
+            </span>
+          )}
 
-          <div className="flex shrink-0 items-center gap-1">
-            {goal.completed ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                <CheckCircle2 className="h-3 w-3" />
-                Done
-              </span>
-            ) : (
-              <span className="text-[13px] font-semibold tabular-nums text-foreground">
-                {Math.round(baseProgress)}%
-              </span>
-            )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 rounded text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted/60"
-              onClick={() => onEdit(goal.id)}
-              aria-label="Edit goal"
-            >
-              <Pencil className="h-3 w-3" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 rounded text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => onRequestDelete(goal)}
-              aria-label="Delete goal"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted/60"
+                aria-label="Goal options"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36">
+              <DropdownMenuItem onClick={() => onEdit(goal.id)}>
+                <Pencil className="mr-2 h-3.5 w-3.5" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onRequestDelete(goal)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* Progress bar */}
-        <ProgressBar value={baseProgress} />
+        {/* Target date */}
+        <p className="text-[12px] text-muted-foreground">
+          {goal.targetDate
+            ? `Target date: ${goal.targetDate}`
+            : `${goal.yearsRemaining} year${goal.yearsRemaining !== 1 ? "s" : ""} remaining`}
+        </p>
 
-        {/* Stats row */}
+        {/* Amounts row */}
+        <div className="flex items-baseline justify-between">
+          <span className="text-[20px] font-semibold tabular-nums text-foreground">
+            {formatCurrency(goal.current)}
+          </span>
+          <span className="text-[15px] font-semibold tabular-nums text-foreground">
+            {formatCurrency(goal.target)}
+          </span>
+        </div>
+
+        {/* Progress bar - color matched to category */}
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full transition-[width] duration-300"
+            style={{ width: `${baseProgress}%`, backgroundColor: meta.color }}
+          />
+        </div>
+
+        {/* Footer */}
         {goal.completed ? (
-          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-            <p className="text-[12px] text-emerald-800">
-              Target reached - well done.
-            </p>
-          </div>
+          <p className="text-[12px] font-medium text-emerald-600">
+            Target reached.
+          </p>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-lg border bg-muted/30 px-3 py-2">
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Wallet className="h-3 w-3" />
-                Saved
-              </div>
-              <div className="mt-0.5 text-[13px] font-medium tabular-nums">
-                {formatCurrency(goal.current)}
-              </div>
-            </div>
-
-            <div className="rounded-lg border bg-muted/30 px-3 py-2">
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <CalendarDays className="h-3 w-3" />
-                {goal.targetDate ? "Due" : "Remaining"}
-              </div>
-              <div className="mt-0.5 text-[13px] font-medium tabular-nums">
-                {goal.targetDate ?? formatCurrency(remaining)}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Monthly needed */}
-        {!goal.completed && (
-          <div className="mt-auto border-t pt-2.5">
-            <div className="flex items-baseline justify-between">
-              <span className="text-[11px] text-muted-foreground">
-                Monthly needed
-              </span>
-              <span className="text-[13px] font-semibold tabular-nums">
-                {formatCurrency(adjustedMonthly)}
-                <span className="ml-0.5 text-[11px] font-normal text-muted-foreground">
-                  /mo
-                </span>
-              </span>
-            </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] text-muted-foreground">
+              {Math.round(baseProgress)}% completed
+            </span>
+            <span className="tabular-nums text-[12px] text-muted-foreground">
+              {formatCurrency(remaining)} to go
+            </span>
           </div>
         )}
       </CardContent>

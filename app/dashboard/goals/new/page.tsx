@@ -20,6 +20,7 @@ import {
 import {
   formatCurrency,
   GOAL_CATEGORY_OPTIONS,
+  GOAL_CATEGORY_META,
   type Goal,
   type GoalCategory,
 } from "@/lib/client-data";
@@ -147,6 +148,10 @@ export default function NewGoalPage() {
         current_amount: toNumber(form.current),
         target_date: targetDate,
         priority: nextPriority,
+        category: form.category,
+        description: form.description.trim() || undefined,
+        icon: GOAL_CATEGORY_META[form.category].icon,
+        color: GOAL_CATEGORY_META[form.category].color,
         status: isComplete ? "completed" : "active",
       });
 

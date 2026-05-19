@@ -2315,6 +2315,21 @@ export const GOAL_CATEGORY_OPTIONS: { value: GoalCategory; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
+/** API icon slug + brand color for each goal category. */
+export const GOAL_CATEGORY_META: Record<
+  GoalCategory,
+  { icon: string; color: string }
+> = {
+  emergency: { icon: "shield", color: "#EF4444" },
+  retirement: { icon: "umbrella-beach", color: "#8B5CF6" },
+  housing: { icon: "house", color: "#3B82F6" },
+  education: { icon: "graduation-cap", color: "#10B981" },
+  travel: { icon: "plane", color: "#F59E0B" },
+  vehicle: { icon: "car", color: "#7C3AED" },
+  business: { icon: "briefcase", color: "#6366F1" },
+  other: { icon: "star", color: "#6B7280" },
+};
+
 export type Goal = {
   id: string;
   userId?: string;
