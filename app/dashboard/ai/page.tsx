@@ -155,7 +155,7 @@ function InsightCard({
           {insight.cta && (
             <button
               onClick={() =>
-                onClick(insight.title + " — " + insight.description)
+                onClick(insight.title + " - " + insight.description)
               }
               className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[#1e3a5f] hover:underline"
             >
@@ -318,7 +318,7 @@ export default function AIInsightsPage() {
         id: "credit-card",
         kind: "action",
         title: "Eliminate High-Interest Debt",
-        description: `${demo.highIntLiab.name} — ${formatCurrency(demo.creditCardBalance)} at ${demo.creditCardRate}% APR. An extra $1,500/month clears it in ~${months} months, saving ~${formatCurrency(interestSaved)} in interest.`,
+        description: `${demo.highIntLiab.name} - ${formatCurrency(demo.creditCardBalance)} at ${demo.creditCardRate}% APR. An extra $1,500/month clears it in ~${months} months, saving ~${formatCurrency(interestSaved)} in interest.`,
         priority: "high",
         cta: "Plan Payoff",
       });
@@ -345,7 +345,7 @@ export default function AIInsightsPage() {
         title: `Uninsured Property${uninsured.length > 1 ? ` (${uninsured.length})` : ""}`,
         description:
           uninsured.length === 1
-            ? `${first.name} (${formatCurrency(first.market_value)}) has no insurance. A landlord policy runs ~$80–120/month and covers catastrophic loss.`
+            ? `${first.name} (${formatCurrency(first.market_value)}) has no insurance. A landlord policy runs ~$80-120/month and covers catastrophic loss.`
             : `${uninsured.length} properties including ${first.name} have no insurance coverage. This is a significant risk exposure.`,
         priority: "high",
         cta: "Add Insurance",
@@ -409,7 +409,7 @@ export default function AIInsightsPage() {
         id: `goal-${topGoal.id}`,
         kind: pct >= 100 ? "milestone" : "opportunity",
         title: `Goal: ${topGoal.title}`,
-        description: `${pct}% funded — ${formatCurrency(topGoal.current ?? 0)} of ${formatCurrency(topGoal.target)}. ${pct >= 50 ? "More than halfway there — keep building momentum." : "Early days — consistent contributions will get you there."}`,
+        description: `${pct}% funded - ${formatCurrency(topGoal.current ?? 0)} of ${formatCurrency(topGoal.target)}. ${pct >= 50 ? "More than halfway there - keep building momentum." : "Early days - consistent contributions will get you there."}`,
         priority: "low",
         cta: "View Goal",
       });
@@ -431,7 +431,7 @@ export default function AIInsightsPage() {
         if (demo.currentInvested === 0) {
           return `To give you a personalised retirement projection, please complete your retirement profile with your current invested amount, monthly savings, and target retirement age.\n\nOnce set up, I can model the impact of extra contributions and suggest the fastest path to your retirement goals.`;
         }
-        return `Based on your current portfolio of ${formatCurrency(demo.currentInvested)} and monthly contributions of ${formatCurrency(demo.monthlySavings)}, retiring at ${demo.retirementAge} is well within reach.\n\nTo retire 2 years earlier at **age ${demo.retirementAge - 2}**, you would need to increase your monthly contributions by approximately **$2,800/month** — bringing your total to ${formatCurrency(demo.monthlySavings + 2800)}/month. At a 7% annual return, that additional effort compounds to roughly **$1.13M in extra retirement capital**.\n\nAlternatively, redirecting even half of your current ${formatCurrency(demo.surplus)}/month surplus toward investments would put you in that range with minimal lifestyle adjustment.`;
+        return `Based on your current portfolio of ${formatCurrency(demo.currentInvested)} and monthly contributions of ${formatCurrency(demo.monthlySavings)}, retiring at ${demo.retirementAge} is well within reach.\n\nTo retire 2 years earlier at **age ${demo.retirementAge - 2}**, you would need to increase your monthly contributions by approximately **$2,800/month** - bringing your total to ${formatCurrency(demo.monthlySavings + 2800)}/month. At a 7% annual return, that additional effort compounds to roughly **$1.13M in extra retirement capital**.\n\nAlternatively, redirecting even half of your current ${formatCurrency(demo.surplus)}/month surplus toward investments would put you in that range with minimal lifestyle adjustment.`;
       }
 
       if (lq.includes("increase savings") || lq.includes("$2,000")) {
@@ -447,19 +447,19 @@ export default function AIInsightsPage() {
         if (demo.portfolioValue === 0) {
           return `Add your investment holdings to unlock personalised portfolio analysis and rebalancing recommendations.`;
         }
-        return `Your ${formatCurrency(demo.portfolioValue)} portfolio is broadly healthy, but a few rebalancing moves could improve it:\n\n**1. Review sector concentration** — Ensure no single sector exceeds 25–30% of your equity allocation. Rotating into diversified ETFs reduces sector-specific risk.\n\n**2. Shorten bond duration** — With rates stabilising, shifting from long-duration government bonds to short-duration corporate bonds could improve yield by 0.4–0.6% with minimal credit risk increase.\n\n**3. Refresh alternative asset valuations** — Request updated valuations for any private equity or illiquid positions before making allocation decisions.`;
+        return `Your ${formatCurrency(demo.portfolioValue)} portfolio is broadly healthy, but a few rebalancing moves could improve it:\n\n**1. Review sector concentration** - Ensure no single sector exceeds 25-30% of your equity allocation. Rotating into diversified ETFs reduces sector-specific risk.\n\n**2. Shorten bond duration** - With rates stabilising, shifting from long-duration government bonds to short-duration corporate bonds could improve yield by 0.4-0.6% with minimal credit risk increase.\n\n**3. Refresh alternative asset valuations** - Request updated valuations for any private equity or illiquid positions before making allocation decisions.`;
       }
 
       if (lq.includes("insured") || lq.includes("insurance")) {
         const uninsuredProps = store.propertyAssets.filter(
           (p) => p.is_active && p.insurance.length === 0,
         );
-        return `You hold **${demo.insurancePolicies} active ${demo.insurancePolicies === 1 ? "policy" : "policies"}**${demo.monthlyInsurancePremium > 0 ? ` at a combined ${formatCurrency(demo.monthlyInsurancePremium)}/month` : ""}.\n\n${uninsuredProps.length > 0 ? `**Coverage gap**: ${uninsuredProps.map((p) => p.name).join(", ")} ${uninsuredProps.length === 1 ? "has" : "have"} no insurance. A standard landlord policy runs $80–120/month per property.\n\n` : ""}${demo.monthlyIncome > 0 ? `**Disability check** — ensure your long-term disability policy covers at least 60% of your ${formatCurrency(demo.monthlyIncome)}/month income. Any uncovered gap is worth reviewing with supplemental coverage.\n\n` : ""}${demo.netWorth > 1_000_000 ? `**Umbrella policy** — with a net worth of ${formatCurrency(demo.netWorth)}, an umbrella liability policy of at least $1–2M is strongly recommended if you don't already have one.` : "Review your coverage levels regularly as your net worth grows."}`;
+        return `You hold **${demo.insurancePolicies} active ${demo.insurancePolicies === 1 ? "policy" : "policies"}**${demo.monthlyInsurancePremium > 0 ? ` at a combined ${formatCurrency(demo.monthlyInsurancePremium)}/month` : ""}.\n\n${uninsuredProps.length > 0 ? `**Coverage gap**: ${uninsuredProps.map((p) => p.name).join(", ")} ${uninsuredProps.length === 1 ? "has" : "have"} no insurance. A standard landlord policy runs $80-120/month per property.\n\n` : ""}${demo.monthlyIncome > 0 ? `**Disability check** - ensure your long-term disability policy covers at least 60% of your ${formatCurrency(demo.monthlyIncome)}/month income. Any uncovered gap is worth reviewing with supplemental coverage.\n\n` : ""}${demo.netWorth > 1_000_000 ? `**Umbrella policy** - with a net worth of ${formatCurrency(demo.netWorth)}, an umbrella liability policy of at least $1-2M is strongly recommended if you don't already have one.` : "Review your coverage levels regularly as your net worth grows."}`;
       }
 
       if (lq.includes("debt") || lq.includes("eliminate")) {
         if (demo.totalDebt === 0) {
-          return `You have no recorded liabilities — great position to be in! If you have debts not yet added to your profile, add them so I can give you a payoff strategy.`;
+          return `You have no recorded liabilities - great position to be in! If you have debts not yet added to your profile, add them so I can give you a payoff strategy.`;
         }
         const nonMortgageDebt = store.liabilities
           .filter((l) => l.type !== "mortgage")
@@ -468,7 +468,7 @@ export default function AIInsightsPage() {
           .slice(0, 3)
           .map(
             (l, i) =>
-              `**Priority ${i + 1} — ${l.name}**: ${formatCurrency(l.balance)} at ${l.interestRatePct}% APR`,
+              `**Priority ${i + 1} - ${l.name}**: ${formatCurrency(l.balance)} at ${l.interestRatePct}% APR`,
           )
           .join("\n");
         return `Your total debt is **${formatCurrency(demo.totalDebt)}**. Using the **avalanche method** (highest interest first):\n\n${debtLines || `**${store.liabilities[0]?.name ?? "Outstanding balance"}**: ${formatCurrency(demo.totalDebt)}`}\n\n**Mortgages**: Productive leverage on appreciating assets. No acceleration needed unless rates are high.\n\n${demo.surplus > 0 ? `With your ${formatCurrency(demo.surplus)}/month surplus, you can service all debts and accelerate high-interest payoff simultaneously.` : ""}`;
@@ -477,19 +477,19 @@ export default function AIInsightsPage() {
       if (lq.includes("tax") || lq.includes("optimis")) {
         const rate = demo.effectiveTaxRate || 28;
         const saving = Math.round(demo.monthlyIncome * 12 * (rate / 100) * 0.1);
-        return `At ${rate}% effective rate on ${formatCurrency(demo.monthlyIncome)}/month income, three levers stand out:\n\n**1. Max out tax-advantaged accounts** — Pension, ISA, or 401(k)/Roth IRA contributions reduce your taxable income, saving ~**${formatCurrency(saving)}/year**.\n\n**2. Tax-loss harvesting** — Selectively realising losses in your brokerage to offset capital gains could save thousands depending on your portfolio size.\n\n**3. Trust or holding structure** — ${demo.netWorth > 500_000 ? `With ${formatCurrency(demo.netWorth)} in net worth, a trust structure could significantly reduce estate tax exposure. Worth a dedicated session with your advisor.` : "As your wealth grows, structuring assets efficiently becomes increasingly valuable."}`;
+        return `At ${rate}% effective rate on ${formatCurrency(demo.monthlyIncome)}/month income, three levers stand out:\n\n**1. Max out tax-advantaged accounts** - Pension, ISA, or 401(k)/Roth IRA contributions reduce your taxable income, saving ~**${formatCurrency(saving)}/year**.\n\n**2. Tax-loss harvesting** - Selectively realising losses in your brokerage to offset capital gains could save thousands depending on your portfolio size.\n\n**3. Trust or holding structure** - ${demo.netWorth > 500_000 ? `With ${formatCurrency(demo.netWorth)} in net worth, a trust structure could significantly reduce estate tax exposure. Worth a dedicated session with your advisor.` : "As your wealth grows, structuring assets efficiently becomes increasingly valuable."}`;
       }
 
       const hasData = demo.netWorth > 0 || demo.monthlyIncome > 0;
       if (!hasData) {
-        return `Complete your financial profile — add your income, expenses, assets, and liabilities — and I'll give you a comprehensive, numbers-based financial analysis tailored to your situation.`;
+        return `Complete your financial profile - add your income, expenses, assets, and liabilities - and I'll give you a comprehensive, numbers-based financial analysis tailored to your situation.`;
       }
       return `Your financial profile ${demo.netWorth > 0 ? `shows a net worth of ${formatCurrency(demo.netWorth)}` : "is being built"}.\n\n${demo.monthlyIncome > 0 ? `• **Monthly income**: ${formatCurrency(demo.monthlyIncome)}\n` : ""}${demo.surplus > 0 ? `• **Monthly surplus**: ${formatCurrency(demo.surplus)}\n` : ""}${demo.currentInvested > 0 ? `• **Invested**: ${formatCurrency(demo.currentInvested)}\n` : ""}${demo.totalDebt > 0 ? `• **Total debt**: ${formatCurrency(demo.totalDebt)}\n` : ""}\nThe highest-impact actions based on your data are surfaced in the insights panel. What would you like to explore in more detail?`;
     },
     [demo, store.propertyAssets, store.liabilities],
   );
 
-  // ── Greeting — fires once when real data is available ───────────────────────
+  // ── Greeting - fires once when real data is available ───────────────────────
   const greetingSet = React.useRef(false);
   React.useEffect(() => {
     if (greetingSet.current) return;
@@ -498,7 +498,7 @@ export default function AIInsightsPage() {
       {
         id: "greeting",
         role: "ai",
-        text: `Hello, ${demo.firstName}! I've analysed your complete financial picture.\n\n${demo.netWorth > 0 ? `• **Net worth**: ${formatCurrency(demo.netWorth)} — growing steadily\n` : ""}${demo.surplus > 0 ? `• **Monthly surplus**: ${formatCurrency(demo.surplus)} — strong position\n` : ""}${demo.currentInvested > 0 ? `• **Retirement**: On track for age ${demo.retirementAge} with ${formatCurrency(demo.currentInvested)} invested\n` : ""}• **Insights**: ${insights.length} personalised signals surfaced on the right\n\nAsk me anything — I'll give you numbers-based answers.`,
+        text: `Hello, ${demo.firstName}! I've analysed your complete financial picture.\n\n${demo.netWorth > 0 ? `• **Net worth**: ${formatCurrency(demo.netWorth)} - growing steadily\n` : ""}${demo.surplus > 0 ? `• **Monthly surplus**: ${formatCurrency(demo.surplus)} - strong position\n` : ""}${demo.currentInvested > 0 ? `• **Retirement**: On track for age ${demo.retirementAge} with ${formatCurrency(demo.currentInvested)} invested\n` : ""}• **Insights**: ${insights.length} personalised signals surfaced on the right\n\nAsk me anything - I'll give you numbers-based answers.`,
         timestamp: new Date(),
       },
     ]);

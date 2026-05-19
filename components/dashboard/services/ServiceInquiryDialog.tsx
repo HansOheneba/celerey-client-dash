@@ -227,7 +227,7 @@ export function ServiceInquiryDialog({
 
   const tipLine = [serviceHint, postSubmitTip].filter(Boolean).join(" ");
 
-  // fullName, email, phone, country are pre-filled from the user profile — always valid
+  // fullName, email, phone, country are pre-filled from the user profile - always valid
   const step1Valid = Boolean(service);
 
   const step2Valid =

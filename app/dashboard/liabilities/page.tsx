@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { KpiStrip, type KpiItem } from "@/components/dashboard/kpi-strip";
+import { DashboardEmptyState } from "@/components/dashboard/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -93,7 +94,11 @@ function getCurrencySymbol(): string {
   }
 }
 
-// Mortgages are excluded — they are managed directly on properties.
+// Module-level fetch timestamp so re-visits (within 30s) skip the skeleton.
+let _liabFetchedAt = 0;
+const LIAB_TTL_MS = 30_000;
+
+// Mortgages are excluded - they are managed directly on properties.
 const LIABILITY_TYPE_OPTIONS: { value: LiabilityType; label: string }[] = [
   { value: "credit_card", label: "Credit Card" },
   { value: "personal_loan", label: "Personal Loan" },
@@ -272,7 +277,7 @@ function LiabilityDialog({
                 type="number"
                 min="1"
                 max="31"
-                placeholder="1–31"
+                placeholder="1-31"
                 value={draft.dueDay}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -287,7 +292,7 @@ function LiabilityDialog({
                   }));
                 }}
               />
-              <p className="text-xs text-muted-foreground">Day 1 – 31</p>
+              <p className="text-xs text-muted-foreground">Day 1 - 31</p>
             </div>
           </div>
 
@@ -499,7 +504,7 @@ function PropertyMortgageCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
               <p className="text-sm font-semibold truncate">
-                {property.name} — Mortgage
+                {property.name} - Mortgage
               </p>
               <Badge
                 variant="outline"
@@ -606,7 +611,10 @@ export default function LiabilitiesPage() {
 
   const currencySymbol = React.useMemo(() => getCurrencySymbol(), []);
 
-  const [isLoading, setIsLoading] = React.useState(true);
+  // Start loading=false if we fetched recently, so re-visits skip the skeleton.
+  const [isLoading, setIsLoading] = React.useState(
+    () => Date.now() - _liabFetchedAt >= LIAB_TTL_MS,
+  );
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<LiabilityDraft>(DEFAULT_DRAFT);
@@ -623,11 +631,14 @@ export default function LiabilitiesPage() {
     fetchLiabilities()
       .then((list) => {
         console.log("[LiabilitiesPage] fetched liabilities:", list);
-        // Full replace — avoids stale-closure duplicates on every page visit
+        // Full replace - avoids stale-closure duplicates on every page visit
         storeSetLiabilities(list);
       })
       .catch((err) => console.warn("[LiabilitiesPage] fetch failed:", err))
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        _liabFetchedAt = Date.now();
+        setIsLoading(false);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -670,7 +681,7 @@ export default function LiabilitiesPage() {
 
   const annualInterestCost = (totalDebt * avgRate) / 100;
 
-  // ── Debt by lender breakdown — named lenders only ────────────────────────
+  // ── Debt by lender breakdown - named lenders only ────────────────────────
   const debtByLender = React.useMemo(() => {
     const map = new Map<string, number>();
     storeLiabilities.forEach((l) => {
@@ -850,7 +861,7 @@ export default function LiabilitiesPage() {
       className="min-h-screen"
     >
       <div className="mx-auto w-full px-4 py-8 md:px-6 space-y-8">
-        {/* Header — always visible */}
+        {/* Header - always visible */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1.5">
             <h1 className="text-2xl font-semibold tracking-tight">
@@ -867,7 +878,7 @@ export default function LiabilitiesPage() {
 
         {isLoading ? (
           <>
-            {/* KPI strip skeleton — labels visible, values loading */}
+            {/* KPI strip skeleton - labels visible, values loading */}
             <KpiStrip items={kpiItems} cols={4} loading />
             {/* Liability card skeletons */}
             <div className="space-y-4">
@@ -877,20 +888,23 @@ export default function LiabilitiesPage() {
             </div>
           </>
         ) : totalEntries === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-            <div className="p-4 rounded-full bg-muted">
-              <TrendingDown className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold">No liabilities added yet</p>
-              <p className="text-xs text-muted-foreground">
-                Add your debts to get a full picture of your net worth.
-              </p>
-            </div>
-            <Button size="sm" onClick={openCreate}>
-              Add liability
-            </Button>
-          </div>
+          <DashboardEmptyState
+            icon={<TrendingDown className="h-8 w-8 text-muted-foreground" />}
+            title="No liabilities added yet"
+            description={
+              <>
+                Liabilities tracks what you owe - credit cards, student loans,
+                personal loans, business debt, anything with a balance. Add one
+                or two and you&apos;ll see total debt, monthly obligations,
+                interest exposure, and a complete net worth picture.
+              </>
+            }
+            action={{
+              label: "Add liability",
+              icon: <Plus className="h-3.5 w-3.5" />,
+              onClick: openCreate,
+            }}
+          />
         ) : (
           <>
             {/* KPI Strip */}

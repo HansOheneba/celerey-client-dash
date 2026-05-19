@@ -42,8 +42,8 @@ export type HoldingFormValues = {
   amountInvested: string; // what the user paid/invested total (cost basis)
   currentValue: string; // manually entered current value (non-live assets)
   faceValue: string; // bond par/face value → stored as initial_value
-  couponRate: string; // annual interest % — bonds, cash (interest-bearing)
-  maturityDate: string; // ISO date — bonds
+  couponRate: string; // annual interest % - bonds, cash (interest-bearing)
+  maturityDate: string; // ISO date - bonds
   purchaseDate: string; // when acquired / as-of date
 };
 
@@ -637,7 +637,7 @@ export function HoldingForm({
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        The total you paid for all your units — this is your
+                        The total you paid for all your units - this is your
                         cost basis.
                       </p>
                     </div>
@@ -784,7 +784,7 @@ export function HoldingForm({
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        What you actually paid — bonds can trade above or below
+                        What you actually paid - bonds can trade above or below
                         face value.
                       </p>
                     </div>
@@ -827,7 +827,7 @@ export function HoldingForm({
                       <Label htmlFor="coupon-rate-cash">
                         Interest rate (%){" "}
                         <span className="font-normal text-muted-foreground">
-                          — optional
+                          - optional
                         </span>
                       </Label>
                       <Input
@@ -873,7 +873,7 @@ export function HoldingForm({
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        The total you put in — this is your cost basis.
+                        The total you put in - this is your cost basis.
                       </p>
                     </div>
 
@@ -907,7 +907,7 @@ export function HoldingForm({
                 </>
               )}
 
-              {/* Date (purchase / acquisition — bonds use maturityDate above) */}
+              {/* Date (purchase / acquisition - bonds use maturityDate above) */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="purchase-date">

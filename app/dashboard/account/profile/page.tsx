@@ -36,11 +36,11 @@ function riskLabel(risk?: string) {
     moderate: "Moderate Growth",
     aggressive: "Aggressive Growth",
   };
-  return risk ? (map[risk] ?? risk) : "—";
+  return risk ? (map[risk] ?? risk) : "-";
 }
 
 function ucFirst(s?: string) {
-  if (!s) return "—";
+  if (!s) return "-";
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
@@ -70,7 +70,7 @@ function Section({
           : fields.map((field) => (
               <div key={field.label}>
                 <p className="text-xs text-muted-foreground">{field.label}</p>
-                <p className="text-sm font-medium">{field.value || "—"}</p>
+                <p className="text-sm font-medium">{field.value || "-"}</p>
               </div>
             ))}
       </div>
@@ -202,7 +202,7 @@ export default function ProfilePage() {
       transition={{ duration: 0.3 }}
       className="max-w-5xl mx-auto space-y-6"
     >
-      {/* Header — always visible */}
+      {/* Header - always visible */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Profile</h1>
@@ -298,7 +298,7 @@ export default function ProfilePage() {
         fields={user?.bio ? [{ label: "Bio", value: user.bio }] : []}
         loading={loading}
       />
-      {/* Risk profile row — rendered separately so we can attach the quiz button */}
+      {/* Risk profile row - rendered separately so we can attach the quiz button */}
       {!loading && (
         <div className="rounded-xl border bg-white">
           <div className="border-b px-6 py-4">

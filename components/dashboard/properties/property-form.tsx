@@ -453,7 +453,7 @@ export function PropertyForm({
                     Current market value
                     {form.valueUncertain && (
                       <span className="ml-2 text-xs font-normal text-muted-foreground">
-                        (optional — uncertain)
+                        (optional - uncertain)
                       </span>
                     )}
                   </Label>

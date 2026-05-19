@@ -127,7 +127,7 @@ export function SettingsDialog({
               }
             />
             <p className="text-xs text-muted-foreground">
-              Used for the overview card. (0–36 months)
+              Used for the overview card. (0-36 months)
             </p>
           </div>
         </div>

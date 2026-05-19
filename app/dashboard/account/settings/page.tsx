@@ -255,7 +255,7 @@ export default function AccountSettingsPage() {
       transition={{ duration: 0.3 }}
       className="max-w-5xl mx-auto space-y-6"
     >
-      {/* Header — always visible */}
+      {/* Header - always visible */}
       <div>
         <h1 className="text-2xl font-semibold">Account Settings</h1>
         <p className="text-sm text-muted-foreground">
@@ -330,7 +330,7 @@ export default function AccountSettingsPage() {
             </div>
           ) : (
             <>
-              {/* Display name — works for all account modes */}
+              {/* Display name - works for all account modes */}
               <div className="space-y-2">
                 <Label>{isSolo ? "Full Name" : "Household Name"}</Label>
                 <Input
@@ -339,7 +339,7 @@ export default function AccountSettingsPage() {
                 />
               </div>
 
-              {/* First / last name — solo only */}
+              {/* First / last name - solo only */}
               {isSolo && (
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
@@ -384,7 +384,7 @@ export default function AccountSettingsPage() {
                 </div>
               </div>
 
-              {/* Date of Birth — solo only */}
+              {/* Date of Birth - solo only */}
               {isSolo && (
                 <div className="space-y-2 w-fit">
                   <Label>Date of Birth</Label>
@@ -398,7 +398,7 @@ export default function AccountSettingsPage() {
                 </div>
               )}
 
-              {/* Occupation + Marital Status — solo only */}
+              {/* Occupation + Marital Status - solo only */}
               {isSolo && (
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
@@ -432,7 +432,7 @@ export default function AccountSettingsPage() {
                 </div>
               )}
 
-              {/* Prefix + Gender — solo only */}
+              {/* Prefix + Gender - solo only */}
               {isSolo && (
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
@@ -479,7 +479,7 @@ export default function AccountSettingsPage() {
                 </div>
               )}
 
-              {/* Dependents — partner/family accounts */}
+              {/* Dependents - partner/family accounts */}
               {!isSolo && (
                 <div className="space-y-2 w-fit">
                   <Label>Number of Dependents</Label>
@@ -570,7 +570,7 @@ export default function AccountSettingsPage() {
                 </div>
               </div>
 
-              {/* Citizenship — solo only (partner/family share a household) */}
+              {/* Citizenship - solo only (partner/family share a household) */}
               {isSolo && (
                 <div className="space-y-2">
                   <Label>Citizenship</Label>
@@ -604,7 +604,7 @@ export default function AccountSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Financial Profile — risk is read-only, requires quiz to update */}
+      {/* Financial Profile - risk is read-only, requires quiz to update */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -682,7 +682,7 @@ export default function AccountSettingsPage() {
                         {getSymbolFromCurrency(c.code) !== c.code
                           ? `${getSymbolFromCurrency(c.code)} `
                           : ""}
-                        {c.code} – {c.name}
+                        {c.code} - {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -725,7 +725,7 @@ export default function AccountSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Enterprise Account — read-only, enterprise users only */}
+      {/* Enterprise Account - read-only, enterprise users only */}
       {isEnterprise && (
         <Card>
           <CardHeader>
@@ -743,13 +743,13 @@ export default function AccountSettingsPage() {
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Company</p>
                 <p className="text-sm font-medium">
-                  {form.enterprise_info?.company_name ?? "—"}
+                  {form.enterprise_info?.company_name ?? "-"}
                 </p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Company ID</p>
                 <p className="text-sm font-medium font-mono">
-                  {form.enterprise_info?.company_id ?? "—"}
+                  {form.enterprise_info?.company_id ?? "-"}
                 </p>
               </div>
               <div className="space-y-1">
@@ -763,13 +763,13 @@ export default function AccountSettingsPage() {
                         month: "short",
                         year: "numeric",
                       })
-                    : "—"}
+                    : "-"}
                 </p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Provisioned By</p>
                 <p className="text-sm font-medium">
-                  {form.enterprise_info?.seat_granted_by ?? "—"}
+                  {form.enterprise_info?.seat_granted_by ?? "-"}
                 </p>
               </div>
             </div>
@@ -777,7 +777,7 @@ export default function AccountSettingsPage() {
         </Card>
       )}
 
-      {/* Risk quiz — right-side sheet */}
+      {/* Risk quiz - right-side sheet */}
       <DialogPrimitive.Root
         open={quizOpen}
         onOpenChange={(v) => {
@@ -818,7 +818,7 @@ export default function AccountSettingsPage() {
               Risk Assessment
             </DialogPrimitive.Title>
             <DialogPrimitive.Description className="sr-only">
-              Answer honestly — there are no right or wrong answers.
+              Answer honestly - there are no right or wrong answers.
             </DialogPrimitive.Description>
             <button
               type="button"

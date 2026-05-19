@@ -73,10 +73,10 @@ function BuyVsRent() {
         <div key={r.label} className="grid grid-cols-3 gap-x-2 text-xs">
           <span className="text-muted-foreground">{r.label}</span>
           <span className="text-right font-medium">
-            {r.own != null ? fmt(r.own) : "—"}
+            {r.own != null ? fmt(r.own) : "-"}
           </span>
           <span className="text-right font-medium">
-            {r.rent != null ? fmt(r.rent) : "—"}
+            {r.rent != null ? fmt(r.rent) : "-"}
           </span>
         </div>
       ))}
@@ -128,7 +128,7 @@ function RefinancingOptions() {
             </div>
             <p className="text-[11px] text-muted-foreground">
               Balance: {fmt(m.balance)} ·{" "}
-              {beneficial ? "Consider refinancing" : "Below market — hold"}
+              {beneficial ? "Consider refinancing" : "Below market - hold"}
             </p>
           </div>
         );
@@ -138,7 +138,7 @@ function RefinancingOptions() {
 
       <p className="text-[11px] text-muted-foreground">
         Both mortgages are locked in below the current market rate of{" "}
-        {pct(MARKET_RATE_PCT)}. Refinancing would increase monthly payments —
+        {pct(MARKET_RATE_PCT)}. Refinancing would increase monthly payments -
         hold existing terms.
       </p>
     </div>
@@ -198,7 +198,7 @@ function PortfolioImpact() {
 
       <p className="text-[11px] text-muted-foreground">
         {highConcentration
-          ? `Property equity is ${pct(concentrationPct)} of net worth — above the 50% threshold. Consider diversifying into liquid assets.`
+          ? `Property equity is ${pct(concentrationPct)} of net worth - above the 50% threshold. Consider diversifying into liquid assets.`
           : `Property concentration is within a healthy range at ${pct(concentrationPct)} of net worth.`}
       </p>
     </div>

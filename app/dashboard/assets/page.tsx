@@ -89,6 +89,7 @@ import {
   type ValuationMethod,
 } from "@/lib/client-data";
 import { NetWorthBreakdown as NetWorthBreakdownCard } from "@/components/dashboard/financial/NetWorthBreakdown";
+import { DashboardEmptyState } from "@/components/dashboard/empty-state";
 import { useFinancialStore } from "@/store/financialStore";
 import {
   deleteAsset,
@@ -213,7 +214,7 @@ function useLivePrices(holdings: AssetHolding[]) {
         const cached = readPriceCache();
         if (cached) {
           // Only use cache if every active crypto holding with a known symbol
-          // already has a price entry — bypasses cache for newly added holdings
+          // already has a price entry - bypasses cache for newly added holdings
           const cryptoIds = holdings
             .filter(
               (h) =>
@@ -230,7 +231,7 @@ function useLivePrices(holdings: AssetHolding[]) {
             setFromCache(true);
             return;
           }
-          // Some holdings are missing — fall through to fresh fetch
+          // Some holdings are missing - fall through to fresh fetch
         }
       }
 
@@ -238,7 +239,7 @@ function useLivePrices(holdings: AssetHolding[]) {
       setFromCache(false);
       const newPrices: LivePrices = {};
 
-      // Only fetch crypto — CoinGecko free tier, no API key needed
+      // Only fetch crypto - CoinGecko free tier, no API key needed
       const cryptoHoldings = holdings.filter(
         (h) =>
           h.is_active &&
@@ -271,7 +272,7 @@ function useLivePrices(holdings: AssetHolding[]) {
             });
           }
         } catch {
-          // Silently fall back to stored valuations — don't crash on API error
+          // Silently fall back to stored valuations - don't crash on API error
         }
       }
 
@@ -421,7 +422,7 @@ function buildPortfolioPerformanceSeries(
   points: PerformancePoint[],
   currentPortfolioValue: number,
 ) {
-  // Never fall back to mock data — only chart real history.
+  // Never fall back to mock data - only chart real history.
   if (points.length === 0 || currentPortfolioValue <= 0) return [];
 
   const lastValue = points.at(-1)?.value ?? 0;
@@ -629,7 +630,7 @@ function AddHoldingDialog({
                 {isMutual && (
                   <span className="font-normal text-muted-foreground">
                     {" "}
-                    — optional (enables live NAV pricing)
+                    - optional (enables live NAV pricing)
                   </span>
                 )}
               </Label>
@@ -731,7 +732,7 @@ function AddHoldingDialog({
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Total you paid — your cost basis.
+                  Total you paid - your cost basis.
                 </p>
               </div>
             </div>
@@ -892,7 +893,7 @@ function AddHoldingDialog({
                   APY / interest rate (%)
                   <span className="font-normal text-muted-foreground">
                     {" "}
-                    — optional
+                    - optional
                   </span>
                 </Label>
                 <Input
@@ -1545,7 +1546,7 @@ export default function AssetsPage() {
   const totalGainPct =
     totalCostBasis > 0 ? (totalGainLoss / totalCostBasis) * 100 : 0;
 
-  // Only use real performance history — never fall back to mock data.
+  // Only use real performance history - never fall back to mock data.
   const performanceSource = storePortfolioPerformance;
 
   const perfMetrics = React.useMemo(
@@ -1556,7 +1557,7 @@ export default function AssetsPage() {
     [performanceSource],
   );
 
-  // Allocation breakdown by asset type — derived from holdings + live prices
+  // Allocation breakdown by asset type - derived from holdings + live prices
   const allocationByType = React.useMemo(() => {
     const map = new Map<string, number>();
     holdings.forEach((h) => {
@@ -1574,7 +1575,7 @@ export default function AssetsPage() {
       .sort((a, b) => b.value - a.value);
   }, [holdings, valuations, livePrices, totalPortfolioValue]);
 
-  // Performance chart — from store portfolioPerformance
+  // Performance chart - from store portfolioPerformance
   const perfChartData = React.useMemo(
     () =>
       buildPortfolioPerformanceSeries(
@@ -1606,7 +1607,7 @@ export default function AssetsPage() {
     [holdings],
   );
 
-  // Account totals by type — derived from store accounts
+  // Account totals by type - derived from store accounts
   const accountsByType = React.useMemo(() => {
     const map = new Map<string, typeof storeAccounts>();
     storeAccounts.forEach((acc) => {
@@ -1737,7 +1738,7 @@ export default function AssetsPage() {
       value:
         perfMetrics.ytdReturnPct != null
           ? `${perfMetrics.ytdReturnPct >= 0 ? "+" : ""}${perfMetrics.ytdReturnPct.toFixed(2)}%`
-          : "—",
+          : "-",
       subline: "Year to date",
       tone:
         (perfMetrics.ytdReturnPct ?? 0) >= 0
@@ -1766,7 +1767,7 @@ export default function AssetsPage() {
     show: { opacity: 1, y: 0, transition: { duration: 0.32 } },
   };
 
-  // ── Empty state — no assets added yet ───────────────────────────────────
+  // ── Empty state - no assets added yet ───────────────────────────────────
   if (!loading && holdings.length === 0 && storeAccounts.length === 0) {
     return (
       <TooltipProvider>
@@ -1793,34 +1794,31 @@ export default function AssetsPage() {
           </div>
 
           {/* Empty state card */}
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-              <div className="rounded-full bg-muted/60 p-5">
-                <FontAwesomeIcon
-                  icon={faChartPie}
-                  className="h-8 w-8 text-muted-foreground"
-                />
-              </div>
-              <div className="space-y-1 max-w-sm">
-                <h3 className="text-lg font-semibold">No assets yet</h3>
-                <p className="text-sm text-muted-foreground">
-                  Add your investments, savings, or other assets to track your
-                  portfolio, net worth, and returns in one place.
-                </p>
-              </div>
-              <Button
-                size="sm"
-                className="gap-1.5 mt-2"
-                onClick={() => {
-                  setEditHolding(null);
-                  setAddOpen(true);
-                }}
-              >
-                <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
-                Add your first asset
-              </Button>
-            </CardContent>
-          </Card>
+          <DashboardEmptyState
+            icon={
+              <FontAwesomeIcon
+                icon={faChartPie}
+                className="h-8 w-8 text-muted-foreground"
+              />
+            }
+            title="No assets yet"
+            description={
+              <>
+                Assets is where your investments, savings, and other holdings
+                live - stocks, ETFs, crypto, cash accounts, anything that builds
+                wealth. Add one or two to unlock your portfolio breakdown,
+                allocation insights, and returns over time.
+              </>
+            }
+            action={{
+              label: "Add your first asset",
+              icon: <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />,
+              onClick: () => {
+                setEditHolding(null);
+                setAddOpen(true);
+              },
+            }}
+          />
         </div>
 
         {/* Still mount the add dialog so clicks above work */}

@@ -80,7 +80,7 @@ const SERVICES: ServiceCard[] = [
     audience:
       "For clients acquiring, financing, or structuring real estate across jurisdictions.",
     description:
-      "A specialist session with an accredited property consultant covering the full picture of an international acquisition — from ownership structures and offshore financing to yield expectations, jurisdiction-specific risks, and portfolio fit.",
+      "A specialist session with an accredited property consultant covering the full picture of an international acquisition - from ownership structures and offshore financing to yield expectations, jurisdiction-specific risks, and portfolio fit.",
     focusAreas: [
       "Acquisition structure analysis",
       "Offshore financing review",
@@ -280,7 +280,7 @@ export default function ConciergePage() {
                 WHAT YOU RECEIVE
               </p>
               <p className="mt-2 text-sm leading-6 text-neutral-700">
-                Each engagement leads to a clear written outcome — an opinion,
+                Each engagement leads to a clear written outcome - an opinion,
                 structured plan, allocation recommendation, or advisory report
                 tailored to your situation.
               </p>

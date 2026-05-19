@@ -34,6 +34,7 @@ import {
 
 import { KpiStrip } from "@/components/dashboard/kpi-strip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardEmptyState } from "@/components/dashboard/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -763,7 +764,7 @@ function PropertyPolicyCard({
             <p className="text-sm font-semibold truncate">
               {policy.provider}{" "}
               <span className="font-normal text-muted-foreground">
-                — {propertyInsuranceTypeLabel(policy.insurance_type)}
+                - {propertyInsuranceTypeLabel(policy.insurance_type)}
               </span>
             </p>
             <Badge
@@ -917,7 +918,7 @@ export default function InsurancePage() {
   const storeProperties = useFinancialStore((s) => s.propertyAssets);
   const storeInsurancePolicies = useFinancialStore((s) => s.insurancePolicies);
 
-  // Derive directly from the store so this is always in sync — no stale local copy.
+  // Derive directly from the store so this is always in sync - no stale local copy.
   const policies = React.useMemo(
     () => storeInsurancePolicies.filter((p) => p.is_active),
     [storeInsurancePolicies],
@@ -1313,21 +1314,23 @@ export default function InsurancePage() {
           </div>
 
           {/* Empty state card */}
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-              <div className="rounded-full bg-muted/60 p-5">
-                <FontAwesomeIcon
-                  icon={faShield}
-                  className="h-8 w-8 text-muted-foreground"
-                />
-              </div>
-              <div className="space-y-1 max-w-sm">
-                <h3 className="text-lg font-semibold">No policies yet</h3>
-                <p className="text-sm text-muted-foreground">
-                  Add your health, life, property, or other policies to track
-                  coverage, premiums, and upcoming renewals in one place.
-                </p>
-              </div>
+          <DashboardEmptyState
+            icon={
+              <FontAwesomeIcon
+                icon={faShield}
+                className="h-8 w-8 text-muted-foreground"
+              />
+            }
+            title="No policies yet"
+            description={
+              <>
+                Insurance is your safety net - health, life, property, auto, and
+                more. Add even one policy and you&apos;ll see total coverage,
+                premiums by category, and renewal reminders so nothing lapses
+                unexpectedly.
+              </>
+            }
+            actionSlot={
               <Button
                 size="sm"
                 className="gap-1.5 mt-2"
@@ -1340,8 +1343,8 @@ export default function InsurancePage() {
                 <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
                 Add your first policy
               </Button>
-            </CardContent>
-          </Card>
+            }
+          />
         </div>
 
         {/* Still mount the add dialog so clicks above work */}
@@ -1486,7 +1489,7 @@ export default function InsurancePage() {
                           <p
                             className={`text-xs font-semibold ${isExpired ? "text-red-700" : "text-amber-700"}`}
                           >
-                            {entry.policy.provider} —{" "}
+                            {entry.policy.provider} -{" "}
                             {propertyInsuranceTypeLabel(
                               entry.policy.insurance_type,
                             )}

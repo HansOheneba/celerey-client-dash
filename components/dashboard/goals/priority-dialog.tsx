@@ -38,7 +38,7 @@ export function PriorityDialog({
     }
   }, [open, goals]);
 
-  // Callback ref — fires the moment the <ul> actually mounts in the portal DOM.
+  // Callback ref - fires the moment the <ul> actually mounts in the portal DOM.
   // A plain useEffect([open]) fires before the portal renders, so listRef.current
   // would be null. The callback ref pattern guarantees the node is real.
   const listCallbackRef = React.useCallback((node: HTMLUListElement | null) => {

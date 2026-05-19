@@ -26,6 +26,7 @@ import {
 import { KpiStrip } from "@/components/dashboard/kpi-strip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DashboardEmptyState } from "@/components/dashboard/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -612,7 +613,7 @@ function DigitalAssetDialog({
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold flex items-center gap-1">
               Access instructions
-              <InfoTip content="How would your family access this? Do not store actual passwords here — reference a password manager or sealed envelope." />
+              <InfoTip content="How would your family access this? Do not store actual passwords here - reference a password manager or sealed envelope." />
             </Label>
             <Textarea
               rows={2}
@@ -791,7 +792,7 @@ export default function LegacyPage() {
         tone: "danger",
         icon: faCircleExclamation,
         title: "No will on record",
-        body: "Without a will, your estate will be distributed according to local intestacy laws — which may not reflect your wishes. This is the most urgent legacy planning step.",
+        body: "Without a will, your estate will be distributed according to local intestacy laws - which may not reflect your wishes. This is the most urgent legacy planning step.",
       });
     } else if (legacy.will.status === "needs_update") {
       list.push({
@@ -846,7 +847,7 @@ export default function LegacyPage() {
         tone: "info",
         icon: faFilePen,
         title: "No letter of wishes yet",
-        body: "A letter of wishes lets you leave personal guidance for your family — funeral preferences, messages to loved ones, or instructions that don't belong in a legal document.",
+        body: "A letter of wishes lets you leave personal guidance for your family - funeral preferences, messages to loved ones, or instructions that don't belong in a legal document.",
       });
     }
 
@@ -1137,31 +1138,31 @@ export default function LegacyPage() {
             </div>
 
             {legacy.beneficiaries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center space-y-4 border rounded-xl border-dashed">
-                <div className="p-4 rounded-full bg-muted">
+              <DashboardEmptyState
+                size="sm"
+                icon={
                   <FontAwesomeIcon
                     icon={faUserGroup}
                     className="h-6 w-6 text-muted-foreground"
                   />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold">
-                    No beneficiaries added
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Add the people who will inherit your estate.
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => {
+                }
+                title="No beneficiaries added"
+                description={
+                  <>
+                    Beneficiaries are the people who inherit your estate. Add
+                    them now so allocations, contact info, and instructions are
+                    documented in one place - your family won’t have to guess in
+                    a difficult moment.
+                  </>
+                }
+                action={{
+                  label: "Add beneficiary",
+                  onClick: () => {
                     setEditBeneficiary(null);
                     setBeneficiaryOpen(true);
-                  }}
-                >
-                  Add beneficiary
-                </Button>
-              </div>
+                  },
+                }}
+              />
             ) : (
               <div className="space-y-2">
                 {legacy.beneficiaries.map((b) => (
@@ -1242,30 +1243,31 @@ export default function LegacyPage() {
             </div>
 
             {legacy.dependents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center space-y-4 border rounded-xl border-dashed">
-                <div className="p-4 rounded-full bg-muted">
+              <DashboardEmptyState
+                size="sm"
+                icon={
                   <FontAwesomeIcon
                     icon={faHeart}
                     className="h-6 w-6 text-muted-foreground"
                   />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold">No dependents added</p>
-                  <p className="text-xs text-muted-foreground">
-                    Add anyone who relies on you financially — children,
-                    parents, or other family members.
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => {
+                }
+                title="No dependents added"
+                description={
+                  <>
+                    Dependents are the people who rely on you financially -
+                    children, partners, parents, or anyone you support. Listing
+                    them helps us right-size your insurance needs and estate
+                    plan so no one is left vulnerable.
+                  </>
+                }
+                action={{
+                  label: "Add dependent",
+                  onClick: () => {
                     setEditDependent(null);
                     setDependentOpen(true);
-                  }}
-                >
-                  Add dependent
-                </Button>
-              </div>
+                  },
+                }}
+              />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {legacy.dependents.map((d) => (
@@ -1345,32 +1347,31 @@ export default function LegacyPage() {
             </div>
 
             {legacy.digitalAssets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center space-y-4 border rounded-xl border-dashed">
-                <div className="p-4 rounded-full bg-muted">
+              <DashboardEmptyState
+                size="sm"
+                icon={
                   <FontAwesomeIcon
                     icon={faVault}
                     className="h-6 w-6 text-muted-foreground"
                   />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold">
-                    No digital assets documented
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Crypto wallets, online businesses, and digital accounts can
-                    be lost forever without proper documentation.
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => {
+                }
+                title="No digital assets documented"
+                description={
+                  <>
+                    Crypto wallets, online businesses, domain names, and digital
+                    subscriptions can be lost forever without documentation. Add
+                    them here so your executor can access or transfer them when
+                    needed.
+                  </>
+                }
+                action={{
+                  label: "Add digital asset",
+                  onClick: () => {
                     setEditDigital(null);
                     setDigitalOpen(true);
-                  }}
-                >
-                  Add digital asset
-                </Button>
-              </div>
+                  },
+                }}
+              />
             ) : (
               <div className="space-y-2">
                 {legacy.digitalAssets.map((a) => (
@@ -1486,7 +1487,7 @@ export default function LegacyPage() {
                       </p>
                       <p className="text-xs text-muted-foreground max-w-sm">
                         A letter of wishes lets you leave personal guidance for
-                        your family — things that don't belong in a legal
+                        your family - things that don't belong in a legal
                         document but matter deeply.
                       </p>
                     </div>

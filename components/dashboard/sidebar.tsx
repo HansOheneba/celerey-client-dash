@@ -169,12 +169,22 @@ export default function DashboardSidebar() {
     <Sidebar
       collapsible="icon"
       variant="sidebar"
-      className="bg-white border-r border-gray-200 text-gray-700"
+      className="bg-[rgba(248,250,252,0.82)] backdrop-blur-xl border-r border-black/4 text-gray-700 relative"
     >
+      {/* Ambient inner lighting - felt, not seen */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(circle at top left, rgba(47,107,255,0.06), transparent 28%), radial-gradient(circle at bottom left, rgba(168,85,247,0.05), transparent 30%)",
+        }}
+      />
+
       {/* ── Header: Logo ── */}
-      <SidebarHeader className="h-16 flex-row items-center justify-center p-0 px-3 border-b border-gray-200">
+      <SidebarHeader className="sticky top-0 z-10 h-16 flex-row items-center justify-center p-0 px-3 border-b bg-white/40 backdrop-blur-xl">
         <Link href="/dashboard" className="flex items-center">
-          {/* Full logo and symbol overlap and crossfade simultaneously — no stutter */}
+          {/* Full logo and symbol overlap and crossfade simultaneously - no stutter */}
           <div className="relative">
             <motion.div
               animate={{ opacity: collapsed ? 0 : 1 }}
@@ -209,8 +219,8 @@ export default function DashboardSidebar() {
       </SidebarHeader>
 
       {/* ── Nav ── */}
-      <SidebarContent className="px-2">
-        <SidebarMenu className="flex flex-col gap-1.5 mt-2">
+      <SidebarContent className="relative z-10 px-2">
+        <SidebarMenu className="flex flex-col gap-2 mt-3">
           {nav.map((item) => {
             const active =
               item.href === "/dashboard"
@@ -226,7 +236,7 @@ export default function DashboardSidebar() {
                   className={`
                     relative rounded-md h-10 px-3
                     transition-colors
-                    ${active ? "bg-gray-100" : "hover:bg-gray-50"}
+                    ${active ? "bg-[rgba(22,11,53,0.06)]" : "hover:bg-black/3"}
                   `}
                 >
                   <Link className="flex items-center gap-3" href={item.href}>
@@ -235,7 +245,7 @@ export default function DashboardSidebar() {
                         icon={item.icon}
                         className={`
                           h-4 w-4
-                          ${active ? "text-[#160b35]" : "text-gray-400"}
+                          ${active ? "text-[#160b35]" : "text-[#6b6880]"}
                         `}
                         fixedWidth
                       />
@@ -292,7 +302,7 @@ export default function DashboardSidebar() {
       <SidebarSeparator className="my-3 bg-gray-200" />
 
       {/* ── Profile Completion Widget ── */}
-      {/* Hidden while the panel is open — they alternate */}
+      {/* Hidden while the panel is open - they alternate */}
       <AnimatePresence initial={false}>
         {!collapsed && !isOpen && profileCompletionScore < 100 && (
           <motion.div

@@ -23,7 +23,7 @@ export function RequestQueueCard() {
             <Clock3 className="h-4 w-4" />
             Standard requests
           </div>
-          <div className="mt-2 text-sm font-semibold">1–2 business days</div>
+          <div className="mt-2 text-sm font-semibold">1-2 business days</div>
           <div className="mt-1 text-xs text-muted-foreground">
             Portfolio questions, goal updates, planning clarifications.
           </div>
@@ -34,7 +34,7 @@ export function RequestQueueCard() {
             <ShieldCheck className="h-4 w-4" />
             Compliance-sensitive
           </div>
-          <div className="mt-2 text-sm font-semibold">2–4 business days</div>
+          <div className="mt-2 text-sm font-semibold">2-4 business days</div>
           <div className="mt-1 text-xs text-muted-foreground">
             Policy changes, IPS updates, major allocation shifts.
           </div>
@@ -45,7 +45,7 @@ export function RequestQueueCard() {
             <GraduationCap className="h-4 w-4" />
             Complex planning
           </div>
-          <div className="mt-2 text-sm font-semibold">3–7 business days</div>
+          <div className="mt-2 text-sm font-semibold">3-7 business days</div>
           <div className="mt-1 text-xs text-muted-foreground">
             Trust structures, tax planning, multi-entity strategy.
           </div>

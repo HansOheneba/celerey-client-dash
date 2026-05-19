@@ -56,7 +56,12 @@ export function markPageKeysFetched(...keys: PageDataKey[]) {
  * Returns `{ loading }` so the page can show a skeleton while data loads.
  */
 export function usePageData(key: PageDataKey) {
-  const [loading, setLoading] = useState(true);
+  // Initialize synchronously from the TTL cache so re-visits never flash a
+  // skeleton. If the key was fetched recently, loading starts as false and
+  // no skeleton renders at all. First-ever visit still starts as true.
+  const [loading, setLoading] = useState(
+    () => Date.now() - (_lastFetched.get(key) ?? 0) >= CACHE_TTL_MS,
+  );
   const mounted = useRef(false);
 
   useEffect(() => {
@@ -67,7 +72,7 @@ export function usePageData(key: PageDataKey) {
     // Skip if this key was already fetched recently
     const lastFetch = _lastFetched.get(key) ?? 0;
     if (Date.now() - lastFetch < CACHE_TTL_MS) {
-      setLoading(false);
+      // loading is already false from the lazy init above
       return;
     }
 

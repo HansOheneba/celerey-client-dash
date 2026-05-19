@@ -29,7 +29,7 @@ export function probabilityTone(
 // ============================================================================
 
 /**
- * Passes through goals as EnrichedGoal — monthlyContributionNeeded and
+ * Passes through goals as EnrichedGoal - monthlyContributionNeeded and
  * probability are backend-computed fields already present on each Goal.
  * No local derivation needed.
  */

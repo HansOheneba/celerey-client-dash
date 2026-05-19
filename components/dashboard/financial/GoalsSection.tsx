@@ -70,7 +70,7 @@ function GoalRow({ goal }: { goal: GoalMetrics }) {
                 </p>
                 <p className="mt-1 text-muted-foreground">
                   The probability score on the Goals page uses a simpler linear
-                  model, so the two figures may differ — especially on
+                  model, so the two figures may differ - especially on
                   long-horizon goals.
                 </p>
               </TooltipContent>

@@ -20,6 +20,7 @@ import { ScenarioCard } from "@/components/dashboard/goals/scenario-card";
 import { DeleteGoalDialog } from "@/components/dashboard/goals/delete-goal-dialog";
 import { PriorityDialog } from "@/components/dashboard/goals/priority-dialog";
 import { enrichGoalsWithCalculations } from "@/components/dashboard/goals/utils";
+import { dashboardTheme } from "@/lib/dashboard-theme";
 import type {
   Goal,
   Scenario,
@@ -147,13 +148,15 @@ export default function GoalsDashboard() {
   };
 
   return (
+    // Outer wrapper is just the motion fade; the dashboard layout already
+    // provides the page background (dashboardTheme.surface). The inner div
+    // uses the shared pageContainer token so spacing matches every other tab.
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="min-h-screen from-background to-muted/20"
     >
-      <div className="mx-auto w-full px-4 py-8 md:px-6">
+      <div className={dashboardTheme.pageContainer}>
         {/* Header */}
         <GoalHeader
           onAddGoal={goToAddGoal}

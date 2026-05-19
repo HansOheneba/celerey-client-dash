@@ -17,6 +17,7 @@ import { ProfileSetupPanel } from "@/components/dashboard/profile-setup-panel";
 import { ProfileWelcomeDialog } from "@/components/dashboard/ProfileWelcomeDialog";
 import { RiskQuizDialog } from "@/components/dashboard/risk/quizCard";
 import { useProfilePanel } from "@/components/dashboard/ProfilePanelContext";
+import { dashboardTheme } from "@/lib/dashboard-theme";
 
 /** Triggers zustand-persist rehydration from localStorage after mount. */
 function StoreHydrator() {
@@ -137,7 +138,9 @@ export default function RootLayout({
                 <SidebarInset className="min-w-0 flex flex-col h-svh overflow-hidden">
                   <DashboardTopbar />
 
-                  <main className="flex-1 overflow-y-auto bg-blue-50/20 p-6 @container/dash">
+                  <main
+                    className={`flex-1 overflow-y-auto p-6 ${dashboardTheme.surface}`}
+                  >
                     {children}
                   </main>
                 </SidebarInset>

@@ -47,7 +47,7 @@ export type LocationDistributionItem = {
   propertyName: string;
 };
 
-/** Stable key derived from country + city — used only for filtering. */
+/** Stable key derived from country + city - used only for filtering. */
 export function toLocationKey(country: string, city: string): LocationKey {
   return `${country}_${city}`.toLowerCase().replace(/\s+/g, "_");
 }

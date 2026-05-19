@@ -212,7 +212,7 @@ function deriveInsights(
       id: "sr-great",
       level: "good",
       title: "Excellent savings discipline",
-      body: `You're saving ${savingsRate.toFixed(1)}% of your income — well above the 20% benchmark. Your surplus of ${formatCurrency(surplus)}/mo compounds meaningfully over time.`,
+      body: `You're saving ${savingsRate.toFixed(1)}% of your income - well above the 20% benchmark. Your surplus of ${formatCurrency(surplus)}/mo compounds meaningfully over time.`,
     });
   } else if (savingsRate >= 20) {
     insights.push({
@@ -234,7 +234,7 @@ function deriveInsights(
     insights.push({
       id: "burn-high",
       level: "danger",
-      title: "High burn rate — low runway",
+      title: "High burn rate - low runway",
       body: `You're spending ${burn.toFixed(0)}% of income. Any income disruption leaves almost no buffer. Prioritise building an emergency fund before increasing discretionary spend.`,
     });
   }
@@ -321,7 +321,7 @@ function InsightCard({ insight }: { insight: Insight }) {
 
 function TrendPill({ value }: { value: number | null }) {
   if (value === null)
-    return <span className="text-xs text-muted-foreground">—</span>;
+    return <span className="text-xs text-muted-foreground">-</span>;
   const up = value > 0;
   return (
     <span
@@ -508,7 +508,7 @@ function EnhancedRowDialog({
               draft.startDate < new Date().toISOString().split("T")[0] && (
                 <p className="text-xs text-amber-600 flex items-center gap-1">
                   <Info className="h-3 w-3" />
-                  This entry will be backdated — historical months will be
+                  This entry will be backdated - historical months will be
                   updated.
                 </p>
               )}
@@ -1001,7 +1001,7 @@ export default function CashFlowPage() {
     setRowDialogType(type);
     setRowDialogMode("edit");
     setEditingId(row.id);
-    // Legacy rows with isRecurring=false had no recurringType — map them to "one-time"
+    // Legacy rows with isRecurring=false had no recurringType - map them to "one-time"
     const resolvedRecurringType: RecurringType =
       row.recurringType ?? (row.isRecurring === false ? "one-time" : "forever");
     setRowDraft({

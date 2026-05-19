@@ -79,7 +79,7 @@ function nextIsoMonth(m: string): string {
 /**
  * Like `projectMonthlyAmount` but ONLY counts rows that carry an explicit
  * `startDate` that falls on or before `isoMonth`.  Used to build synthetic
- * historical data — rows with no startDate are ignored (we don't know when
+ * historical data - rows with no startDate are ignored (we don't know when
  * they started).
  */
 function projectHistoricalMonthlyAmount(
@@ -294,7 +294,7 @@ export function CashFlowChart({
   // "New user" = no recorded actual history yet
   const isNewUser = data.length === 0;
 
-  // "This year" is the default — shows the full calendar year with solid actuals + dashed future
+  // "This year" is the default - shows the full calendar year with solid actuals + dashed future
   const [timeRange, setTimeRange] = React.useState<string>("this-year");
 
   // Projected monthly totals for banner
@@ -342,7 +342,7 @@ export function CashFlowChart({
     const points: EnrichedPoint[] = [];
 
     // ── Historical: synthetic from configured rows, cashFlowHistory as fallback ──
-    // Synthetic (row-based) always wins when it exists — cashFlowHistory
+    // Synthetic (row-based) always wins when it exists - cashFlowHistory
     // snapshots are stale by definition (they predate any row edits the user
     // makes, especially for the current month which may not be over yet).
     // Only fall back to cashFlowHistory actuals for months that have zero
@@ -395,7 +395,7 @@ export function CashFlowChart({
     return points.sort((a, b) => a.month.localeCompare(b.month));
   }, [data, incomeRows, expenseCategories]);
 
-  // ── Historical months (non-projected) — used for range availability ────
+  // ── Historical months (non-projected) - used for range availability ────
   const historicalMonths = React.useMemo(
     () => mergedData.filter((p) => !p.isProjected),
     [mergedData],
@@ -422,7 +422,7 @@ export function CashFlowChart({
       return [...historical.slice(-1), ...future];
     }
 
-    // Historical views: ONLY historical/synthetic data — no future projection
+    // Historical views: ONLY historical/synthetic data - no future projection
     const n = timeRange === "3m" ? 3 : timeRange === "6m" ? 6 : 12;
     return historical.slice(-n);
   }, [mergedData, timeRange]);
@@ -478,7 +478,7 @@ export function CashFlowChart({
       label: "3m",
       disabled: historicalMonths.length < 2,
       reason: `No cash flow going back 3 months${
-        earliestLabel ? ` — earliest entry: ${earliestLabel}` : ""
+        earliestLabel ? ` - earliest entry: ${earliestLabel}` : ""
       }`,
     },
     {
@@ -486,7 +486,7 @@ export function CashFlowChart({
       label: "6m",
       disabled: historicalMonths.length < 4,
       reason: `No cash flow going back 6 months${
-        earliestLabel ? ` — earliest entry: ${earliestLabel}` : ""
+        earliestLabel ? ` - earliest entry: ${earliestLabel}` : ""
       }`,
     },
     {
@@ -494,7 +494,7 @@ export function CashFlowChart({
       label: "12m",
       disabled: historicalMonths.length < 7,
       reason: `No cash flow going back 12 months${
-        earliestLabel ? ` — earliest entry: ${earliestLabel}` : ""
+        earliestLabel ? ` - earliest entry: ${earliestLabel}` : ""
       }`,
     },
     { value: "12m-forward", label: "12m →", disabled: false, reason: "" },
@@ -529,7 +529,7 @@ export function CashFlowChart({
           <CardTitle>{title}</CardTitle>
           <CardDescription>
             {isNewUser
-              ? "Based on your setup — actuals will appear as months go by"
+              ? "Based on your setup - actuals will appear as months go by"
               : description}
           </CardDescription>
         </div>
@@ -539,7 +539,7 @@ export function CashFlowChart({
               disabled ? (
                 <Tooltip key={value}>
                   <TooltipTrigger asChild>
-                    {/* span wrapper needed — disabled buttons can't fire pointer events */}
+                    {/* span wrapper needed - disabled buttons can't fire pointer events */}
                     <span className="inline-flex">
                       <button
                         disabled

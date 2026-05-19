@@ -497,7 +497,7 @@ function EditRetirementDialog({
                 {
                   key: "safeWithdrawalRatePct" as const,
                   label: "Safe Withdrawal %",
-                  tip: "The '4% rule' — the percentage of your portfolio you withdraw each year in retirement.",
+                  tip: "The '4% rule' - the percentage of your portfolio you withdraw each year in retirement.",
                 },
                 {
                   key: "desiredMonthlyIncome" as const,
@@ -681,7 +681,7 @@ function SimulatorPanel({
                 className="h-3.5 w-3.5 text-blue-500"
               />
               Expected Annual Return
-              <InfoTip content="Historical S&P 500 real return is ~7%. Conservative portfolios typically return 4–5%." />
+              <InfoTip content="Historical S&P 500 real return is ~7%. Conservative portfolios typically return 4-5%." />
             </Label>
             <span className="text-sm font-bold tabular-nums">{simReturn}%</span>
           </div>
@@ -969,7 +969,7 @@ export default function RetirementPage() {
         title: isSolo
           ? "You're on track to retire comfortably"
           : "Your household is on track to retire comfortably",
-        body: `At ${isSolo ? "your" : "your combined"} current savings rate of ${formatCurrency(totalMonthly)}/mo, ${isSolo ? "you're" : "you're both"} projected to reach ${formatCurrency(outputs.projectedBalanceAtRetirement)} by ${isSolo ? `age ${config.retirementAge}` : targetYear} — enough to sustain ${formatCurrency(outputs.sustainableMonthlyIncome)}/mo.`,
+        body: `At ${isSolo ? "your" : "your combined"} current savings rate of ${formatCurrency(totalMonthly)}/mo, ${isSolo ? "you're" : "you're both"} projected to reach ${formatCurrency(outputs.projectedBalanceAtRetirement)} by ${isSolo ? `age ${config.retirementAge}` : targetYear} - enough to sustain ${formatCurrency(outputs.sustainableMonthlyIncome)}/mo.`,
         icon: faCircleCheck,
       });
     } else {
@@ -1007,7 +1007,7 @@ export default function RetirementPage() {
       list.push({
         level: "warning",
         title: "Optimistic return assumption",
-        body: `You're projecting ${config.expectedReturnPct}% annual returns. Historical real returns for diversified portfolios average 6–7%. Consider stress-testing with a lower rate using the simulator.`,
+        body: `You're projecting ${config.expectedReturnPct}% annual returns. Historical real returns for diversified portfolios average 6-7%. Consider stress-testing with a lower rate using the simulator.`,
         icon: faChartLine,
       });
     }
@@ -1395,7 +1395,7 @@ export default function RetirementPage() {
                             <StatRow
                               label="Safe withdrawal"
                               value={`${config.safeWithdrawalRatePct}%/yr`}
-                              tip="The '4% rule' — percentage of portfolio withdrawn each year."
+                              tip="The '4% rule' - percentage of portfolio withdrawn each year."
                             />
                             <StatRow
                               label="Life expectancy"
@@ -1428,7 +1428,7 @@ export default function RetirementPage() {
                               className={`text-xs font-semibold ${onTrack ? "text-emerald-700 dark:text-emerald-300" : "text-red-600 dark:text-red-400"}`}
                             >
                               {onTrack
-                                ? `${isSolo ? "You're" : "You're both"} on track — projected surplus of ${formatCurrency(incomeGapAbs)}/mo`
+                                ? `${isSolo ? "You're" : "You're both"} on track - projected surplus of ${formatCurrency(incomeGapAbs)}/mo`
                                 : `Shortfall of ${formatCurrency(incomeGapAbs)}/mo at current trajectory`}
                             </p>
                             <p className="text-xs text-muted-foreground mt-0.5">
@@ -1465,7 +1465,7 @@ export default function RetirementPage() {
                             Adjust the levers
                           </CardTitle>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Slide to simulate changes — see the impact on{" "}
+                            Slide to simulate changes - see the impact on{" "}
                             {isSolo ? "your" : "your household's"} retirement
                             balance in real time
                           </p>

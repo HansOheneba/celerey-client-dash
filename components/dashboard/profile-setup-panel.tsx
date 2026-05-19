@@ -251,7 +251,7 @@ export function ProfileSetupPanel() {
     {
       id: "emergency-fund",
       label: "Set up emergency fund",
-      description: "3–6 months of expenses as a safety net.",
+      description: "3-6 months of expenses as a safety net.",
       href: "/dashboard/cash-flow",
       actionLabel: "Configure",
       icon: <PiggyBank className="h-3.5 w-3.5" />,
@@ -286,7 +286,7 @@ export function ProfileSetupPanel() {
     <AnimatePresence>
       {isOpen && (
         // Width-animating wrapper so the flex layout collapses in sync with the
-        // slide — no blank space lag between exit animation and reflow.
+        // slide - no blank space lag between exit animation and reflow.
         <motion.div
           key="profile-panel-wrapper"
           initial={{ width: 0 }}

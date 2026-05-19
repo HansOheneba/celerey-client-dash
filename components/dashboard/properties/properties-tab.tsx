@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { KpiStrip, type KpiItem } from "@/components/dashboard/kpi-strip";
+import { DashboardEmptyState } from "@/components/dashboard/empty-state";
 import { PropertyRow } from "@/components/dashboard/properties/property-row";
 import { PropertyAnalysis } from "@/components/dashboard/properties/property-analysis";
 import AssetMap from "@/components/dashboard/properties/country-chart";
@@ -43,7 +44,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── Insurance summary — read-only, all actions link to insurance tab ──────
+// ─── Insurance summary - read-only, all actions link to insurance tab ──────
 
 function PropertyInsuranceSummary({ properties }: { properties: Property[] }) {
   const allPolicies = properties.flatMap((p) =>
@@ -143,7 +144,7 @@ function PropertyInsuranceSummary({ properties }: { properties: Property[] }) {
               >
                 <div className="h-1.5 w-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
                 <p className="text-xs text-red-700 dark:text-red-300">
-                  <span className="font-medium">{pol.propertyName}</span> —{" "}
+                  <span className="font-medium">{pol.propertyName}</span> -{" "}
                   {propertyInsuranceTypeLabel(pol.insurance_type)} expired{" "}
                   {new Date(pol.expiry_date).toLocaleDateString("en-US", {
                     month: "short",
@@ -167,7 +168,7 @@ function PropertyInsuranceSummary({ properties }: { properties: Property[] }) {
               >
                 <div className="h-1.5 w-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                 <p className="text-xs text-amber-700 dark:text-amber-300">
-                  <span className="font-medium">{pol.propertyName}</span> —{" "}
+                  <span className="font-medium">{pol.propertyName}</span> -{" "}
                   {propertyInsuranceTypeLabel(pol.insurance_type)} expires{" "}
                   {new Date(pol.expiry_date).toLocaleDateString("en-US", {
                     month: "short",
@@ -337,20 +338,25 @@ export function PropertiesTab() {
 
   if (properties.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-        <div className="p-4 rounded-full bg-muted">
-          <Home className="h-8 w-8 text-muted-foreground" />
-        </div>
-        <div className="space-y-1">
-          <p className="text-sm font-semibold">No properties added yet</p>
-          <p className="text-xs text-muted-foreground">
-            Add a property to track its value, equity, and insurance.
-          </p>
-        </div>
-        <Button asChild size="sm">
-          <Link href="/dashboard/properties/new">Add property</Link>
-        </Button>
-      </div>
+      <DashboardEmptyState
+        icon={<Home className="h-8 w-8 text-muted-foreground" />}
+        title="No properties added yet"
+        description={
+          <>
+            Properties tracks real estate you own - primary homes, rentals,
+            land, or commercial space. Add one and you&apos;ll see equity,
+            loan-to-value ratios, insurance coverage, and geographic exposure
+            roll up across your portfolio.
+          </>
+        }
+        actionSlot={
+          <Button asChild size="sm" className="gap-1.5 mt-2">
+            <Link href="/dashboard/properties/new">
+              <Plus className="h-3.5 w-3.5" /> Add your first property
+            </Link>
+          </Button>
+        }
+      />
     );
   }
 

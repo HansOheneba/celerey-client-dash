@@ -386,7 +386,7 @@ export default function DashboardPage() {
           return;
         }
       } catch {
-        // Non-fatal — retry until timeout
+        // Non-fatal - retry until timeout
       }
       if (Date.now() - start >= MAX_DURATION_MS) {
         setStripeReturnState("timeout");
@@ -679,7 +679,7 @@ export default function DashboardPage() {
   const upcoming: UpcomingItem[] = useMemo(() => {
     const items: UpcomingItem[] = [];
     if (items.length === 0)
-      items.push({ id: "u-fallback", title: "No upcoming items", time: "—" });
+      items.push({ id: "u-fallback", title: "No upcoming items", time: "-" });
     return items;
   }, []);
 
@@ -770,7 +770,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4 px-6 text-center">
         <p className="text-base font-medium">
-          Payment received — we&apos;re still activating your account.
+          Payment received - we&apos;re still activating your account.
         </p>
         <p className="text-sm text-muted-foreground max-w-md">
           This is taking longer than expected. Your subscription will be enabled
@@ -841,7 +841,7 @@ export default function DashboardPage() {
               items={[
                 {
                   label: "Net Worth",
-                  value: hasAssets ? formatCurrency(snapshot.netWorth) : "—",
+                  value: hasAssets ? formatCurrency(snapshot.netWorth) : "-",
                   subline: hasAssets
                     ? "Assets minus liabilities"
                     : "Complete your profile to calculate your net worth",
@@ -858,7 +858,7 @@ export default function DashboardPage() {
                   label: "Portfolio Value",
                   value:
                     store.holdings.length === 0
-                      ? "—"
+                      ? "-"
                       : formatCurrency(snapshot.portfolioValue),
                   subline:
                     store.holdings.length === 0
@@ -872,7 +872,7 @@ export default function DashboardPage() {
                   value:
                     snapshot.monthlyIncome === 0 &&
                     snapshot.monthlyExpenses === 0
-                      ? "—"
+                      ? "-"
                       : formatCurrency(snapshot.monthlyCashFlow),
                   subline:
                     snapshot.monthlyIncome === 0 &&
@@ -1099,7 +1099,7 @@ export default function DashboardPage() {
                             dot={false}
                             connectNulls={false}
                           />
-                          {/* Projected lines — dashed */}
+                          {/* Projected lines - dashed */}
                           <Line
                             dataKey="projIncome"
                             type="monotone"

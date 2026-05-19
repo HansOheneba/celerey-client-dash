@@ -27,7 +27,7 @@ export function ProfileWelcomeDialog() {
   const score = useFinancialStore((s) => s.profileCompletionScore);
   const displayName = useFinancialStore((s) => s.user?.display_name);
 
-  // Already complete — nothing to nudge about.
+  // Already complete - nothing to nudge about.
   if (score >= 100) return null;
 
   const firstName = displayName?.split(" ")[0] ?? "there";

@@ -118,7 +118,7 @@ export function AdvisorProfileCard({
 
               <p className="text-xs text-muted-foreground">
                 Requests are triaged. Standard requests typically receive a
-                response within 1–2 business days.
+                response within 1-2 business days.
               </p>
             </div>
           </div>

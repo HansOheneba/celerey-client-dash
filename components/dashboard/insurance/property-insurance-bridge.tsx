@@ -140,7 +140,7 @@ export function PropertyInsuranceBridge({
               >
                 <div className="h-1.5 w-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
                 <p className="text-xs text-red-700 dark:text-red-300">
-                  <span className="font-medium">{pol.propertyName}</span> —{" "}
+                  <span className="font-medium">{pol.propertyName}</span> -{" "}
                   {propertyInsuranceTypeLabel(pol.insurance_type)} expired{" "}
                   {new Date(pol.expiry_date).toLocaleDateString("en-US", {
                     month: "short",
@@ -164,7 +164,7 @@ export function PropertyInsuranceBridge({
               >
                 <div className="h-1.5 w-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                 <p className="text-xs text-amber-700 dark:text-amber-300">
-                  <span className="font-medium">{pol.propertyName}</span> —{" "}
+                  <span className="font-medium">{pol.propertyName}</span> -{" "}
                   {propertyInsuranceTypeLabel(pol.insurance_type)} expires{" "}
                   {new Date(pol.expiry_date).toLocaleDateString("en-US", {
                     month: "short",

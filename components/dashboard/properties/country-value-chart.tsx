@@ -20,7 +20,7 @@ import {
 import { formatCurrency, type Property } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 
-// ─── Brand palette — navy shades for slices ───────────────────────────────────
+// ─── Brand palette - navy shades for slices ───────────────────────────────────
 
 const SLICE_COLORS = [
   "#151339",

@@ -1,8 +1,15 @@
 // components/dashboard/kpi-strip.tsx
+//
+// Reusable KPI row used on every dashboard tab.
+//
+// Visual style (background, border, radius) is driven by the central
+// theme module: lib/dashboard-theme.ts → dashboardTheme.kpiTile. Edit
+// that token to restyle every KPI tile across the app.
 
 import * as React from "react";
 import { cn } from "@/lib/client-data";
 import { Skeleton } from "@/components/ui/skeleton";
+import { dashboardTheme } from "@/lib/dashboard-theme";
 
 export type KpiItem = {
   label: string;
@@ -30,7 +37,7 @@ const toneClass: Record<NonNullable<KpiItem["tone"]>, string> = {
 
 const colsClass: Record<NonNullable<KpiStripProps["cols"]>, string> = {
   // Container-query driven so the strip reacts to the dashboard `<main>`
-  // width — not the viewport. This keeps cards from squishing when side
+  // width - not the viewport. This keeps cards from squishing when side
   // panels (e.g. profile setup) narrow the content column.
   2: "grid-cols-1 @sm/dash:grid-cols-2",
   3: "grid-cols-1 @sm/dash:grid-cols-2 @2xl/dash:grid-cols-3",
@@ -52,7 +59,8 @@ export function KpiStrip({
           key={item.label}
           onClick={loading ? undefined : item.onClick}
           className={cn(
-            "rounded-xl border bg-card px-4 py-3.5 space-y-1",
+            dashboardTheme.kpiTile,
+            "px-4 py-3.5 space-y-1",
             !loading && item.onClick && "cursor-pointer transition-shadow",
           )}
         >

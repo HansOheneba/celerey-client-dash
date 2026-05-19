@@ -410,7 +410,7 @@ export default function EditGoalPage() {
         target: toNumber(form.target),
         current: toNumber(form.current),
         yearsRemaining,
-        // completed is backend-owned — keep from existing store record
+        // completed is backend-owned - keep from existing store record
         completed: toNumber(form.current) >= toNumber(form.target),
         targetDate: form.targetDate || undefined,
         // Preserve backend-computed values from existing record, fall back to local estimate
@@ -523,7 +523,7 @@ export default function EditGoalPage() {
                 </TooltipTrigger>
                 <TooltipContent className="max-w-55 text-xs leading-relaxed">
                   {tone === "complete" &&
-                    "You've reached your target. Nothing more needed here — great work."}
+                    "You've reached your target. Nothing more needed here - great work."}
                   {tone === "good" &&
                     "You're on track. Your current savings and timeline line up well with your goal."}
                   {tone === "ok" &&
@@ -575,7 +575,7 @@ export default function EditGoalPage() {
                     </TooltipTrigger>
                     <TooltipContent className="max-w-55 text-xs leading-relaxed">
                       {tone === "complete" &&
-                        "You've reached your target. Nothing more needed here — great work."}
+                        "You've reached your target. Nothing more needed here - great work."}
                       {tone === "good" &&
                         "You're on track. Your current savings and timeline line up well with your goal."}
                       {tone === "ok" &&

@@ -179,7 +179,7 @@ export default function ProfileSetupPage() {
       id: "goals",
       label: "Set your first goal",
       description:
-        "Goals give your money direction — a holiday, a home, or financial freedom.",
+        "Goals give your money direction - a holiday, a home, or financial freedom.",
       href: "/dashboard/goals",
       actionLabel: "Set a goal",
       icon: <Target className="h-4 w-4" />,
@@ -212,7 +212,7 @@ export default function ProfileSetupPage() {
       id: "liabilities",
       label: "Add your liabilities",
       description:
-        "Mortgages, loans, and credit cards — know exactly what you owe.",
+        "Mortgages, loans, and credit cards - know exactly what you owe.",
       href: "/dashboard/liabilities",
       actionLabel: "Add liabilities",
       icon: <TrendingDown className="h-4 w-4" />,
@@ -222,7 +222,7 @@ export default function ProfileSetupPage() {
       id: "emergency-fund",
       label: "Set up your emergency fund",
       description:
-        "A safety net of 3–6 months of expenses protects you from the unexpected.",
+        "A safety net of 3-6 months of expenses protects you from the unexpected.",
       href: "/dashboard/cash-flow",
       actionLabel: "Configure fund",
       icon: <PiggyBank className="h-4 w-4" />,
@@ -232,7 +232,7 @@ export default function ProfileSetupPage() {
       id: "assets",
       label: "Add your first asset",
       description:
-        "Stocks, ETFs, crypto, savings — track everything you own in one place.",
+        "Stocks, ETFs, crypto, savings - track everything you own in one place.",
       href: "/dashboard/assets",
       actionLabel: "Add assets",
       icon: <Briefcase className="h-4 w-4" />,
@@ -304,8 +304,8 @@ export default function ProfileSetupPage() {
                   <p className="text-xs text-muted-foreground">
                     {completedItems} of {totalItems} sections complete
                     {score === 100
-                      ? " — your profile is fully set up!"
-                      : " — keep going!"}
+                      ? " - your profile is fully set up!"
+                      : " - keep going!"}
                   </p>
                 </div>
               </div>

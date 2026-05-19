@@ -62,7 +62,7 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
     question: "How is my net worth calculated?",
     answer:
-      "Your net worth is computed by summing the current value of all assets — including investment holdings, property, and cash accounts — then subtracting all outstanding liabilities. Celerey refreshes this figure automatically whenever you update any asset or liability entry.",
+      "Your net worth is computed by summing the current value of all assets - including investment holdings, property, and cash accounts - then subtracting all outstanding liabilities. Celerey refreshes this figure automatically whenever you update any asset or liability entry.",
   },
   {
     question: "How does the retirement projection work?",
@@ -77,7 +77,7 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
     question: "How do I export my data?",
     answer:
-      "Navigate to Support › Data & Privacy and click Export my data. A JSON file containing your full financial profile will be downloaded to your device immediately — no waiting and no email required.",
+      "Navigate to Support › Data & Privacy and click Export my data. A JSON file containing your full financial profile will be downloaded to your device immediately - no waiting and no email required.",
   },
   {
     question: "Can I connect my bank account?",

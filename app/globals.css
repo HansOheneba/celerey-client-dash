@@ -107,6 +107,20 @@
   animation: celerey-breathe 1.8s ease-in-out infinite;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * DASHBOARD SURFACE
+ * Background for the dashboard <main>. Mirrors the brand loader gradient
+ * (components/login/celerey-loader.tsx) — a soft blue + violet radial wash
+ * on a near-white base. Gives white cards/KPI tiles room to breathe with
+ * a subtle premium tint that ties the dashboard back to the auth screens.
+ *
+ * To restyle the page background app-wide, edit ONLY this block — every
+ * dashboard tab inherits it via <main className="dashboard-surface"> in
+ * app/dashboard/layout.tsx.
+ * ──────────────────────────────────────────────────────────────────────── */
+.dashboard-surface {
+  background-color: white;
+}
 
 .phone-input-field {
   display: flex !important;

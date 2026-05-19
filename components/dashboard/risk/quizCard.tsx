@@ -101,7 +101,7 @@ export function RiskQuizDialog({
         open={open}
         onOpenChange={(v) => {
           if (v) setEverOpened(true);
-          // Block Radix's built-in close — we handle it via requestClose
+          // Block Radix's built-in close - we handle it via requestClose
         }}
       >
         <DialogPrimitive.Portal>

@@ -62,16 +62,16 @@ export function requiredNestEgg({
   /** Nominal annual return as a DECIMAL, e.g. 0.07 for 7%. */
   expectedReturnRate: number;
 }): number {
-  // Step 1 — how many years the nest egg must sustain withdrawals
+  // Step 1 - how many years the nest egg must sustain withdrawals
   const retirementYears = Math.max(1, lifeExpectancy - retirementAge);
 
-  // Step 2 — inflate desired monthly income to retirement-date dollars
+  // Step 2 - inflate desired monthly income to retirement-date dollars
   const desiredMonthlyAtRetirement =
     desiredMonthlyIncomeToday * Math.pow(1 + inflationRate, years);
-  // Step 3 — annualise (×12 BEFORE discounting, order matters)
+  // Step 3 - annualise (×12 BEFORE discounting, order matters)
   const annualIncomeAtRetirement = desiredMonthlyAtRetirement * 12;
 
-  // Step 4 — PV of annuity using REAL return rate
+  // Step 4 - PV of annuity using REAL return rate
   // Real rate strips inflation so the income target and discount rate are
   // expressed in the same purchasing-power terms.
   const realRate = (1 + expectedReturnRate) / (1 + inflationRate) - 1;

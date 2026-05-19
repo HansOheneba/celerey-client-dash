@@ -102,7 +102,7 @@ export function PropertyRow({ property }: { property: Property }) {
               {property.value_uncertain ? (
                 <div className="flex items-center gap-1">
                   <span className="text-sm font-semibold tabular-nums text-muted-foreground">
-                    —
+                    -
                   </span>
                   <Badge
                     variant="outline"
@@ -178,7 +178,7 @@ export function PropertyRow({ property }: { property: Property }) {
               </div>
             </div>
 
-            {/* Insurance — clicking goes to the property edit form */}
+            {/* Insurance - clicking goes to the property edit form */}
             <div>
               <div className="text-xs text-muted-foreground">Insurance</div>
               {hasInsurance ? (
@@ -211,7 +211,7 @@ export function PropertyRow({ property }: { property: Property }) {
                   href={`/dashboard/properties/${property.property_id}/edit?focus=insurance`}
                   className="text-xs text-amber-600 dark:text-amber-400 hover:underline underline-offset-2"
                 >
-                  None — add
+                  None - add
                 </Link>
               )}
             </div>

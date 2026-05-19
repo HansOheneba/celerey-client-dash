@@ -356,7 +356,7 @@ export default function DashboardTopbar() {
                   try {
                     await fetch("/api/auth/sign-out", { method: "POST" });
                   } catch {
-                    // ignore — still clear local state
+                    // ignore - still clear local state
                   }
                   resetSession();
                   router.replace("/");
