@@ -84,9 +84,10 @@ export function usePageData(key: PageDataKey) {
         switch (key) {
           case "goals": {
             console.log("[usePageData] fetching goals...");
-            const goals = await fetchGoals();
-            console.log("[usePageData] goals result:", goals);
+            const { goals, meta } = await fetchGoals();
+            console.log("[usePageData] goals result:", goals, meta);
             store.setGoals(goals);
+            store.setGoalsMeta(meta);
             break;
           }
           case "cash-flow": {

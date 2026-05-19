@@ -29,7 +29,8 @@ import type {
   RetirementData,
   EmergencyFundData,
 } from "@/lib/onboarding/types";
-import type { DashboardBootstrapData } from "@/lib/dashboard-api";
+import type { DashboardBootstrapData, GoalsMeta } from "@/lib/dashboard-api";
+import { EMPTY_GOALS_META } from "@/lib/dashboard-api";
 
 // ── Legacy types ──────────────────────────────────────────────────────────────
 
@@ -180,6 +181,7 @@ interface OnboardingSeedData {
 interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
   user: User | null;
   goals: Goal[];
+  goalsMeta: GoalsMeta;
   /** Rich property objects — overrides the lightweight PropertyAsset[] in FinancialDomainData. */
   propertyAssets: Property[];
   /** Rich asset holdings — separate from the lightweight Account[] kept for selector compat. */
@@ -188,6 +190,7 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
 
   setUser: (user: User | null) => void;
   setGoals: (goals: Goal[]) => void;
+  setGoalsMeta: (meta: GoalsMeta) => void;
   setIncome: (rows: CashFlowRow[]) => void;
   setExpenses: (categories: ExpenseCategory[]) => void;
   setLiabilities: (liabilities: Liability[]) => void;
@@ -236,6 +239,7 @@ type FinancialData = Omit<
   FinancialState,
   | "setUser"
   | "setGoals"
+  | "setGoalsMeta"
   | "setIncome"
   | "setExpenses"
   | "setLiabilities"
@@ -275,6 +279,7 @@ type FinancialData = Omit<
 const INITIAL_STATE: FinancialData = {
   user: null,
   goals: [],
+  goalsMeta: EMPTY_GOALS_META,
   accounts: [],
   holdings: [],
   liabilities: [],
@@ -320,6 +325,8 @@ export const useFinancialStore = create<FinancialState>()(
             profileCompletionScore: computeProfileCompletionScore(n),
           };
         }),
+
+      setGoalsMeta: (goalsMeta) => set({ goalsMeta }),
 
       setIncome: (rows) =>
         set((s) => {

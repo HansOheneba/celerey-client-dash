@@ -186,7 +186,7 @@ export default function EditGoalPage() {
       // If not in store (e.g. direct navigation), fetch from API
       if (!goal) {
         try {
-          const fetched = await fetchGoals();
+          const { goals: fetched } = await fetchGoals();
           goal = fetched.find((g) => g.id === goalId);
         } catch {
           // goal stays undefined

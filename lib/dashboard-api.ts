@@ -90,12 +90,38 @@ interface ApiGoal {
   target_date?: string;
   priority?: number;
   status?: string;
-  icon?: string;
-  color?: string;
-  category?: string;
-  description?: string;
+  icon?: string | null;
+  color?: string | null;
+  category?: string | null;
+  description?: string | null;
+  is_completed?: boolean;
+  years_remaining?: number;
+  monthly_contribution_needed?: number;
+  probability?: number;
+  completed_date?: string | null;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface GoalsMeta {
+  totalMonthlyNeeded: number;
+  totalGoals: number;
+  completedGoals: number;
+  activeGoals: number;
+}
+
+export const EMPTY_GOALS_META: GoalsMeta = {
+  totalMonthlyNeeded: 0,
+  totalGoals: 0,
+  completedGoals: 0,
+  activeGoals: 0,
+};
+
+interface ApiGoalsMeta {
+  total_monthly_needed?: number;
+  total_goals?: number;
+  completed_goals?: number;
+  active_goals?: number;
 }
 
 interface ApiIncome {
@@ -224,17 +250,22 @@ function apiGoalToStore(g: ApiGoal, index: number): Goal {
   const targetDate = g.target_date
     ? new Date(g.target_date).toISOString().split("T")[0]
     : undefined;
-  const yearsRemaining = targetDate
-    ? Math.max(
-        0,
-        Math.round((new Date(targetDate).getTime() - Date.now()) / msPerYear()),
-      )
-    : 0;
+  // Prefer API-provided years_remaining; fall back to derived value.
+  const yearsRemaining =
+    typeof g.years_remaining === "number"
+      ? g.years_remaining
+      : targetDate
+        ? Math.max(
+            0,
+            (new Date(targetDate).getTime() - Date.now()) / msPerYear(),
+          )
+        : 0;
   const remaining = Math.max(
     0,
     Number(g.target_amount) - Number(g.current_amount),
   );
   const completed =
+    g.is_completed === true ||
     g.status === "completed" ||
     Number(g.current_amount) >= Number(g.target_amount);
 
@@ -242,20 +273,33 @@ function apiGoalToStore(g: ApiGoal, index: number): Goal {
     id: g.goal_id,
     userId: g.user_id,
     title: g.title,
-    // API does not return category — default to "other"; round-trip via icon field when available
-    category: (g.category as GoalCategory | undefined) ?? "other",
-    description: g.description,
+    category: (g.category as GoalCategory | null | undefined) ?? "other",
+    description: g.description ?? undefined,
     priority: g.priority ?? index + 1,
     target: Number(g.target_amount) || 0,
     current: Number(g.current_amount) || 0,
     yearsRemaining,
     completed,
+    completedDate: g.completed_date ?? undefined,
     targetDate,
     monthlyContributionNeeded:
-      yearsRemaining > 0 ? Math.ceil(remaining / (yearsRemaining * 12)) : 0,
-    probability: 50,
+      typeof g.monthly_contribution_needed === "number"
+        ? g.monthly_contribution_needed
+        : yearsRemaining > 0
+          ? Math.ceil(remaining / (yearsRemaining * 12))
+          : 0,
+    probability: typeof g.probability === "number" ? g.probability : 50,
     createdAt: g.created_at,
     updatedAt: g.updated_at,
+  };
+}
+
+function apiGoalsMetaToStore(m: ApiGoalsMeta | undefined): GoalsMeta {
+  return {
+    totalMonthlyNeeded: Number(m?.total_monthly_needed) || 0,
+    totalGoals: Number(m?.total_goals) || 0,
+    completedGoals: Number(m?.completed_goals) || 0,
+    activeGoals: Number(m?.active_goals) || 0,
   };
 }
 
@@ -356,20 +400,27 @@ export async function updateUser(payload: {
   }
 }
 
-export async function fetchGoals(): Promise<Goal[]> {
+export async function fetchGoals(): Promise<{
+  goals: Goal[];
+  meta: GoalsMeta;
+}> {
   const res = await proxyCall<{
-    data?: ApiGoal[] | { goals?: ApiGoal[] };
+    data?: ApiGoal[] | { goals?: ApiGoal[]; meta?: ApiGoalsMeta };
     success?: boolean;
   }>("goals.find");
-  console.log("[fetchGoals] raw API response:", res);
   const data = (res as { data?: unknown }).data;
   const list: ApiGoal[] = Array.isArray(res)
     ? (res as unknown as ApiGoal[])
     : Array.isArray(data)
       ? (data as ApiGoal[])
       : ((data as { goals?: ApiGoal[] })?.goals ?? []);
-  console.log("[fetchGoals] mapped list:", list);
-  return list.map((g, i) => apiGoalToStore(g, i));
+  const apiMeta: ApiGoalsMeta | undefined = Array.isArray(data)
+    ? undefined
+    : (data as { meta?: ApiGoalsMeta } | undefined)?.meta;
+  return {
+    goals: list.map((g, i) => apiGoalToStore(g, i)),
+    meta: apiGoalsMetaToStore(apiMeta),
+  };
 }
 
 export async function createGoal(payload: {
@@ -1038,7 +1089,7 @@ export async function fetchDashboardBootstrap(): Promise<DashboardBootstrapData>
     ]);
 
   return {
-    goals: goals.status === "fulfilled" ? goals.value : [],
+    goals: goals.status === "fulfilled" ? goals.value.goals : [],
     incomeRows: incomeRows.status === "fulfilled" ? incomeRows.value : [],
     expenseCategories:
       expenseCategories.status === "fulfilled" ? expenseCategories.value : [],

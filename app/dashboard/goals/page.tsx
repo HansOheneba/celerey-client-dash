@@ -16,6 +16,9 @@ import {
 import { GoalHeader } from "@/components/dashboard/goals/goal-header";
 import { GoalFilterTabs } from "@/components/dashboard/goals/goal-filter-tabs";
 import { GoalCard } from "@/components/dashboard/goals/goal-card";
+import { KpiStrip, type KpiItem } from "@/components/dashboard/kpi-strip";
+import { formatCurrency } from "@/components/dashboard/goals/utils";
+import { Wallet, Target, Activity, CheckCircle2 } from "lucide-react";
 import { ScenarioCard } from "@/components/dashboard/goals/scenario-card";
 import { DeleteGoalDialog } from "@/components/dashboard/goals/delete-goal-dialog";
 import { PriorityDialog } from "@/components/dashboard/goals/priority-dialog";
@@ -35,6 +38,7 @@ export default function GoalsDashboard() {
   const router = useRouter();
   const { loading } = usePageData("goals");
   const storeGoals = useFinancialStore((s) => s.goals);
+  const goalsMeta = useFinancialStore((s) => s.goalsMeta);
 
   const [scenarios, setScenarios] =
     React.useState<Scenario[]>(FALLBACK_SCENARIOS);
@@ -163,6 +167,37 @@ export default function GoalsDashboard() {
           onEditPriority={() => setPriorityOpen(true)}
           hasPrioritizableGoals={goals.length > 1}
         />
+
+        {/* KPI Strip */}
+        <div className="mt-4">
+          <KpiStrip
+            cols={4}
+            loading={loading}
+            items={
+              [
+                {
+                  label: "Monthly contribution needed",
+                  value: formatCurrency(goalsMeta.totalMonthlyNeeded),
+                  subline: "across all active goals",
+                },
+                {
+                  label: "Total goals",
+                  value: String(goalsMeta.totalGoals),
+                },
+                {
+                  label: "Active",
+                  value: String(goalsMeta.activeGoals),
+                  tone: "neutral",
+                },
+                {
+                  label: "Completed",
+                  value: String(goalsMeta.completedGoals),
+                  tone: "good",
+                },
+              ] satisfies KpiItem[]
+            }
+          />
+        </div>
 
         {/* Filter Tabs */}
         <GoalFilterTabs
