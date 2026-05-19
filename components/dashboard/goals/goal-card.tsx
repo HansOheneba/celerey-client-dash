@@ -111,14 +111,33 @@ export function GoalCard({
             Target reached.
           </p>
         ) : (
-          <div className="flex items-center justify-between">
-            <span className="text-[12px] text-muted-foreground">
-              {Math.round(baseProgress)}% completed
-            </span>
-            <span className="tabular-nums text-[12px] text-muted-foreground">
-              {formatCurrency(remaining)} to go
-            </span>
-          </div>
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] text-muted-foreground">
+                {Math.round(baseProgress)}% completed
+              </span>
+              <span className="tabular-nums text-[12px] text-muted-foreground">
+                {formatCurrency(remaining)} to go
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-t border-border/50 pt-2">
+              <span className="text-[11px] text-muted-foreground">
+                Likelihood of acheivement
+              </span>
+              <span
+                className={cn(
+                  "text-[12px] font-semibold tabular-nums",
+                  goal.probability >= 75
+                    ? "text-emerald-600"
+                    : goal.probability >= 50
+                      ? "text-amber-500"
+                      : "text-red-500",
+                )}
+              >
+                {goal.probability}%
+              </span>
+            </div>
+          </>
         )}
       </CardContent>
     </DashCard>
