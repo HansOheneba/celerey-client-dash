@@ -31,7 +31,9 @@ export function GoalCard({
   const meta = GOAL_CATEGORY_META[goal.category];
 
   return (
-    <DashCard className={cn("group relative flex flex-col overflow-hidden py-0")}>
+    <DashCard
+      className={cn("group relative flex flex-col overflow-hidden py-0")}
+    >
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
         {/* Pill + actions */}
         <div className="flex items-start justify-between gap-2">
