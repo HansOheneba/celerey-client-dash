@@ -1059,6 +1059,124 @@ export async function fetchDashboardBootstrap(): Promise<DashboardBootstrapData>
 // Re-export mapper so the store can use it when seeding retirement from API
 export { apiRetirementToStore };
 
+// ── Dashboard Summary ─────────────────────────────────────────────────────
+//
+// Single endpoint that returns everything the dashboard overview needs in
+// one round-trip — user, subscription, goals, income/expenses, emergency
+// fund, cash flow history/summary, assets, liabilities, properties,
+// insurance, retirement config, risk assessment. Replaces the parallel
+// fan-out in fetchDashboardBootstrap.
+
+interface ApiDashboardSummary {
+  user: ApiUser;
+  subscription: SubscriptionApiData;
+  goals: ApiGoal[];
+  income: ApiIncome[];
+  expenses: ApiExpense[];
+  emergency_fund: ApiEmergencyFund | null;
+  cash_flow_history: ApiHistoryPoint[];
+  cash_flow_summary: ApiCashFlowSummary | null;
+  assets: Record<string, unknown>[];
+  liabilities: ApiLiability[];
+  properties: Record<string, unknown>[];
+  insurance_policies: Record<string, unknown>[];
+  retirement: {
+    config?: Record<string, unknown> | null;
+    projections?: unknown;
+  } | null;
+  risk_assessment: RiskAssessmentResult | null;
+  meta?: { generated_at?: string; currency?: string };
+}
+
+export interface DashboardSummaryData extends DashboardBootstrapData {
+  user: ApiUser | null;
+  subscription: SubscriptionApiData | null;
+  cashFlowSummary: ApiCashFlowSummary | null;
+  riskAssessment: RiskAssessmentResult | null;
+}
+
+function mapSummaryToDashboardData(
+  s: ApiDashboardSummary,
+): DashboardSummaryData {
+  // Map retirement config — summary uses camelCase keys directly, mirroring
+  // the shape extractRetirementConfig produces.
+  let retirement: RetirementConfig | null = null;
+  const rc = s.retirement?.config;
+  if (rc) {
+    const dob = (s.user?.date_of_birth ?? null) as string | null;
+    retirement = {
+      currentAge: dob ? calculateAge(dob) : 0,
+      retirementAge: Number(rc.retirementAge) || 0,
+      lifeExpectancy: Number(rc.lifeExpectancy) || 85,
+      currentInvested: Number(rc.currentInvested) || 0,
+      monthlySavings: Number(rc.monthlySavings) || 0,
+      existingPensionBalance: Number(rc.existingPensionBalance) || 0,
+      monthlyPensionContribution: Number(rc.monthlyPensionContribution) || 0,
+      expectedReturnPct: Number(rc.expectedReturnPct) || 7,
+      inflationPct: Number(rc.inflationPct) || 2,
+      safeWithdrawalRatePct: Number(rc.safeWithdrawalRatePct) || 4,
+      desiredMonthlyIncome: Number(rc.desiredMonthlyIncome) || 0,
+    };
+  }
+
+  return {
+    user: s.user ?? null,
+    subscription: s.subscription ?? null,
+    goals: (s.goals ?? []).map((g, i) => apiGoalToStore(g, i)),
+    incomeRows: (s.income ?? []).map(apiIncomeToStore),
+    expenseCategories: (s.expenses ?? []).map(apiExpenseToStore),
+    emergencyFund: s.emergency_fund ?? null,
+    cashFlowHistory: (s.cash_flow_history ?? []).map((p) => ({
+      month: p.month,
+      income: Number(p.income) || 0,
+      expenses: Number(p.expenses) || 0,
+      surplus: p.surplus != null ? Number(p.surplus) : undefined,
+    })),
+    cashFlowSummary: s.cash_flow_summary ?? null,
+    holdings: (s.assets ?? []).map(mapApiHolding),
+    insurancePolicies: (s.insurance_policies ?? []).map(mapApiInsurancePolicy),
+    propertyAssets: (s.properties ?? []).map(coerceProperty),
+    liabilities: (s.liabilities ?? []).map(apiLiabilityToStore),
+    retirement,
+    riskAssessment: s.risk_assessment ?? null,
+  };
+}
+
+export async function fetchDashboardSummary(): Promise<DashboardSummaryData> {
+  console.log("[fetchDashboardSummary] ▶ calling dashboard.summary");
+  const res = await proxyCall<{
+    success?: boolean;
+    data?: ApiDashboardSummary;
+  }>("dashboard.summary");
+  const data =
+    (res as { data?: ApiDashboardSummary }).data ??
+    (res as unknown as ApiDashboardSummary);
+  console.log("[fetchDashboardSummary] ◀ mapped");
+  return mapSummaryToDashboardData(data);
+}
+
+// Module-level prefetch slot. After OTP verification we kick off the summary
+// fetch but the dashboard layout isn't mounted yet — useDashboardData will
+// reuse this in-flight promise on mount instead of starting a new request.
+let _summaryPrefetch: Promise<DashboardSummaryData> | null = null;
+
+export function prefetchDashboardSummary(): Promise<DashboardSummaryData> {
+  if (!_summaryPrefetch) {
+    _summaryPrefetch = fetchDashboardSummary().catch((err) => {
+      // Reset on failure so a fresh attempt is made next time
+      _summaryPrefetch = null;
+      throw err;
+    });
+  }
+  return _summaryPrefetch;
+}
+
+export function consumeDashboardSummaryPrefetch(): Promise<DashboardSummaryData> | null {
+  const p = _summaryPrefetch;
+  _summaryPrefetch = null;
+  return p;
+}
+
 // ── Risk Assessment ────────────────────────────────────────────────────────
 
 export interface RiskQuestion {
@@ -1232,9 +1350,10 @@ export async function recalculateRiskScore(): Promise<RiskAssessmentResult | nul
 
 export interface SubscriptionApiData {
   subscription_status: string; // "none" | "trialing" | "active"
-  subscription_plan?: string;
-  trial_started_at?: string;
-  trial_ends_at?: string;
+  subscription_plan?: string | null;
+  trial_started_at?: string | null;
+  trial_ends_at?: string | null;
+  renewed_at?: string | null;
   is_enterprise?: boolean;
   entitlements?: SubscriptionEntitlements;
   record_limits?: SubscriptionRecordLimits;
@@ -1255,26 +1374,6 @@ export async function fetchSubscription(): Promise<SubscriptionApiData | null> {
   } catch (err) {
     console.warn("[fetchSubscription] failed (non-fatal):", err);
     return null;
-  }
-}
-
-export async function upgradeSubscription(
-  plan: string,
-): Promise<SubscriptionApiData | null> {
-  console.log("[upgradeSubscription] ▶ payload:", { plan });
-  try {
-    const res = await proxyCall<{
-      success?: boolean;
-      data?: SubscriptionApiData;
-    }>("subscription.upgrade", "POST", { plan });
-    console.log(
-      "[upgradeSubscription] ◀ raw response:",
-      JSON.stringify(res, null, 2),
-    );
-    return (res as any)?.data ?? null;
-  } catch (err) {
-    console.error("[upgradeSubscription] ✗ error:", err);
-    throw err;
   }
 }
 

@@ -21,6 +21,7 @@ import {
   fetchProperties,
   fetchUser,
   fetchRetirement,
+  fetchDashboardSummary,
 } from "@/lib/dashboard-api";
 
 export type PageDataKey =
@@ -161,35 +162,22 @@ export function usePageData(key: PageDataKey) {
             break;
           }
           case "overview": {
-            const [
-              goals,
-              income,
-              expenses,
-              history,
-              holdings,
-              properties,
-              insurance,
-            ] = await Promise.allSettled([
-              fetchGoals(),
-              fetchIncome(),
-              fetchExpenses(),
-              fetchCashFlowHistory(),
-              fetchAssets(),
-              fetchProperties(),
-              fetchInsurancePolicies(),
-            ]);
-            if (goals.status === "fulfilled") store.setGoals(goals.value);
-            if (income.status === "fulfilled") store.setIncome(income.value);
-            if (expenses.status === "fulfilled")
-              store.setExpenses(expenses.value);
-            if (history.status === "fulfilled")
-              store.setCashFlowHistory(history.value);
-            if (holdings.status === "fulfilled")
-              store.setHoldings(holdings.value);
-            if (properties.status === "fulfilled")
-              store.setPropertyAssets(properties.value);
-            if (insurance.status === "fulfilled")
-              store.setInsurancePolicies(insurance.value);
+            // Single consolidated endpoint that returns goals, cashflow,
+            // assets, properties, insurance, retirement, etc. in one call.
+            // Avoids hitting the per-resource rate limit.
+            const summary = await fetchDashboardSummary();
+            store.hydrateFromApi(summary);
+            // Mark every key the summary already covers as fresh so a quick
+            // tab switch doesn't trigger a duplicate per-resource fetch.
+            markPageKeysFetched(
+              "goals",
+              "cash-flow",
+              "assets",
+              "insurance",
+              "properties",
+              "retirement",
+              "profile",
+            );
             break;
           }
         }

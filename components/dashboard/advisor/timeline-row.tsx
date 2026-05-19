@@ -23,7 +23,7 @@ export function TimelineRow({
     <div
       className={cn(
         "flex items-start justify-between gap-3 rounded-2xl border p-4",
-        "border-muted/60 bg-background/60 shadow-sm",
+        "border-muted/60 bg-background/60",
       )}
     >
       <div className="flex min-w-0 items-start gap-3">

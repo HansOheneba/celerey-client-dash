@@ -64,7 +64,8 @@ import {
 import { useClientGate } from "@/lib/useClientGate";
 import { useEffect, useMemo, useState } from "react";
 import { useProfilePanel } from "./ProfilePanelContext";
-import { setSubscriptionData } from "@/lib/client-data";
+import { createCheckoutSession } from "@/lib/dashboard-api";
+import { mockUpgradeToPro } from "@/lib/client-data";
 import { toast } from "sonner";
 
 const nav = [
@@ -96,16 +97,23 @@ export default function DashboardSidebar() {
   const userEmail = user?.email ?? "";
   const [mounted, setMounted] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const { sub } = useClientGate();
 
-  function handleUpgrade() {
-    setSubscriptionData({
-      subscription_status: "active",
-      subscription_plan: "pro",
-    });
-    toast.success("You're now on Premium!");
+  async function handleUpgrade() {
+    if (upgrading) return;
+    setUpgrading(true);
+    try {
+      // MOCK: bypass Stripe while backend webhook is unreliable.
+      mockUpgradeToPro();
+      toast.success("You're on Pro \u2014 enjoy!");
+      setUpgrading(false);
+    } catch {
+      toast.error("Could not start checkout. Please try again.");
+      setUpgrading(false);
+    }
   }
 
   // Trial end date, formatted for display
@@ -368,9 +376,10 @@ export default function DashboardSidebar() {
               <button
                 type="button"
                 onClick={handleUpgrade}
-                className="relative w-full rounded-md bg-white/15 backdrop-blur-sm border border-white/25 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-white/25 transition-colors"
+                disabled={upgrading}
+                className="relative w-full rounded-md bg-white/15 backdrop-blur-sm border border-white/25 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-white/25 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Upgrade to Premium
+                {upgrading ? "Starting checkout…" : "Upgrade to Premium"}
               </button>
             </div>
           </motion.div>

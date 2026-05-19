@@ -43,21 +43,47 @@ export async function POST(req: NextRequest) {
   console.log("URL    :", endpoint);
   console.log("Payload:", JSON.stringify(body, null, 2));
 
+  // Generous timeout — upstream onboarding can be slow on first user creation.
+  const TIMEOUT_MS = 45_000;
+
+  async function callUpstream(): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      return await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   let upstream: Response;
   try {
-    upstream = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    return NextResponse.json(
-      { error: "Could not reach the upstream API. Please try again." },
-      { status: 502 },
-    );
+    upstream = await callUpstream();
+  } catch (err) {
+    // Retry once on transient network/abort errors.
+    const reason = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    console.error("[onboarding/submit] upstream fetch failed, retrying:", reason);
+    try {
+      upstream = await callUpstream();
+    } catch (err2) {
+      const reason2 = err2 instanceof Error ? `${err2.name}: ${err2.message}` : String(err2);
+      console.error("[onboarding/submit] upstream fetch failed (retry):", reason2);
+      return NextResponse.json(
+        {
+          error: "Could not reach the upstream API. Please try again.",
+          detail: reason2,
+        },
+        { status: 502 },
+      );
+    }
   }
 
   const data = (await upstream.json().catch(() => null)) as {

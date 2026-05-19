@@ -14,6 +14,7 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { SessionExpiredError } from "@/lib/dashboard-api";
 import { ProfilePanelProvider } from "@/components/dashboard/ProfilePanelContext";
 import { ProfileSetupPanel } from "@/components/dashboard/profile-setup-panel";
+import { ProfileWelcomeDialog } from "@/components/dashboard/ProfileWelcomeDialog";
 import { RiskQuizDialog } from "@/components/dashboard/risk/quizCard";
 import { useProfilePanel } from "@/components/dashboard/ProfilePanelContext";
 
@@ -128,6 +129,7 @@ export default function RootLayout({
         <DashboardGuard>
           <ProfilePanelProvider>
             <GlobalRiskQuizDialog />
+            <ProfileWelcomeDialog />
             <SidebarProvider defaultOpen>
               <div className="flex min-h-svh w-full overflow-x-hidden">
                 <AdminSidebar />
@@ -135,7 +137,7 @@ export default function RootLayout({
                 <SidebarInset className="min-w-0 flex flex-col h-svh overflow-hidden">
                   <DashboardTopbar />
 
-                  <main className="flex-1 overflow-y-auto bg-blue-50/20 p-6">
+                  <main className="flex-1 overflow-y-auto bg-blue-50/20 p-6 @container/dash">
                     {children}
                   </main>
                 </SidebarInset>

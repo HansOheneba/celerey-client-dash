@@ -238,13 +238,40 @@ export function OnboardingShell({
         style={{
           visibility: splashDone ? "visible" : "hidden",
           background: `
-            radial-gradient(circle at 20% 10%, rgba(47,107,255,0.06), transparent 40%),
-            radial-gradient(circle at 80% 90%, rgba(168,85,247,0.06), transparent 50%),
-            #ffffff
-          `,
+      radial-gradient(circle at top left, rgba(59,130,246,0.18), transparent 32%),
+      radial-gradient(circle at top right, rgba(168,85,247,0.14), transparent 30%),
+      radial-gradient(circle at bottom left, rgba(14,165,233,0.12), transparent 28%),
+      radial-gradient(circle at bottom right, rgba(99,102,241,0.14), transparent 35%),
+      linear-gradient(
+        135deg,
+        #f8fafc 0%,
+        #f1f5f9 35%,
+        #eef2ff 65%,
+        #f8fafc 100%
+      )
+    `,
         }}
-        className="flex min-h-screen flex-col"
+        className="relative flex min-h-screen flex-col overflow-hidden"
       >
+        {/* ── Ambient blur + grid texture ── */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          {/* Grid texture */}
+          <div
+            className="absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, #0f172a 1px, transparent 1px),
+                linear-gradient(to bottom, #0f172a 1px, transparent 1px)
+              `,
+              backgroundSize: "48px 48px",
+            }}
+          />
+          {/* Floating orbs */}
+          <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-blue-500/15 blur-3xl" />
+          <div className="absolute top-1/3 -right-32 h-112 w-md rounded-full bg-violet-500/15 blur-3xl" />
+          <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-cyan-400/10 blur-3xl" />
+        </div>
+
         {/* ── Top Bar ───────────────── */}
         <header className="pt-8 pb-6">
           <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 px-4 sm:px-6">
@@ -262,7 +289,20 @@ export function OnboardingShell({
 
         {/* ── Content ───────────────── */}
         <main className="flex flex-1 justify-center items-center px-4 pt-4 pb-10 sm:px-6">
-          <div className="w-full max-w-2xl">
+          <div
+            className="
+              w-full
+              max-w-2xl
+              rounded-3xl
+              border
+              border-white/40
+              bg-white/70
+              backdrop-blur-xl
+              shadow-[0_20px_80px_rgba(15,23,42,0.08)]
+              p-6
+              sm:p-8
+            "
+          >
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={currentStep}

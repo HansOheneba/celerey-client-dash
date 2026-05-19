@@ -953,31 +953,35 @@ export default function CashFlowPage() {
       subline: "Target ≥ 20%",
       tone: savingsRate >= 20 ? "good" : savingsRate > 0 ? "warning" : "danger",
     },
-    storeEmergencyFund.currentCashBalance === 0
+    !storeEmergencyFund.currentCashBalance
       ? {
           label: "Emergency Fund",
           value: "Not set up",
           subline: "Add a cash balance to track runway",
           tone: "neutral" as const,
         }
-      : {
-          label: "Emergency Fund",
-          value:
-            efMetrics.runwayMonths > 9
-              ? "9+ mo runway"
-              : `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
-          subline:
-            totalExpenses === 0
-              ? `${formatCurrency(efMetrics.currentBalance)} saved · add expenses to see runway`
-              : efMetrics.funded
-                ? `${formatCurrency(efMetrics.currentBalance)} · target ${efMetrics.targetMonths}mo`
-                : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} below ${efMetrics.targetMonths}mo target`,
-          tone: efMetrics.funded
-            ? "good"
-            : efMetrics.runwayMonths >= 3
-              ? "warning"
-              : "danger",
-        },
+      : totalExpenses === 0
+        ? {
+            label: "Emergency Fund",
+            value: formatCurrency(efMetrics.currentBalance),
+            subline: "Add expenses to calculate runway",
+            tone: "neutral" as const,
+          }
+        : {
+            label: "Emergency Fund",
+            value:
+              efMetrics.runwayMonths > 9
+                ? "9+ mo runway"
+                : `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
+            subline: efMetrics.funded
+              ? `${formatCurrency(efMetrics.currentBalance)} · target ${efMetrics.targetMonths}mo`
+              : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} below ${efMetrics.targetMonths}mo target`,
+            tone: efMetrics.funded
+              ? "good"
+              : efMetrics.runwayMonths >= 3
+                ? "warning"
+                : "danger",
+          },
   ];
 
   // ── Dialog helpers ────────────────────────────────────────────────────────

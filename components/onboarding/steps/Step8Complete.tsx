@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
-import { getSubscription } from "@/lib/client-data";
 
 interface Step8CompleteProps {
   /** display_name — works for solo (full name) and partner/family (household name) */
@@ -23,12 +22,9 @@ export function Step8Complete({
   const router = useRouter();
 
   function handleCta() {
-    const sub = getSubscription();
-    if (sub.status === "none") {
-      router.push("/choose-plan");
-    } else {
-      router.push("/dashboard");
-    }
+    // Paywall redirect to /choose-plan is temporarily disabled while
+    // backend subscription_status sync is being fixed.
+    router.push("/dashboard");
   }
 
   useEffect(() => {

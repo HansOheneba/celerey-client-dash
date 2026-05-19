@@ -122,7 +122,7 @@ function InsightCard({
   const Icon = meta.Icon;
 
   return (
-    <div className="rounded-xl border border-muted/60 bg-background p-4 hover:border-muted hover:shadow-sm transition-all">
+    <div className="rounded-xl border border-muted/60 bg-background p-4 hover:border-muted transition-colors">
       <div className="flex items-start gap-3">
         <div
           className={cn(

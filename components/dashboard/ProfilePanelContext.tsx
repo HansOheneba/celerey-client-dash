@@ -5,9 +5,15 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 const DISMISSED_KEY = "profile_panel_dismissed_v1";
 
 interface ProfilePanelContextValue {
+  /** Side-sheet checklist panel */
   isOpen: boolean;
   open: () => void;
   dismiss: () => void;
+  /** Welcome "complete your profile" dialog */
+  welcomeOpen: boolean;
+  openWelcome: () => void;
+  dismissWelcome: () => void;
+  /** Risk assessment quiz */
   riskQuizOpen: boolean;
   openRiskQuiz: () => void;
   closeRiskQuiz: () => void;
@@ -17,6 +23,9 @@ const ProfilePanelContext = createContext<ProfilePanelContextValue>({
   isOpen: false,
   open: () => {},
   dismiss: () => {},
+  welcomeOpen: false,
+  openWelcome: () => {},
+  dismissWelcome: () => {},
   riskQuizOpen: false,
   openRiskQuiz: () => {},
   closeRiskQuiz: () => {},
@@ -28,6 +37,7 @@ export function ProfilePanelProvider({
   children: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [riskQuizOpen, setRiskQuizOpen] = useState(false);
 
   useEffect(() => {
@@ -35,16 +45,12 @@ export function ProfilePanelProvider({
       typeof window !== "undefined" &&
       localStorage.getItem(DISMISSED_KEY) === "true";
     if (!dismissed) {
-      setIsOpen(true);
+      setWelcomeOpen(true);
     }
   }, []);
 
-  function open() {
-    setIsOpen(true);
-  }
-
-  function dismiss() {
-    setIsOpen(false);
+  function dismissWelcome() {
+    setWelcomeOpen(false);
     try {
       localStorage.setItem(DISMISSED_KEY, "true");
     } catch {
@@ -56,8 +62,11 @@ export function ProfilePanelProvider({
     <ProfilePanelContext.Provider
       value={{
         isOpen,
-        open,
-        dismiss,
+        open: () => setIsOpen(true),
+        dismiss: () => setIsOpen(false),
+        welcomeOpen,
+        openWelcome: () => setWelcomeOpen(true),
+        dismissWelcome,
         riskQuizOpen,
         openRiskQuiz: () => setRiskQuizOpen(true),
         closeRiskQuiz: () => setRiskQuizOpen(false),

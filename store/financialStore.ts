@@ -293,6 +293,9 @@ const INITIAL_STATE: FinancialData = {
   profileCompletionScore: 0,
 };
 
+/** Exposed for session-reset utilities — use `resetSession()` rather than this directly. */
+export const FINANCIAL_STORE_INITIAL_STATE = INITIAL_STATE;
+
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 export const useFinancialStore = create<FinancialState>()(

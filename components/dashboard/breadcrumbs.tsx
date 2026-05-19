@@ -21,18 +21,20 @@ export default function Breadcrumbs() {
   }, [pathname]);
 
   return (
-    <nav className="flex items-center text-sm">
+    <nav className="flex items-center text-sm min-w-0">
       {segments.map((segment, index) => (
         <React.Fragment key={segment.href}>
           {index > 0 && (
-            <ChevronRight className="h-4 w-4 mx-2 text-muted-foreground" />
+            <ChevronRight className="hidden sm:block h-4 w-4 mx-2 text-muted-foreground shrink-0" />
           )}
           {segment.isLast ? (
-            <span className="font-medium text-foreground">{segment.label}</span>
+            <span className="font-medium text-foreground truncate">
+              {segment.label}
+            </span>
           ) : (
             <Link
               href={segment.href}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="hidden sm:inline text-muted-foreground hover:text-foreground transition-colors truncate"
             >
               {segment.label}
             </Link>

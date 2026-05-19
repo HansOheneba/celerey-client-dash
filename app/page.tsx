@@ -13,10 +13,18 @@ import { CelereyLoader } from "@/components/login/celerey-loader";
 import type { AuthMode, AuthStep } from "@/components/login/types";
 import {
   setAuth,
+  getAuth,
   getSubscription,
   getUserType,
   setOnboarded,
+  setSubscriptionData,
+  mockStartTrialIfMissing,
 } from "../lib/client-data";
+import { resetSession } from "../lib/session-reset";
+import {
+  fetchSubscription,
+  prefetchDashboardSummary,
+} from "../lib/dashboard-api";
 
 const OTP_MESSAGE_TYPE = "OTPAuthMessage:HTML";
 
@@ -180,29 +188,77 @@ export default function Home() {
         const sessionToken = payload?.data?.session_token;
         if (!sessionToken) throw new Error("Unable to verify code.");
 
+        // If the browser has stale data for a different account, wipe it
+        // before establishing the new session so the new user doesn't inherit
+        // the previous user's onboarded flag, subscription, profile, etc.
+        const previous = getAuth();
+        const accountSwitched =
+          !!previous.email &&
+          previous.email.toLowerCase() !== email.toLowerCase();
+        if (accountSwitched) {
+          resetSession();
+        }
+
         await fetch("/api/auth/set-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token: sessionToken, type: "session" }),
         });
 
+        // Kick off the dashboard summary fetch immediately so the data is
+        // ready (or in-flight) by the time the dashboard layout mounts —
+        // dashboard.summary is the only request needed for the overview.
+        prefetchDashboardSummary();
+
         verificationSucceeded = true;
         setIsNavigating(true);
         setAuth(email);
+        // MOCK: default new logins to a 7-day trial so we can exercise
+        // gated UI until the backend webhook is wired up.
+        mockStartTrialIfMissing();
         // Existing users with a session token have already completed onboarding.
         // Mark them as onboarded so DashboardGuard doesn't redirect them.
         setOnboarded();
 
-        const sub = getSubscription();
-        if (getUserType() === "enterprise" || sub.status !== "none") {
-          router.push("/dashboard");
-        } else {
-          router.push("/choose-plan");
+        // After an account switch we just wiped local subscription state, so
+        // pull the real one from the API before routing — otherwise the user
+        // would land on the dashboard with stale subscription data.
+        if (accountSwitched) {
+          try {
+            const fresh = await fetchSubscription();
+            if (fresh) setSubscriptionData(fresh);
+          } catch {
+            /* non-fatal — fall through to default routing */
+          }
         }
+
+        // Paywall redirect to /choose-plan is temporarily disabled while
+        // backend subscription_status sync is being fixed.
+        router.push("/dashboard");
       } else {
         // ── New account: onboarding_token ────────────────────────────────
         const onboardingToken = payload?.data?.onboarding_token;
         if (!onboardingToken) throw new Error("Unable to verify code.");
+
+        // Detect a re-verify after onboarding-session expiry: if the previous
+        // run stashed a reverify flag for THIS email, preserve their
+        // onboarding progress instead of wiping it like a fresh signup.
+        let isReverify = false;
+        try {
+          const flag = localStorage.getItem("onboarding_reverify_email");
+          isReverify = !!flag && flag.toLowerCase() === email.toLowerCase();
+          // Always clear the flag — single-use.
+          localStorage.removeItem("onboarding_reverify_email");
+        } catch {
+          /* noop */
+        }
+
+        if (!isReverify) {
+          // A fresh signup must always start from a clean slate — wipe any
+          // residual state from a previous account on this browser (both
+          // localStorage AND in-memory Zustand stores).
+          resetSession();
+        }
 
         await fetch("/api/auth/set-token", {
           method: "POST",

@@ -540,7 +540,7 @@ export default function EditGoalPage() {
 
         <form onSubmit={handleSave} className="grid gap-6 lg:grid-cols-3">
           {/* Left: Main card */}
-          <Card className="border-muted/60 bg-background/70 shadow-sm backdrop-blur lg:col-span-2">
+          <Card className="border-muted/60 bg-background/70 backdrop-blur lg:col-span-2">
             <CardHeader className="space-y-1">
               <CardTitle className="text-base">Goal details</CardTitle>
               <p className="text-sm text-muted-foreground">
@@ -857,7 +857,7 @@ export default function EditGoalPage() {
           {/* Right: Record activity + Timeline */}
           <div className="space-y-6">
             {/* Record progress */}
-            <Card className="border-muted/60 bg-background/70 shadow-sm backdrop-blur">
+            <Card className="border-muted/60 bg-background/70 backdrop-blur">
               <CardHeader className="space-y-1">
                 <CardTitle className="text-base">Record progress</CardTitle>
                 <p className="text-sm text-muted-foreground">
@@ -1103,7 +1103,7 @@ export default function EditGoalPage() {
             </Card>
 
             {/* Activity timeline */}
-            <Card className="border-muted/60 bg-background/70 shadow-sm backdrop-blur">
+            <Card className="border-muted/60 bg-background/70 backdrop-blur">
               <CardHeader className="space-y-1">
                 <CardTitle className="text-base">Activity</CardTitle>
                 <p className="text-sm text-muted-foreground">

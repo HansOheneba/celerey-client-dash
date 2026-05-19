@@ -1,19 +1,25 @@
 // hooks/useDashboardData.ts
 //
-// Fetches all live dashboard data from the API on mount and populates
-// the financial store. Safe to call multiple times — deduped by a module-level
-// flag so it only ever fires once per browser session regardless of remounts.
+// Fetches the entire dashboard payload from a single endpoint
+// (dashboard.summary) on mount and populates the financial store. Safe to
+// call multiple times — deduped by a module-level flag so it only ever fires
+// once per browser session regardless of remounts.
 
 "use client";
 
 import { useEffect } from "react";
 import { useFinancialStore } from "@/store/financialStore";
 import {
-  fetchDashboardBootstrap,
-  fetchUser,
-  fetchSubscription,
+  fetchDashboardSummary,
+  consumeDashboardSummaryPrefetch,
+  type DashboardSummaryData,
 } from "@/lib/dashboard-api";
-import { setSubscriptionData, getAuth } from "@/lib/client-data";
+import {
+  setSubscriptionData,
+  getAuth,
+  getSubscription,
+  mockStartTrialIfMissing,
+} from "@/lib/client-data";
 import { markPageKeysFetched } from "@/hooks/usePageData";
 
 // Module-level — survives component remounts (e.g. React StrictMode double-fire,
@@ -30,11 +36,16 @@ export function useDashboardData() {
     if (!getAuth().loggedIn) return;
     _bootstrapped = true;
 
-    // Fetch user profile first so the sidebar email is always populated
-    fetchUser()
-      .then((user) => {
-        if (user) {
-          console.log("[useDashboardData] user.get ◄", user);
+    // Reuse the in-flight prefetch from OTP verify if present; otherwise start
+    // a fresh fetch. Either way, one round-trip to dashboard.summary.
+    const summaryPromise: Promise<DashboardSummaryData> =
+      consumeDashboardSummaryPrefetch() ?? fetchDashboardSummary();
+
+    summaryPromise
+      .then((summary) => {
+        // 1. User profile → sidebar / topbar / etc.
+        if (summary.user) {
+          const user = summary.user;
           setUser({
             user_id: user.user_id,
             email: user.email ?? "",
@@ -60,16 +71,36 @@ export function useDashboardData() {
             updated_at: user.updated_at ?? "",
           });
         }
-      })
-      .catch(() => {
-        // Non-fatal — keep whatever is in the store from localStorage
-      });
 
-    fetchDashboardBootstrap()
-      .then((data) => {
-        hydrateFromApi(data);
-        // Mark all page keys as fresh so usePageData skips re-fetching
-        // endpoints that bootstrap already covered.
+        // 2. Subscription → localStorage / useClientGate. Skip during Stripe
+        // return — that flow owns subscription writes via its poll loop.
+        // MOCK: while backend webhook is unreliable, we DO NOT trust the
+        // backend `subscription_status` and instead default new users to a
+        // local 7-day trial. The upgrade button flips this to "active/pro"
+        // locally. Remove this block once the backend is ready and switch
+        // back to `setSubscriptionData(summary.subscription)`.
+        const isStripeReturn =
+          typeof window !== "undefined" &&
+          new URLSearchParams(window.location.search).get("sub") === "success";
+        if (!isStripeReturn) {
+          // Only sync the backend payload if it reports an actual paid/active
+          // state. Otherwise fall back to the local mock trial.
+          const backendStatus = summary.subscription?.subscription_status;
+          if (
+            summary.subscription &&
+            (backendStatus === "active" || backendStatus === "trialing")
+          ) {
+            setSubscriptionData(summary.subscription);
+          } else if (getSubscription().status === "none") {
+            mockStartTrialIfMissing();
+          }
+        }
+
+        // 3. Financial data → Zustand store.
+        hydrateFromApi(summary);
+
+        // 4. Tell usePageData every overview-covered key is fresh so tab
+        // navigation within the TTL window doesn't refetch the same data.
         markPageKeysFetched(
           "overview",
           "goals",
@@ -78,23 +109,13 @@ export function useDashboardData() {
           "insurance",
           "properties",
           "retirement",
+          "profile",
         );
       })
-      .catch(() => {
-        // Non-fatal — store keeps whatever was in localStorage.
-        // Silent: the user still sees their seeded onboarding data.
-      });
-
-    // Sync server-authoritative subscription state into localStorage so
-    // useClientGate / canAccessFeature always reflect the real entitlement.
-    fetchSubscription()
-      .then((sub) => {
-        if (sub?.subscription_status) {
-          setSubscriptionData(sub);
-        }
-      })
-      .catch(() => {
-        // Non-fatal — keep whatever is in localStorage
+      .catch((err) => {
+        // Non-fatal — keep whatever was in localStorage. The user still sees
+        // their persisted seeded data.
+        console.warn("[useDashboardData] dashboard.summary failed:", err);
       });
   }, [hydrateFromApi, setUser]);
 }

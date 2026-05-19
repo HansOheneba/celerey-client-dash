@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 import { Info, ArrowRight } from "lucide-react";
 
 import { useClientGate } from "../../lib/useClientGate";
-import { isOnboarded, setSubscriptionData } from "../../lib/client-data";
+import { isOnboarded } from "../../lib/client-data";
+import { createCheckoutSession } from "../../lib/dashboard-api";
 import {
-  createCheckoutSession,
-  upgradeSubscription,
-} from "../../lib/dashboard-api";
+  mockStartTrialIfMissing,
+  mockUpgradeToPro,
+} from "../../lib/client-data";
 import { CelereyLoader } from "../../components/login/celerey-loader";
 
 type FeatureRow = {
@@ -218,10 +219,8 @@ export default function ChoosePlanPage() {
   async function startTrial(): Promise<void> {
     setTrialUpgrading(true);
     try {
-      const result = await upgradeSubscription("starter");
-      if (result) {
-        setSubscriptionData(result);
-      }
+      // MOCK: bypass Stripe while backend webhook is unreliable.
+      mockStartTrialIfMissing();
       router.replace("/dashboard");
     } catch {
       setTrialUpgrading(false);
@@ -231,12 +230,9 @@ export default function ChoosePlanPage() {
   async function goPremiumNow(): Promise<void> {
     setPremiumUpgrading(true);
     try {
-      const result = await createCheckoutSession("pro");
-      if (result?.url) {
-        window.location.href = result.url;
-      } else {
-        setPremiumUpgrading(false);
-      }
+      // MOCK: bypass Stripe while backend webhook is unreliable.
+      mockUpgradeToPro();
+      router.replace("/dashboard");
     } catch {
       setPremiumUpgrading(false);
     }

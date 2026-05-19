@@ -421,14 +421,13 @@ function buildPortfolioPerformanceSeries(
   points: PerformancePoint[],
   currentPortfolioValue: number,
 ) {
-  const source = points.length > 0 ? points : mockPortfolioPerformance;
-  if (source.length === 0 || currentPortfolioValue <= 0) return [];
+  // Never fall back to mock data — only chart real history.
+  if (points.length === 0 || currentPortfolioValue <= 0) return [];
 
-  const lastValue = source.at(-1)?.value ?? 0;
-  const scale =
-    points.length > 0 || lastValue <= 0 ? 1 : currentPortfolioValue / lastValue;
+  const lastValue = points.at(-1)?.value ?? 0;
+  const scale = lastValue <= 0 ? 1 : currentPortfolioValue / lastValue;
 
-  return [...source]
+  return [...points]
     .sort((a, b) => a.month.localeCompare(b.month))
     .map((point) => ({
       label: new Date(point.month + "-01").toLocaleDateString("en-US", {
@@ -1546,16 +1545,14 @@ export default function AssetsPage() {
   const totalGainPct =
     totalCostBasis > 0 ? (totalGainLoss / totalCostBasis) * 100 : 0;
 
-  const performanceSource = React.useMemo(
-    () =>
-      storePortfolioPerformance.length > 0
-        ? storePortfolioPerformance
-        : mockPortfolioPerformance,
-    [storePortfolioPerformance],
-  );
+  // Only use real performance history — never fall back to mock data.
+  const performanceSource = storePortfolioPerformance;
 
   const perfMetrics = React.useMemo(
-    () => selectPerformanceMetrics(performanceSource),
+    () =>
+      performanceSource.length > 0
+        ? selectPerformanceMetrics(performanceSource)
+        : { ytdReturnPct: null, totalContributions: 0, totalGrowth: 0 },
     [performanceSource],
   );
 
@@ -1768,6 +1765,77 @@ export default function AssetsPage() {
     hidden: { opacity: 0, y: 12 },
     show: { opacity: 1, y: 0, transition: { duration: 0.32 } },
   };
+
+  // ── Empty state — no assets added yet ───────────────────────────────────
+  if (!loading && holdings.length === 0 && storeAccounts.length === 0) {
+    return (
+      <TooltipProvider>
+        <div className="mx-auto px-6 py-8 space-y-8">
+          {/* Header */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">Assets</h1>
+              <p className="text-sm text-muted-foreground">
+                Your investment portfolio and holdings
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="gap-1.5 self-start sm:self-auto"
+              onClick={() => {
+                setEditHolding(null);
+                setAddOpen(true);
+              }}
+            >
+              <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+              Add holding
+            </Button>
+          </div>
+
+          {/* Empty state card */}
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+              <div className="rounded-full bg-muted/60 p-5">
+                <FontAwesomeIcon
+                  icon={faChartPie}
+                  className="h-8 w-8 text-muted-foreground"
+                />
+              </div>
+              <div className="space-y-1 max-w-sm">
+                <h3 className="text-lg font-semibold">No assets yet</h3>
+                <p className="text-sm text-muted-foreground">
+                  Add your investments, savings, or other assets to track your
+                  portfolio, net worth, and returns in one place.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="gap-1.5 mt-2"
+                onClick={() => {
+                  setEditHolding(null);
+                  setAddOpen(true);
+                }}
+              >
+                <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+                Add your first asset
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Still mount the add dialog so clicks above work */}
+        <AddHoldingDialog
+          open={addOpen}
+          onClose={() => {
+            setAddOpen(false);
+            setEditHolding(null);
+          }}
+          onSave={handleSaveHolding}
+          editHolding={editHolding}
+        />
+      </TooltipProvider>
+    );
+  }
 
   return (
     <TooltipProvider>

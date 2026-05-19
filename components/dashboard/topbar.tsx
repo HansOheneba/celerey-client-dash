@@ -35,12 +35,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Settings, LogOut, UserIcon, Loader2, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  clearAuth,
-  clearUserProfile,
-  setSubscriptionData,
-} from "@/lib/client-data";
 import { useClientGate } from "@/lib/useClientGate";
+import { createCheckoutSession } from "@/lib/dashboard-api";
+import { mockUpgradeToPro } from "@/lib/client-data";
+import { resetSession } from "@/lib/session-reset";
 import { toast } from "sonner";
 
 export default function DashboardTopbar() {
@@ -57,6 +55,7 @@ export default function DashboardTopbar() {
   const [notifEverOpened, setNotifEverOpened] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dropdownEverOpened, setDropdownEverOpened] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const { sub } = useClientGate();
@@ -73,13 +72,20 @@ export default function DashboardTopbar() {
       : null;
   const hasNotifications = incomplete || isTrialing;
 
-  function handleUpgradeFromNotif() {
-    setNotifOpen(false);
-    setSubscriptionData({
-      subscription_status: "active",
-      subscription_plan: "pro",
-    });
-    toast.success("You're now on Premium!");
+  async function handleUpgradeFromNotif() {
+    if (upgrading) return;
+    setUpgrading(true);
+    try {
+      // MOCK: bypass Stripe checkout while backend webhook is unreliable.
+      // Flip local subscription state to pro and close the popover.
+      mockUpgradeToPro();
+      toast.success("You're on Pro \u2014 enjoy!");
+      setNotifOpen(false);
+      setUpgrading(false);
+    } catch {
+      toast.error("Could not start checkout. Please try again.");
+      setUpgrading(false);
+    }
   }
 
   const displayName = getUserFullName(user ?? undefined);
@@ -93,15 +99,17 @@ export default function DashboardTopbar() {
     : "";
 
   return (
-    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-white px-6 h-16">
+    <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-white px-3 sm:px-6 h-16 gap-2">
       {/* LEFT SIDE */}
-      <div className="flex items-center gap-3 ">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
         <SidebarTrigger />
-        <Breadcrumbs />
+        <div className="min-w-0 truncate">
+          <Breadcrumbs />
+        </div>
       </div>
 
       {/* RIGHT SIDE */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
         {/* Bell / Notifications */}
         <Popover
           open={notifOpen}
@@ -194,9 +202,12 @@ export default function DashboardTopbar() {
                     <button
                       type="button"
                       onClick={handleUpgradeFromNotif}
-                      className="text-[11px] font-semibold text-amber-600 hover:text-amber-700 transition-colors"
+                      disabled={upgrading}
+                      className="text-[11px] font-semibold text-amber-600 hover:text-amber-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                      Upgrade to Premium →
+                      {upgrading
+                        ? "Starting checkout…"
+                        : "Upgrade to Premium →"}
                     </button>
                   </div>
                 </div>
@@ -214,7 +225,7 @@ export default function DashboardTopbar() {
         </Popover>
 
         {/* Divider */}
-        <div className="h-8 w-px bg-gray-200" />
+        <div className="hidden sm:block h-8 w-px bg-gray-200" />
 
         {/* User profile dropdown */}
         <AlertDialog>
@@ -226,12 +237,12 @@ export default function DashboardTopbar() {
             }}
           >
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-gray-100 transition-colors text-left">
-                <div className="flex flex-col text-right">
-                  <span className="text-sm font-semibold text-gray-800 leading-tight">
+              <button className="flex items-center gap-1.5 sm:gap-2.5 rounded-lg px-1 sm:px-2 py-1.5 hover:bg-gray-100 transition-colors text-left">
+                <div className="hidden md:flex flex-col text-right max-w-45">
+                  <span className="text-sm font-semibold text-gray-800 leading-tight truncate">
                     {mounted ? displayName : ""}
                   </span>
-                  <span className="text-xs text-gray-500 leading-tight">
+                  <span className="text-xs text-gray-500 leading-tight truncate">
                     {userEmail}
                   </span>
                 </div>
@@ -258,7 +269,7 @@ export default function DashboardTopbar() {
                     </AvatarFallback>
                   </Avatar>
                 </div>
-                <ChevronDown className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                <ChevronDown className="hidden sm:block h-3.5 w-3.5 text-gray-400 shrink-0" />
               </button>
             </DropdownMenuTrigger>
 
@@ -347,8 +358,7 @@ export default function DashboardTopbar() {
                   } catch {
                     // ignore — still clear local state
                   }
-                  clearAuth();
-                  clearUserProfile();
+                  resetSession();
                   router.replace("/");
                 }}
               >

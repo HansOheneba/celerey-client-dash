@@ -209,7 +209,7 @@ export default function NewGoalPage() {
 
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
           {/* Left: Main card */}
-          <Card className="border-muted/60 bg-background/70 shadow-sm backdrop-blur lg:col-span-2">
+          <Card className="border-muted/60 bg-background/70 backdrop-blur lg:col-span-2">
             <CardHeader className="space-y-1">
               <CardTitle className="text-base">Goal setup</CardTitle>
               <p className="text-sm text-muted-foreground">
@@ -443,7 +443,7 @@ export default function NewGoalPage() {
 
           {/* Right: Summary card */}
           <div className="space-y-6">
-            <Card className="border-muted/60 bg-background/70 shadow-sm backdrop-blur">
+            <Card className="border-muted/60 bg-background/70 backdrop-blur">
               <CardHeader className="space-y-1">
                 <CardTitle className="text-base">Summary</CardTitle>
               </CardHeader>

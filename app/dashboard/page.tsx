@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -338,22 +338,70 @@ export default function DashboardPage() {
   const { ready, auth, sub, userType } = useClientGate();
   useMonthlySnapshot();
 
-  // ── Stripe return: sync real subscription status then hard-reload ──────────
+  // ── Stripe return: poll subscription.find until the webhook activates ─────
+  // The Stripe success redirect can land here BEFORE the
+  // checkout.session.completed webhook has updated subscription_status on the
+  // backend. Doing a single fetch + reload would race the webhook and persist
+  // a stale "none", which DashboardGuard would then bounce to /choose-plan.
+  // Instead we poll with a "Confirming your subscription…" overlay until the
+  // status flips to trialing/active, or we hit a timeout.
+  type StripeReturnState = "idle" | "confirming" | "timeout";
+  const [stripeReturnState, setStripeReturnState] = useState<StripeReturnState>(
+    () => {
+      if (typeof window === "undefined") return "idle";
+      return new URLSearchParams(window.location.search).get("sub") ===
+        "success"
+        ? "confirming"
+        : "idle";
+    },
+  );
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("sub") !== "success") return;
-    fetchSubscription()
-      .then((data) => {
-        if (data) {
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const POLL_INTERVAL_MS = 1500;
+    const MAX_DURATION_MS = 20000;
+    const start = Date.now();
+
+    const poll = async () => {
+      if (cancelled) return;
+      try {
+        const data = await fetchSubscription();
+        if (cancelled) return;
+        if (
+          data &&
+          (data.subscription_status === "trialing" ||
+            data.subscription_status === "active")
+        ) {
+          // setSubscriptionData dispatches celerey:sub-updated, which makes
+          // useClientGate re-read and the paywall redirect effect skip.
           setSubscriptionData(data);
+          setStripeReturnState("idle");
+          router.replace("/dashboard");
+          return;
         }
-      })
-      .finally(() => {
-        // Hard reload strips the query param and re-reads localStorage
-        window.location.replace("/dashboard");
-      });
-  }, []);
+      } catch {
+        // Non-fatal — retry until timeout
+      }
+      if (Date.now() - start >= MAX_DURATION_MS) {
+        setStripeReturnState("timeout");
+        return;
+      }
+      timer = setTimeout(poll, POLL_INTERVAL_MS);
+    };
+
+    poll();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [router]);
 
   useEffect(() => {
     if (!ready) return;
@@ -361,19 +409,10 @@ export default function DashboardPage() {
       router.replace("/");
       return;
     }
-    // Enterprise users bypass the paywall
-    if (userType === "enterprise") return;
-    // Skip paywall redirect while Stripe is returning — sync effect handles it
-    if (
-      typeof window !== "undefined" &&
-      new URLSearchParams(window.location.search).get("sub") === "success"
-    )
-      return;
-    if (auth.loggedIn && sub.status === "none") {
-      router.replace("/choose-plan");
-      return;
-    }
-  }, [ready, auth, sub.status, userType, router]);
+    // Subscription paywall redirect is temporarily disabled while the
+    // backend subscription_status sync is being fixed. Premium features
+    // remain gated by canAccessFeature() below.
+  }, [ready, auth, router]);
 
   function handleUpgradeIntent(): void {
     if (typeof window !== "undefined") {
@@ -712,6 +751,41 @@ export default function DashboardPage() {
         show: { opacity: 1, y: 0, transition: { duration: 0.35 } },
       };
 
+  if (stripeReturnState === "confirming") {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-primary" />
+        <div>
+          <p className="text-base font-medium">Confirming your subscription…</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            This usually takes just a few seconds. Please don&apos;t close this
+            tab.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (stripeReturnState === "timeout") {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-base font-medium">
+          Payment received — we&apos;re still activating your account.
+        </p>
+        <p className="text-sm text-muted-foreground max-w-md">
+          This is taking longer than expected. Your subscription will be enabled
+          automatically once Stripe finishes confirming the payment.
+        </p>
+        <Button
+          onClick={() => window.location.replace("/dashboard")}
+          variant="outline"
+        >
+          Refresh
+        </Button>
+      </div>
+    );
+  }
+
   if (!ready) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -734,14 +808,14 @@ export default function DashboardPage() {
           {/* ── Header ── */}
           <motion.div
             variants={mi}
-            className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"
+            className="flex flex-col gap-4 @2xl/dash:flex-row @2xl/dash:items-start @2xl/dash:justify-between"
           >
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">
                 {store.user?.account_mode !== "solo" ? "Welcome in," : "Hi"}
                 {greetingName ? ` ${greetingName}` : ""},
               </p>
-              <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
+              <h1 className="text-3xl @md/dash:text-4xl font-semibold tracking-tight">
                 {timeGreeting}
               </h1>
             </div>
@@ -782,7 +856,10 @@ export default function DashboardPage() {
                 },
                 {
                   label: "Portfolio Value",
-                  value: formatCurrency(snapshot.portfolioValue),
+                  value:
+                    store.holdings.length === 0
+                      ? "—"
+                      : formatCurrency(snapshot.portfolioValue),
                   subline:
                     store.holdings.length === 0
                       ? "Add assets to track your portfolio"
@@ -792,32 +869,46 @@ export default function DashboardPage() {
                 },
                 {
                   label: "Monthly Surplus",
-                  value: formatCurrency(snapshot.monthlyCashFlow),
+                  value:
+                    snapshot.monthlyIncome === 0 &&
+                    snapshot.monthlyExpenses === 0
+                      ? "—"
+                      : formatCurrency(snapshot.monthlyCashFlow),
                   subline:
-                    store.expenseCategories.length === 0
-                      ? "Add expenses to see your surplus"
-                      : `${formatCurrency(snapshot.monthlyIncome)} in · ${formatCurrency(snapshot.monthlyExpenses)} out`,
-                  tone: snapshot.monthlyCashFlow >= 0 ? "good" : "danger",
+                    snapshot.monthlyIncome === 0 &&
+                    snapshot.monthlyExpenses === 0
+                      ? "Add income and expenses to see your surplus"
+                      : store.expenseCategories.length === 0
+                        ? "Add expenses to see your surplus"
+                        : `${formatCurrency(snapshot.monthlyIncome)} in · ${formatCurrency(snapshot.monthlyExpenses)} out`,
+                  tone:
+                    snapshot.monthlyIncome === 0 &&
+                    snapshot.monthlyExpenses === 0
+                      ? "neutral"
+                      : snapshot.monthlyCashFlow >= 0
+                        ? "good"
+                        : "danger",
                   onClick: () => router.push("/dashboard/cash-flow"),
                 },
                 {
                   label: "Emergency Fund",
-                  value:
-                    store.emergencyFund.currentCashBalance === 0
-                      ? "Not set up"
+                  value: !store.emergencyFund.currentCashBalance
+                    ? "Not set up"
+                    : store.expenseCategories.length === 0
+                      ? formatCurrency(efMetrics.currentBalance)
                       : efMetrics.runwayMonths > 9
                         ? "9+ mo runway"
                         : `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
-                  subline:
-                    store.emergencyFund.currentCashBalance === 0
-                      ? "Set up your emergency fund"
-                      : store.expenseCategories.length === 0
-                        ? `${formatCurrency(efMetrics.currentBalance)} saved · add expenses to see runway`
-                        : efMetrics.funded
-                          ? `${formatCurrency(efMetrics.currentBalance)} · Fully funded`
-                          : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} short of ${efMetrics.targetMonths}mo target`,
-                  tone:
-                    store.emergencyFund.currentCashBalance === 0
+                  subline: !store.emergencyFund.currentCashBalance
+                    ? "Set up your emergency fund"
+                    : store.expenseCategories.length === 0
+                      ? "Add expenses to calculate runway"
+                      : efMetrics.funded
+                        ? `${formatCurrency(efMetrics.currentBalance)} · Fully funded`
+                        : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} short of ${efMetrics.targetMonths}mo target`,
+                  tone: !store.emergencyFund.currentCashBalance
+                    ? "neutral"
+                    : store.expenseCategories.length === 0
                       ? "neutral"
                       : efMetrics.funded
                         ? "good"
@@ -831,9 +922,9 @@ export default function DashboardPage() {
           </motion.div>
 
           {/* ── Main Grid ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 @5xl/dash:grid-cols-12 gap-6">
             {/* Left column */}
-            <div className="lg:col-span-8 space-y-6">
+            <div className="@5xl/dash:col-span-8 space-y-6">
               {/* Cash Flow Chart */}
               <motion.div variants={mi}>
                 <SectionLabel>Cash flow</SectionLabel>
@@ -1229,7 +1320,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Right column */}
-            <div className="lg:col-span-4 space-y-6">
+            <div className="@5xl/dash:col-span-4 space-y-6">
               {/* Retirement */}
               <motion.div variants={mi}>
                 <SectionLabel>Retirement</SectionLabel>

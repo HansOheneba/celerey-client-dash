@@ -3,12 +3,7 @@
 // components/dashboard/DashboardGuard.tsx
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  isOnboarded,
-  getSubscription,
-  getAuth,
-  getUserType,
-} from "@/lib/client-data";
+import { isOnboarded, getAuth } from "@/lib/client-data";
 
 export function DashboardGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -23,12 +18,9 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
       router.replace("/onboarding");
       return;
     }
-    // Enterprise users have their subscription covered by their company — skip paywall
-    if (getUserType() === "enterprise") return;
-    const sub = getSubscription();
-    if (sub.status === "none") {
-      router.replace("/choose-plan");
-    }
+    // Subscription paywall is temporarily disabled while the backend
+    // subscription_status sync is being fixed. Feature-level entitlements
+    // (canAccessFeature) still gate premium UI elements.
   }, [router]);
 
   return <>{children}</>;

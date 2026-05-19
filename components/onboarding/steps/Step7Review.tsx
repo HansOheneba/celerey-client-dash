@@ -1,10 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import { submitOnboarding, TokenExpiredError } from "@/lib/onboarding/api";
+import { prefetchDashboardSummary } from "@/lib/dashboard-api";
 import type { OnboardingPayload } from "@/lib/onboarding/types";
 import {
   setOnboarded,
@@ -20,7 +24,6 @@ import {
   Banknote,
   Shield,
   Sunset,
-  Loader2,
 } from "lucide-react";
 import { formatCurrencyAmount } from "@/lib/utils";
 
@@ -60,12 +63,98 @@ function SectionCard({
       <button
         type="button"
         onClick={() => onEdit(step)}
-        className="ml-3 shrink-0 flex items-center gap-1 text-xs font-medium text-indigo-700 hover:text-indigo-900 transition-colors"
+        className="ml-3 shrink-0 flex items-center gap-1 text-xs font-medium text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer"
       >
         Edit <ChevronRight className="h-3 w-3" />
       </button>
     </div>
   );
+}
+
+const SETUP_MESSAGES = [
+  "Preparing your dashboard",
+  "Crunching your numbers",
+  "Calculating your retirement projections",
+  "Organizing your goals",
+  "Mapping your cash flow",
+  "Almost there — finalizing your setup",
+];
+
+function SetupOverlay() {
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const id = setInterval(() => {
+      setMessageIndex((i) => (i + 1) % SETUP_MESSAGES.length);
+    }, 2200);
+    return () => clearInterval(id);
+  }, []);
+
+  if (!mounted) return null;
+
+  const overlay = (
+    <div
+      className="fixed inset-0 z-9999 flex flex-col items-center justify-center overflow-hidden animate-fade-in animate-duration-700 animate-ease-out"
+      style={{
+        background: `
+          radial-gradient(circle at top left, rgba(59,130,246,0.22), transparent 32%),
+          radial-gradient(circle at top right, rgba(168,85,247,0.18), transparent 30%),
+          radial-gradient(circle at bottom left, rgba(14,165,233,0.16), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(99,102,241,0.18), transparent 35%),
+          linear-gradient(135deg, #f8fafc 0%, #f1f5f9 35%, #eef2ff 65%, #f8fafc 100%)
+        `,
+      }}
+    >
+      {/* Floating orbs */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-blue-500/20 blur-3xl animate-pulse animate-duration-4000" />
+        <div className="absolute top-1/3 -right-32 h-112 w-md rounded-full bg-violet-500/20 blur-3xl animate-pulse animate-duration-5000" />
+        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-cyan-400/15 blur-3xl animate-pulse animate-duration-4500" />
+      </div>
+
+      {/* Logo + halo */}
+      <div className="relative flex items-center justify-center animate-fade-in animate-duration-700">
+        <div
+          className="absolute h-56 w-56 rounded-full blur-2xl animate-pulse animate-duration-2400"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(47,107,255,0.28), rgba(168,85,247,0.18), transparent 70%)",
+          }}
+        />
+        <Image
+          src="https://i.ibb.co/d0v22fZp/logo-Dark.png"
+          alt="Celerey"
+          width={110}
+          height={110}
+          priority
+        />
+      </div>
+
+      {/* Title */}
+      <h2 className="relative mt-10 text-2xl font-semibold text-slate-900 animate-fade-in-up animate-duration-700 animate-delay-200">
+        Setting up your dashboard
+      </h2>
+
+      {/* Rotating message */}
+      <div className="relative mt-3 h-6 overflow-hidden">
+        <p
+          key={messageIndex}
+          className="text-sm text-slate-500 animate-fade-in-up animate-duration-500"
+        >
+          {SETUP_MESSAGES[messageIndex]}…
+        </p>
+      </div>
+
+      {/* Indeterminate progress bar */}
+      <div className="relative mt-8 h-1 w-64 overflow-hidden rounded-full bg-slate-200/70 animate-fade-in animate-duration-700 animate-delay-300">
+        <div className="absolute inset-y-0 -left-1/3 w-1/3 rounded-full bg-linear-to-r from-blue-500 via-violet-500 to-cyan-400 animate-slide-in-left animate-iteration-count-infinite animate-duration-1600 animate-ease-in-out" />
+      </div>
+    </div>
+  );
+
+  return createPortal(overlay, document.body);
 }
 
 export function Step7Review({
@@ -107,6 +196,10 @@ export function Step7Review({
     try {
       const result = await submitOnboarding(payload);
 
+      // Kick off the dashboard summary fetch immediately so it's already
+      // in-flight / ready by the time the user reaches /dashboard.
+      prefetchDashboardSummary();
+
       // Persist the created user profile for use throughout the dashboard.
       const user = result.data.user;
       setUserProfile({
@@ -133,6 +226,13 @@ export function Step7Review({
       onComplete();
     } catch (err) {
       if (err instanceof TokenExpiredError) {
+        // Stash the email so the next OTP verify treats this as a re-verify
+        // (not a fresh signup) and preserves the onboarding progress.
+        try {
+          localStorage.setItem("onboarding_reverify_email", email);
+        } catch {
+          /* noop */
+        }
         setSessionExpired(true);
         setSubmitError("");
       } else {
@@ -150,6 +250,7 @@ export function Step7Review({
 
   return (
     <div className="space-y-10">
+      {isSubmitting && <SetupOverlay />}
       {/* Header */}
       <div className="max-w-xl">
         <h1 className="text-3xl font-semibold text-slate-900 leading-tight">
@@ -249,8 +350,8 @@ export function Step7Review({
           </p>
 
           <p className="text-sm text-amber-700 leading-relaxed">
-            Your onboarding session expired while you were away, for security reasons. Your progress is saved,
-            reverify your email to continue.
+            Your onboarding session expired while you were away, for security
+            reasons. Your progress is saved, reverify your email to continue.
           </p>
 
           <Button
@@ -258,7 +359,7 @@ export function Step7Review({
             className="h-9 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm px-4"
             onClick={() => router.push("/")}
           >
-            Restart onboarding →
+            Re-verify your email →
           </Button>
         </div>
       )}
@@ -286,19 +387,10 @@ export function Step7Review({
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="flex-1 gap-2 bg-primary hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl disabled:opacity-70"
+          className="flex-1 gap-2 bg-primary hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl disabled:opacity-70 cursor-pointer"
         >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Setting up your dashboard
-            </>
-          ) : (
-            <>
-              <CheckCircle2 className="h-4 w-4" />
-              Complete setup
-            </>
-          )}
+          <CheckCircle2 className="h-4 w-4" />
+          Complete setup
         </Button>
       </div>
     </div>

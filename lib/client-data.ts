@@ -604,9 +604,10 @@ export function setSubscription(status: SubscriptionStatus): void {
  */
 export function setSubscriptionData(data: {
   subscription_status: string;
-  subscription_plan?: string;
-  trial_started_at?: string;
-  trial_ends_at?: string;
+  subscription_plan?: string | null;
+  trial_started_at?: string | null;
+  trial_ends_at?: string | null;
+  renewed_at?: string | null;
   is_enterprise?: boolean;
   entitlements?: Partial<SubscriptionEntitlements>;
   record_limits?: Partial<SubscriptionRecordLimits>;
@@ -633,6 +634,59 @@ export function clearSubscription(): void {
   safeSetItem(SUB_STATUS_KEY, "none");
   safeRemoveItem(TRIAL_STARTED_AT_KEY);
   safeRemoveItem(SUB_DATA_KEY);
+}
+
+// ── MOCK SUBSCRIPTION HELPERS (REMOVE when backend webhook is ready) ─────────
+// Default new users to a 7-day trial and let "Upgrade" flip them to Pro
+// locally so we can exercise gated UI without Stripe round-trips.
+
+const ALL_ENTITLEMENTS_ON: SubscriptionEntitlements = {
+  insights_full: true,
+  advisor_chat: true,
+  concierge_requests: true,
+  export_data: true,
+  retirement_scenarios: true,
+  live_market_data: true,
+  portfolio_charts: true,
+  cash_flow_projections: true,
+  goal_scenarios: true,
+};
+
+const PRO_RECORD_LIMITS: SubscriptionRecordLimits = {
+  goals: 999,
+  assets: 999,
+  properties: 999,
+  liabilities: 999,
+  insurance_policies: 999,
+};
+
+export function mockStartTrialIfMissing(): void {
+  if (typeof window === "undefined") return;
+  if (safeGetItem(SUB_DATA_KEY)) return; // already have sub state
+  const now = new Date();
+  const end = new Date(now.getTime() + 7 * 86_400_000);
+  setSubscriptionData({
+    subscription_status: "trialing",
+    subscription_plan: "trial",
+    trial_started_at: now.toISOString(),
+    trial_ends_at: end.toISOString(),
+    is_enterprise: false,
+    entitlements: ALL_ENTITLEMENTS_ON,
+    record_limits: PRO_RECORD_LIMITS,
+  });
+}
+
+export function mockUpgradeToPro(): void {
+  setSubscriptionData({
+    subscription_status: "active",
+    subscription_plan: "pro",
+    trial_started_at: null,
+    trial_ends_at: null,
+    renewed_at: new Date().toISOString(),
+    is_enterprise: false,
+    entitlements: ALL_ENTITLEMENTS_ON,
+    record_limits: PRO_RECORD_LIMITS,
+  });
 }
 
 // ── Enterprise user-type helpers ──────────────────────────────────────────────
@@ -717,6 +771,39 @@ export function clearUserProfile(): void {
 }
 
 const NETWORTH_HISTORY_KEY = "networth_history_v1";
+
+/**
+ * Wipes every piece of user-scoped local state — auth, subscription, onboarding flag,
+ * cached profile, persisted Zustand stores, snapshots, etc.
+ *
+ * Use this whenever a new auth session is being established on a browser that may
+ * still hold another user's data (signup/login on a shared PC, after a sign-out
+ * that didn't clear everything, etc.) to prevent cross-account leakage.
+ */
+export function clearAllUserData(): void {
+  if (typeof window === "undefined") return;
+
+  // Auth + subscription + onboarding + profile
+  clearAuth();
+  clearSubscription();
+  clearUserType();
+  clearOnboarded();
+  clearUserProfile();
+
+  // Per-feature caches keyed by string
+  safeRemoveItem(NETWORTH_HISTORY_KEY);
+
+  // Persisted Zustand stores (financial dashboard + onboarding wizard)
+  safeRemoveItem("financial-store-v1");
+  safeRemoveItem("celerey-onboarding-v1");
+
+  // Notify subscription listeners that state was cleared
+  try {
+    window.dispatchEvent(new CustomEvent("celerey:sub-updated"));
+  } catch {
+    /* noop */
+  }
+}
 
 export type NetWorthHistoryItem = {
   ts: string;

@@ -1284,6 +1284,80 @@ export default function InsurancePage() {
     show: { opacity: 1, y: 0, transition: { duration: 0.32 } },
   };
 
+  if (!loading && policies.length === 0 && propertyEntries.length === 0) {
+    return (
+      <TooltipProvider>
+        <div className="mx-auto px-6 py-8 space-y-8">
+          {/* Header */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Insurance
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Your policies, coverage, and upcoming renewals
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="gap-1.5 self-start sm:self-auto"
+              style={{ backgroundColor: PRIMARY, color: "white" }}
+              onClick={() => {
+                setEditPolicy(null);
+                setDialogOpen(true);
+              }}
+            >
+              <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+              Add policy
+            </Button>
+          </div>
+
+          {/* Empty state card */}
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+              <div className="rounded-full bg-muted/60 p-5">
+                <FontAwesomeIcon
+                  icon={faShield}
+                  className="h-8 w-8 text-muted-foreground"
+                />
+              </div>
+              <div className="space-y-1 max-w-sm">
+                <h3 className="text-lg font-semibold">No policies yet</h3>
+                <p className="text-sm text-muted-foreground">
+                  Add your health, life, property, or other policies to track
+                  coverage, premiums, and upcoming renewals in one place.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="gap-1.5 mt-2"
+                style={{ backgroundColor: PRIMARY, color: "white" }}
+                onClick={() => {
+                  setEditPolicy(null);
+                  setDialogOpen(true);
+                }}
+              >
+                <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+                Add your first policy
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Still mount the add dialog so clicks above work */}
+        <PolicyDialog
+          open={dialogOpen}
+          onClose={() => {
+            setDialogOpen(false);
+            setEditPolicy(null);
+          }}
+          onSave={handleSave}
+          editPolicy={editPolicy}
+        />
+      </TooltipProvider>
+    );
+  }
+
   return (
     <TooltipProvider>
       <motion.div

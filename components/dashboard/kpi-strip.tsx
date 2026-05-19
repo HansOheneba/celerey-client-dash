@@ -29,11 +29,14 @@ const toneClass: Record<NonNullable<KpiItem["tone"]>, string> = {
 };
 
 const colsClass: Record<NonNullable<KpiStripProps["cols"]>, string> = {
-  2: "grid-cols-2",
-  3: "grid-cols-2 md:grid-cols-3",
-  4: "grid-cols-2 md:grid-cols-4",
-  5: "grid-cols-2 md:grid-cols-3 lg:grid-cols-5",
-  6: "grid-cols-2 md:grid-cols-3 lg:grid-cols-6",
+  // Container-query driven so the strip reacts to the dashboard `<main>`
+  // width — not the viewport. This keeps cards from squishing when side
+  // panels (e.g. profile setup) narrow the content column.
+  2: "grid-cols-1 @sm/dash:grid-cols-2",
+  3: "grid-cols-1 @sm/dash:grid-cols-2 @2xl/dash:grid-cols-3",
+  4: "grid-cols-1 @sm/dash:grid-cols-2 @3xl/dash:grid-cols-4",
+  5: "grid-cols-1 @sm/dash:grid-cols-2 @2xl/dash:grid-cols-3 @4xl/dash:grid-cols-5",
+  6: "grid-cols-1 @sm/dash:grid-cols-2 @2xl/dash:grid-cols-3 @4xl/dash:grid-cols-6",
 };
 
 export function KpiStrip({

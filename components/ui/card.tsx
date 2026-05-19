@@ -14,11 +14,8 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
           "rounded-3xl border",
           // spacing
           "py-6",
-          // softer, modern surface
+          // softer, modern surface — flat, contrast comes from bg only
           "border-border/60",
-        
-         
-          "shadow-[0_16px_40px_rgba(15,23,42,0.08)]",
         ].join(" "),
         className,
       )}
@@ -37,7 +34,6 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
           "grid auto-rows-min grid-rows-[auto_auto] items-start gap-1",
           "px-6",
           "has-data-[slot=card-action]:grid-cols-[1fr_auto]",
-        
         ].join(" "),
         className,
       )}

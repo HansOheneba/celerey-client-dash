@@ -39,7 +39,7 @@ export function GoalCard({
   return (
     <DashCard
       className={cn(
-        "group relative flex flex-col overflow-hidden transition-shadow hover:shadow-md",
+        "group relative flex flex-col overflow-hidden",
         goal.completed && "border-emerald-500/30",
       )}
     >
