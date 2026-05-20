@@ -1269,10 +1269,33 @@ export interface RiskQuestion {
 
 export interface RiskAssessmentResult {
   assessment_id: string;
-  score: number;
-  band: string; // "conservative" | "moderate" | "aggressive" etc.
-  risk_profile: string;
-  responses: Record<string, number>;
+  questionnaire_version?: string;
+  responses?: Record<string, number>;
+  profile_snapshot?: {
+    age?: number | null;
+    dependents?: number | null;
+    debt_level?: string | null;
+    emergency_fund_status?: string | null;
+    country_code?: string | null;
+  };
+  scoring?: {
+    time_horizon_avg?: number;
+    questionnaire_score?: number;
+    modifiers?: {
+      age?: number;
+      dependents?: number;
+      debt?: number;
+      emergency_fund?: number;
+    };
+    modifier_total?: number;
+    final_score?: number;
+  };
+  result?: {
+    risk_band?: string;
+    description?: string;
+    strategy?: string;
+  };
+  is_recalculation?: boolean;
   created_at?: string;
 }
 

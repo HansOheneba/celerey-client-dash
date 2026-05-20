@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { getUserFullName, type User } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 import { usePageData } from "@/hooks/usePageData";
-import { updateUser } from "@/lib/dashboard-api";
+import { updateUser, submitRiskAssessment } from "@/lib/dashboard-api";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -216,24 +216,23 @@ export default function AccountSettingsPage() {
     score: number;
     band: RiskBand;
     answers: Record<number, OptionScore>;
+    responses: Record<string, number>;
   }) {
     setQuizOpen(false);
-    const apiRiskValue = bandToApiValue(result.band);
     try {
-      const updated = await updateUser({
-        risk_profile: apiRiskValue,
-        risk_score: result.score,
-        risk_answers: result.answers,
+      const submitted = await submitRiskAssessment({
+        questionnaire_version: "1.0",
+        responses: result.responses,
       });
-      if (updated) {
-        const next = {
-          ...form,
-          risk_profile: apiRiskValue as User["risk_profile"],
-          updated_at: new Date().toISOString(),
-        };
-        setUser(next);
-        setForm(next);
-        toast.success(`Risk profile updated to ${riskBandLabel(result.band)}.`);
+      if (submitted) {
+        const riskProfile = submitted.result?.risk_band;
+        const storeUser = useFinancialStore.getState().user;
+        if (storeUser && riskProfile) {
+          const next = { ...storeUser, risk_profile: riskProfile as User["risk_profile"] };
+          setUser(next);
+          setForm((f) => ({ ...f, risk_profile: riskProfile as User["risk_profile"] }));
+        }
+        toast.success("Risk profile updated.");
       } else {
         toast.error("Failed to save risk profile. Please try again.");
       }
