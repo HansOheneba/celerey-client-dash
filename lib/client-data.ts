@@ -230,6 +230,7 @@ export interface CashFlowRow {
   recurringType?: RecurringType;
   recurringMonths?: number;
   startDate?: string;
+  endDate?: string;
 }
 
 export interface ExpenseCategory {
@@ -241,6 +242,7 @@ export interface ExpenseCategory {
   recurringType?: RecurringType;
   recurringMonths?: number;
   startDate?: string;
+  endDate?: string;
 }
 
 export type MoneyRow = {
@@ -249,18 +251,15 @@ export type MoneyRow = {
   amount: number;
 };
 
-export type RecurringType = "forever" | "months" | "one-time";
+export type RecurringType = "monthly" | "one-time";
 
 export interface CashFlowEntryDraft {
   name: string;
   amount: string;
-  isRecurring: boolean;
   recurringType: RecurringType;
-  recurringMonths: string;
   startDate: string;
-  endDate?: string;
+  endDate: string; // empty string = no end date (ongoing / one-time)
   category: string;
-  note: string;
 }
 
 export interface CashFlowSettings {
@@ -279,8 +278,7 @@ export interface CashFlowPoint {
  * Returns the effective projected monthly amount for a given ISO month
  * (YYYY-MM) from a list of income/expense rows, respecting recurring type.
  * - "one-time" or isRecurring===false: only counts for the row's startDate month.
- * - "months": counts for `recurringMonths` months from startDate.
- * - "forever" or no recurring info: always counted.
+ * - "monthly" (or legacy "forever") or no recurring info: counts from startDate forward.
  */
 export function projectMonthlyAmount(
   rows: Array<{
@@ -289,6 +287,7 @@ export function projectMonthlyAmount(
     recurringType?: RecurringType;
     recurringMonths?: number;
     startDate?: string;
+    endDate?: string;
   }>,
   isoMonth: string,
 ): number {
@@ -298,18 +297,10 @@ export function projectMonthlyAmount(
         if (!row.startDate) return false;
         return row.startDate.slice(0, 7) === isoMonth;
       }
-      if (
-        row.recurringType === "months" &&
-        row.recurringMonths != null &&
-        row.startDate
-      ) {
-        const [sy, sm] = row.startDate.slice(0, 7).split("-").map(Number);
-        const [py, pm] = isoMonth.split("-").map(Number);
-        const diff = (py - sy) * 12 + (pm - sm);
-        return diff >= 0 && diff < row.recurringMonths;
-      }
-      // "forever" recurring: don't project before the row's own start date
+      // "monthly" (or legacy "forever") - don't project before the row's start date
       if (row.startDate && isoMonth < row.startDate.slice(0, 7)) return false;
+      // Stop projecting after the row's end date
+      if (row.endDate && isoMonth > row.endDate.slice(0, 7)) return false;
       return true;
     })
     .reduce((s, r) => s + r.amount, 0);

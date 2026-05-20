@@ -137,7 +137,9 @@ export default function OnboardingPage() {
 
   if (!ready) return <CelereyLoader />;
 
-  const totalIncome = incomes.reduce((s, i) => s + Number(i.amount_monthly), 0);
+  const totalIncome = incomes
+    .filter((i) => i.is_recurring)
+    .reduce((s, i) => s + Number(i.amount_monthly), 0);
 
   // display_name is the single source of truth for names across all account modes
   const displayName = identity?.display_name ?? "there";

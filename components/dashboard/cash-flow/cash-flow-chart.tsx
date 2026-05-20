@@ -89,6 +89,7 @@ function projectHistoricalMonthlyAmount(
     recurringType?: RecurringType;
     recurringMonths?: number;
     startDate?: string;
+    endDate?: string;
   }>,
   isoMonth: string,
 ): number {
@@ -113,6 +114,8 @@ function projectHistoricalMonthlyAmount(
         const diff = (py - sy) * 12 + (pm - sm);
         return diff >= 0 && diff < row.recurringMonths;
       }
+      // Stop counting after the row's end date
+      if (row.endDate && isoMonth > row.endDate.slice(0, 7)) return false;
       return true; // "forever" with an explicit startDate
     })
     .reduce((s, r) => s + r.amount, 0);

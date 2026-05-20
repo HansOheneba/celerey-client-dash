@@ -147,7 +147,9 @@ function EditIncomePopover({
           </div>
 
           <div className="space-y-1">
-            <Label className="text-xs">Monthly amount</Label>
+            <Label className="text-xs">
+              {isRecurring ? "Monthly amount" : "One-time amount"}
+            </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
                 {getCurrencyPrefix(preferredCurrency)}
@@ -323,10 +325,9 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
     .filter((i) => i.category !== "Other")
     .map((i) => i.category);
 
-  const totalMonthlyIncome = incomes.reduce(
-    (s, i) => s + Number(i.amount_monthly),
-    0,
-  );
+  const totalMonthlyIncome = incomes
+    .filter((i) => i.is_recurring)
+    .reduce((s, i) => s + Number(i.amount_monthly), 0);
 
   function addIncome(data: IncomeFormValues) {
     setIncomes((prev) => [
@@ -475,7 +476,9 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
           {/* ── Row 2: Amount + Recurring toggle ── */}
           <div className="grid grid-cols-2 gap-3 items-end">
             <div className="space-y-1.5">
-              <Label className="text-xs text-slate-600">Monthly amount</Label>
+              <Label className="text-xs text-slate-600">
+                {isRecurring ? "Monthly amount" : "One-time amount"}
+              </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
                   {getCurrencyPrefix(preferredCurrency)}

@@ -317,8 +317,9 @@ function apiIncomeToStore(i: ApiIncome): CashFlowRow {
     name: i.name,
     amount: Number(i.amount ?? i.amount_monthly) || 0,
     isRecurring: i.recurring_type !== "one-time" && (i.is_recurring ?? true),
-    recurringType: i.recurring_type === "one-time" ? "one-time" : "forever",
+    recurringType: i.recurring_type === "one-time" ? "one-time" : "monthly",
     startDate: i.start_date,
+    endDate: i.end_date ?? undefined,
   };
 }
 
@@ -329,8 +330,9 @@ function apiExpenseToStore(e: ApiExpense): ExpenseCategory {
     amount: Number(e.amount ?? e.amount_monthly) || 0,
     essential: e.essential ?? false,
     isRecurring: e.recurring_type !== "one-time" && (e.is_recurring ?? true),
-    recurringType: e.recurring_type === "one-time" ? "one-time" : "forever",
+    recurringType: e.recurring_type === "one-time" ? "one-time" : "monthly",
     startDate: e.start_date,
+    endDate: e.end_date ?? undefined,
   };
 }
 

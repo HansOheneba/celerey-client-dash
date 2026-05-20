@@ -238,7 +238,9 @@ export function Step7Review({
     }
   }
 
-  const totalIncome = incomes.reduce((s, i) => s + Number(i.amount_monthly), 0);
+  const totalIncome = incomes
+    .filter((i) => i.is_recurring)
+    .reduce((s, i) => s + Number(i.amount_monthly), 0);
   const preferredCurrency = identity?.currency || "USD";
 
   return (
@@ -286,7 +288,7 @@ export function Step7Review({
           title="Your income"
           summary={
             incomes.length > 0
-              ? `${incomes.length} source${incomes.length > 1 ? "s" : ""} · ${formatCurrencyAmount(totalIncome, preferredCurrency)} this month`
+              ? `${incomes.length} source${incomes.length > 1 ? "s" : ""} · ${formatCurrencyAmount(totalIncome, preferredCurrency)}/mo recurring`
               : "No income added"
           }
           step={4}

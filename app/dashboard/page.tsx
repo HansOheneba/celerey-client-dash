@@ -319,12 +319,6 @@ function projectHistoricalAmountOverview(
       if (!row.isRecurring || row.recurringType === "one-time") {
         return startMonth === isoMonth;
       }
-      if (row.recurringType === "months" && row.recurringMonths != null) {
-        const [sy, sm] = startMonth.split("-").map(Number);
-        const [py, pm] = isoMonth.split("-").map(Number);
-        const diff = (py - sy) * 12 + (pm - sm);
-        return diff >= 0 && diff < row.recurringMonths;
-      }
       return true;
     })
     .reduce((s, r) => s + r.amount, 0);
