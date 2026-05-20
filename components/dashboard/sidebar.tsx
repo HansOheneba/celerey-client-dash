@@ -236,7 +236,6 @@ export default function DashboardSidebar() {
 
             return (
               <SidebarMenuItem key={item.href}>
-                
                 <SidebarMenuButton
                   asChild
                   isActive={active}
@@ -269,11 +268,7 @@ export default function DashboardSidebar() {
                           transition={{ duration: 0.14 }}
                           className={`
                             text-sm whitespace-nowrap
-                            ${
-                              active
-                                ? "text-white font-bold"
-                                : "text-white"
-                            }
+                            ${active ? "text-white font-bold" : "text-white"}
                           `}
                         >
                           {item.label}
