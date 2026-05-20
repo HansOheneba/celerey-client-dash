@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
+import LightRays from "@/components/LightRays";
 
 interface Step8CompleteProps {
   /** display_name — works for solo (full name) and partner/family (household name) */
@@ -45,19 +46,37 @@ export function Step8Complete({
   ];
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12 text-center">
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0b0a23] px-4 py-12 text-center">
+      {/* Animated light rays background */}
+      <div className="pointer-events-none absolute inset-0">
+        <LightRays
+          raysOrigin="top-center"
+          raysColor="#ffffff"
+          raysSpeed={0.2}
+          lightSpread={2}
+          rayLength={1.5}
+          pulsating
+          fadeDistance={1.9}
+          saturation={1}
+          followMouse={false}
+          mouseInfluence={0.1}
+          noiseAmount={0}
+          distortion={0}
+        />
+      </div>
+
       {/* Title */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="space-y-3 max-w-md"
+        className="relative z-10 space-y-3 max-w-md"
       >
-        <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 leading-tight">
-          You're all set, {displayName}
+        <h1 className="text-3xl sm:text-4xl font-semibold text-white leading-tight">
+          You're all set, <span className="text-blue-300">{displayName}</span>
         </h1>
 
-        <p className="text-slate-500 text-base sm:text-lg leading-relaxed">
+        <p className="text-white/70 text-base sm:text-lg leading-relaxed">
           Your dashboard is ready. You can now see your net worth, track your
           finances, and get a clear view of where you stand.
         </p>
@@ -88,25 +107,25 @@ export function Step8Complete({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.35, duration: 0.4 }}
-        className="mt-10 w-full max-w-sm"
+        className="relative z-10 mt-10 w-full max-w-sm"
       >
         <Button
           type="button"
           onClick={handleCta}
-          className="w-full bg-primary hover:bg-primary/90 text-white h-12 text-base rounded-xl"
+          className="w-full bg-white hover:bg-white/90 text-[#0b0a23] h-12 text-base rounded-xl"
         >
           Go to dashboard
         </Button>
 
-        <p className="mt-3 text-xs text-slate-400">
+        <p className="mt-3 text-xs text-white/50">
           You can update your information anytime from your settings
         </p>
       </motion.div>
 
       {/* Logo */}
-      <div className="mt-12 opacity-30">
+      <div className="relative z-10 mt-12 opacity-70">
         <Image
-          src="https://i.ibb.co/d0v22fZp/logo-Dark.png"
+          src="/logos/logoWhite.png"
           alt="Celerey"
           width={50}
           height={50}
