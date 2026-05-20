@@ -10,7 +10,6 @@ import { DashboardGuard } from "@/components/dashboard/DashboardGuard";
 import { CelereyLoader } from "@/components/login/celerey-loader";
 import { useFinancialStore } from "@/store/financialStore";
 import { setDefaultCurrency } from "@/lib/client-data";
-import { useDashboardData } from "@/hooks/useDashboardData";
 import { SessionExpiredError } from "@/lib/dashboard-api";
 import { ProfilePanelProvider } from "@/components/dashboard/ProfilePanelContext";
 import { ProfileSetupPanel } from "@/components/dashboard/profile-setup-panel";
@@ -24,12 +23,6 @@ function StoreHydrator() {
   useEffect(() => {
     useFinancialStore.persist.rehydrate();
   }, []);
-  return null;
-}
-
-/** Fetches live API data and hydrates the financial store. */
-function ApiDataLoader() {
-  useDashboardData();
   return null;
 }
 
@@ -125,7 +118,6 @@ export default function RootLayout({
         }}
       >
         <StoreHydrator />
-        <ApiDataLoader />
         <CurrencySync />
         <DashboardGuard>
           <ProfilePanelProvider>

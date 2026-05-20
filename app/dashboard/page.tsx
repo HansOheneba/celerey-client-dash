@@ -36,6 +36,7 @@ import { setSubscriptionData } from "../../lib/client-data";
 import { fetchSubscription } from "../../lib/dashboard-api";
 import { useMonthlySnapshot } from "@/hooks/useMonthlySnapshot";
 import { usePageData } from "@/hooks/usePageData";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import {
   canAccessFeature,
   type FeatureKey,
@@ -435,6 +436,7 @@ export default function DashboardPage() {
   // ── Store ─────────────────────────────────────────────────────────────────
 
   const { loading } = usePageData("overview");
+  useDashboardData();
 
   const store = useFinancialStore();
   const financialData: FinancialDomainData = useMemo(

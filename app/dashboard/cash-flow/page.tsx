@@ -77,8 +77,6 @@ import {
   updateExpense,
   deleteExpense,
   updateEmergencyFund,
-  fetchCashFlowSummary,
-  type ApiCashFlowSummary,
 } from "@/lib/dashboard-api";
 import { usePageData } from "@/hooks/usePageData";
 import { toast } from "sonner";
@@ -108,21 +106,13 @@ function avgFromHistory(
 export default function CashFlowPage() {
   const { loading } = usePageData("cash-flow");
 
-  const [cashFlowSummary, setCashFlowSummary] =
-    React.useState<ApiCashFlowSummary | null>(null);
-
-  React.useEffect(() => {
-    fetchCashFlowSummary()
-      .then((summary) => setCashFlowSummary(summary))
-      .catch(() => {});
-  }, []);
-
   // ── Store subscriptions ───────────────────────────────────────────────────
   const storeHoldings = useFinancialStore((s) => s.holdings);
   const storePropertyAssets = useFinancialStore((s) => s.propertyAssets);
   const storeAccounts = useFinancialStore((s) => s.accounts);
   const storeEmergencyFund = useFinancialStore((s) => s.emergencyFund);
   const storeCashFlowHistory = useFinancialStore((s) => s.cashFlowHistory);
+  const cashFlowSummary = useFinancialStore((s) => s.cashFlowSummary);
 
   const income = useFinancialStore((s) => s.incomeRows);
   const expenses = useFinancialStore((s) => s.expenseCategories);

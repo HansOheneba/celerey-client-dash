@@ -16,6 +16,7 @@ import {
   fetchExpenses,
   fetchEmergencyFund,
   fetchCashFlowHistory,
+  fetchCashFlowSummary,
   fetchAssets,
   fetchInsurancePolicies,
   fetchProperties,
@@ -91,12 +92,13 @@ export function usePageData(key: PageDataKey) {
             break;
           }
           case "cash-flow": {
-            const [income, expenses, emergencyFund, history] =
+            const [income, expenses, emergencyFund, history, summary] =
               await Promise.allSettled([
                 fetchIncome(),
                 fetchExpenses(),
                 fetchEmergencyFund(),
                 fetchCashFlowHistory(),
+                fetchCashFlowSummary(),
               ]);
             if (income.status === "fulfilled") store.setIncome(income.value);
             if (expenses.status === "fulfilled")
@@ -111,6 +113,8 @@ export function usePageData(key: PageDataKey) {
             }
             if (history.status === "fulfilled")
               store.setCashFlowHistory(history.value);
+            if (summary.status === "fulfilled" && summary.value)
+              store.setCashFlowSummary(summary.value);
             break;
           }
           case "assets": {

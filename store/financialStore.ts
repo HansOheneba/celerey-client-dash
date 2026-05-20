@@ -29,7 +29,10 @@ import type {
   RetirementData,
   EmergencyFundData,
 } from "@/lib/onboarding/types";
-import type { DashboardBootstrapData } from "@/lib/dashboard-api";
+import type {
+  DashboardBootstrapData,
+  ApiCashFlowSummary,
+} from "@/lib/dashboard-api";
 import { type GoalsMeta, EMPTY_GOALS_META } from "@/lib/goals-meta";
 
 // ── Legacy types ──────────────────────────────────────────────────────────────
@@ -202,6 +205,8 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
   setHoldings: (holdings: AssetHolding[]) => void;
   setPropertyAssets: (props: Property[]) => void;
   setCashFlowHistory: (points: CashFlowPoint[]) => void;
+  cashFlowSummary: ApiCashFlowSummary | null;
+  setCashFlowSummary: (summary: ApiCashFlowSummary | null) => void;
   setInsurancePolicies: (policies: InsurancePolicy[]) => void;
   addProperty: (property: Property) => void;
   updateProperty: (property: Property) => void;
@@ -251,6 +256,7 @@ type FinancialData = Omit<
   | "setHoldings"
   | "setPropertyAssets"
   | "setCashFlowHistory"
+  | "setCashFlowSummary"
   | "setInsurancePolicies"
   | "addProperty"
   | "updateProperty"
@@ -294,6 +300,7 @@ const INITIAL_STATE: FinancialData = {
   freshness: [],
   retirement: DEFAULT_RETIREMENT,
   cashFlowHistory: [],
+  cashFlowSummary: null,
   legacy: DEFAULT_LEGACY,
   profileCompletionScore: 0,
 };
@@ -432,6 +439,7 @@ export const useFinancialStore = create<FinancialState>()(
         }),
 
       setCashFlowHistory: (cashFlowHistory) => set(() => ({ cashFlowHistory })),
+      setCashFlowSummary: (cashFlowSummary) => set(() => ({ cashFlowSummary })),
 
       setInsurancePolicies: (insurancePolicies) =>
         set((s) => {

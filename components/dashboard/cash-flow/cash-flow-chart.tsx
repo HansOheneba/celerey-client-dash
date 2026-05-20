@@ -108,12 +108,6 @@ function projectHistoricalMonthlyAmount(
       if (!row.isRecurring || row.recurringType === "one-time") {
         return startMonth === isoMonth;
       }
-      if (row.recurringType === "months" && row.recurringMonths != null) {
-        const [sy, sm] = startMonth.split("-").map(Number);
-        const [py, pm] = isoMonth.split("-").map(Number);
-        const diff = (py - sy) * 12 + (pm - sm);
-        return diff >= 0 && diff < row.recurringMonths;
-      }
       // Stop counting after the row's end date
       if (row.endDate && isoMonth > row.endDate.slice(0, 7)) return false;
       return true; // "forever" with an explicit startDate
@@ -145,7 +139,7 @@ function CashFlowTooltip({ active, payload, label }: any) {
       : null;
 
   return (
-    <div className="rounded-lg border bg-background shadow-md px-3 py-2.5 text-xs space-y-1.5 min-w-[160px]">
+    <div className="rounded-lg border bg-background shadow-md px-3 py-2.5 text-xs space-y-1.5 min-w-40">
       <p className="font-semibold text-foreground mb-1">
         {label}
         {isProjected && (
@@ -516,7 +510,7 @@ export function CashFlowChart({
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
-            <p className="text-sm text-muted-foreground max-w-[280px]">
+            <p className="text-sm text-muted-foreground max-w-70">
               Set up your income and expenses to see your projected cash flow.
             </p>
           </div>
@@ -621,7 +615,7 @@ export function CashFlowChart({
 
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-[220px] w-full"
+          className="aspect-auto h-55 w-full"
         >
           <LineChart data={chartData} margin={{ left: 12, right: 12 }}>
             <CartesianGrid
