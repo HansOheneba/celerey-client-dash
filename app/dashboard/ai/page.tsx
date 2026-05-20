@@ -201,7 +201,12 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
           />
         </div>
       )}
-      <div className={cn("flex max-w-[85%] flex-col", isAI ? "items-start" : "items-end")}>
+      <div
+        className={cn(
+          "flex max-w-[85%] flex-col",
+          isAI ? "items-start" : "items-end",
+        )}
+      >
         <div
           className={cn(
             "rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
@@ -619,8 +624,7 @@ export default function AIInsightsPage() {
     return null;
   }
 
-  const isEmptyState =
-    messages.length <= 1 && messages[0]?.id === "greeting";
+  const isEmptyState = messages.length <= 1 && messages[0]?.id === "greeting";
 
   const quickStats = [
     {

@@ -68,14 +68,14 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: white;
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --sidebar: #18163f;
+  --sidebar-foreground: rgba(255, 255, 255, 0.8);
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #18163f;
+  --sidebar-accent: rgba(255, 255, 255, 0.1);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: rgba(255, 255, 255, 0.3);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
 }
@@ -107,17 +107,6 @@
   animation: celerey-breathe 1.8s ease-in-out infinite;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
- * DASHBOARD SURFACE
- * Background for the dashboard <main>. Mirrors the brand loader gradient
- * (components/login/celerey-loader.tsx) — a soft blue + violet radial wash
- * on a near-white base. Gives white cards/KPI tiles room to breathe with
- * a subtle premium tint that ties the dashboard back to the auth screens.
- *
- * To restyle the page background app-wide, edit ONLY this block — every
- * dashboard tab inherits it via <main className="dashboard-surface"> in
- * app/dashboard/layout.tsx.
- * ──────────────────────────────────────────────────────────────────────── */
 .dashboard-surface {
   background-color: rgb(247, 247, 247);
 }

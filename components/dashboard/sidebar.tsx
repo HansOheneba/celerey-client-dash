@@ -169,7 +169,7 @@ export default function DashboardSidebar() {
     <Sidebar
       collapsible="icon"
       variant="sidebar"
-      className="bg-[rgba(248,250,252,0.82)] backdrop-blur-xl border-r border-black/4 text-gray-700 relative"
+      className="border-r border-white/10 text-white/80 relative"
     >
       {/* Ambient inner lighting - felt, not seen */}
       <div
@@ -182,7 +182,7 @@ export default function DashboardSidebar() {
       />
 
       {/* ── Header: Logo ── */}
-      <SidebarHeader className="sticky top-0 z-10 h-16 flex-row items-center justify-center p-0 px-3 border-b bg-white/40 backdrop-blur-xl">
+      <SidebarHeader className="sticky top-0 z-10 h-16 flex-row items-center justify-center p-0 px-3 border-b border-white/10 bg-white/5 backdrop-blur-xl">
         <Link href="/dashboard" className="flex items-center">
           {/* Full logo and symbol overlap and crossfade simultaneously - no stutter */}
           <div className="relative">
@@ -192,7 +192,7 @@ export default function DashboardSidebar() {
               className={collapsed ? "pointer-events-none" : ""}
             >
               <Image
-                src="/logos/logoDark.png"
+                src="/logos/logoWhite.png"
                 alt="Celerey"
                 width={150}
                 height={40}
@@ -206,12 +206,12 @@ export default function DashboardSidebar() {
               className="absolute inset-0 flex items-center"
             >
               <Image
-                src="/logos/Celerey-Secondary-Symbol-Dark.png"
+                src="/logos/CelereySymbolLight.png"
                 alt="Celerey"
                 width={28}
                 height={28}
                 priority
-                className="h-7 w-auto object-contain"
+                className="h-10 w-auto object-contain"
               />
             </motion.div>
           </div>
@@ -236,38 +236,19 @@ export default function DashboardSidebar() {
                   className={`
                     relative rounded-md h-10 px-3
                     transition-colors
-                    ${active ? "bg-[rgba(22,11,53,0.06)]" : "hover:bg-black/3"}
+                    ${active ? "bg-white/15" : "hover:bg-white/8"}
                   `}
                 >
                   <Link className="flex items-center gap-3" href={item.href}>
-                    <span className="relative shrink-0">
+                    <span className="shrink-0">
                       <FontAwesomeIcon
                         icon={item.icon}
                         className={`
                           h-4 w-4
-                          ${active ? "text-[#160b35]" : "text-[#6b6880]"}
+                          ${active ? "text-white" : "text-white/50"}
                         `}
                         fixedWidth
                       />
-                      <AnimatePresence>
-                        {attentionHrefs.has(item.href) && (
-                          <motion.span
-                            key="badge"
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0, opacity: 0 }}
-                            transition={{
-                              type: "spring",
-                              damping: 16,
-                              stiffness: 300,
-                            }}
-                            className="absolute -top-1 -right-1 flex size-2"
-                          >
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
-                            <span className="relative inline-flex size-2 rounded-full bg-blue-500" />
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
                     </span>
 
                     <AnimatePresence initial={false}>
@@ -282,8 +263,8 @@ export default function DashboardSidebar() {
                             text-sm whitespace-nowrap
                             ${
                               active
-                                ? "text-[#160b35] font-medium"
-                                : "text-gray-600"
+                                ? "text-white font-medium"
+                                : "text-white/60"
                             }
                           `}
                         >
@@ -293,13 +274,30 @@ export default function DashboardSidebar() {
                     </AnimatePresence>
                   </Link>
                 </SidebarMenuButton>
+
+                {/* Badge lives outside the overflow-hidden button so it's visible in both states */}
+                <AnimatePresence>
+                  {attentionHrefs.has(item.href) && (
+                    <motion.span
+                      key="badge"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: "spring", damping: 16, stiffness: 300 }}
+                      className="pointer-events-none absolute top-1.5 right-1.5 flex size-2"
+                    >
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                      <span className="relative inline-flex size-2 rounded-full bg-blue-500" />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </SidebarMenuItem>
             );
           })}
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarSeparator className="my-3 bg-gray-200" />
+      <SidebarSeparator className="my-3 bg-white/10" />
 
       {/* ── Profile Completion Widget ── */}
       {/* Hidden while the panel is open - they alternate */}
@@ -316,30 +314,30 @@ export default function DashboardSidebar() {
             <button
               type="button"
               onClick={openProfilePanel}
-              className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors px-3 py-2.5 space-y-2"
+              className="w-full text-left rounded-lg border border-white/15 bg-white/8 hover:bg-white/15 transition-colors px-3 py-2.5 space-y-2"
             >
               <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-gray-700">
+                <p className="text-xs font-medium text-white/80">
                   Your profile is{" "}
-                  <span className="font-semibold text-[#160b35]">
+                  <span className="font-semibold text-white">
                     {profileCompletionScore}%
                   </span>{" "}
                   complete
                 </p>
-                <span className="text-xs tabular-nums text-gray-500">
+                <span className="text-xs tabular-nums text-white/50">
                   {profileCompletionScore}/100
                 </span>
               </div>
-              <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-white/15 overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${profileCompletionScore}%` }}
                   transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="h-full rounded-full bg-[#160b35]"
+                  className="h-full rounded-full bg-white"
                 />
               </div>
               {profileCompletionScore < 100 && (
-                <p className="text-[11px] text-gray-500 leading-snug">
+                <p className="text-[11px] text-white/50 leading-snug">
                   Complete your profile to get the most out of Celerey
                 </p>
               )}
@@ -404,7 +402,7 @@ export default function DashboardSidebar() {
             <SidebarMenuButton
               asChild
               tooltip="Support"
-              className="hover:bg-gray-50"
+              className="hover:bg-white/8"
             >
               <Link
                 href="/dashboard/support"
@@ -412,7 +410,7 @@ export default function DashboardSidebar() {
               >
                 <FontAwesomeIcon
                   icon={faHeadset}
-                  className="h-4 w-4 text-gray-400"
+                  className="h-4 w-4 text-white/40"
                   fixedWidth
                 />
                 <AnimatePresence initial={false}>
@@ -423,7 +421,7 @@ export default function DashboardSidebar() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -4 }}
                       transition={{ duration: 0.14 }}
-                      className="text-sm text-gray-600"
+                      className="text-sm text-white/60"
                     >
                       Support
                     </motion.span>
