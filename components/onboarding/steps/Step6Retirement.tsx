@@ -117,7 +117,7 @@ export function Step6Retirement({
 
       {/* ── Section 1: When & Lifestyle ── */}
       <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-5 shadow-sm space-y-4">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
           When &amp; lifestyle
         </p>
 
@@ -199,7 +199,7 @@ export function Step6Retirement({
 
       {/* ── Section 2: Contributions ── */}
       <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-5 shadow-sm space-y-4">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
           Your contributions
         </p>
 
@@ -228,13 +228,13 @@ export function Step6Retirement({
       </div>
 
       {/* Navigation */}
-      <div className="flex gap-3 pt-1">
+      <div className="flex justify-between gap-3 pt-1">
         {onBack && (
           <Button
             type="button"
             variant="outline"
             onClick={onBack}
-            className="flex-1 gap-1 h-11 rounded-xl"
+            className="flex-1 gap-1 h-12 rounded-xl"
           >
             <ChevronLeft className="h-4 w-4" />
             Back
@@ -243,7 +243,7 @@ export function Step6Retirement({
         <Button
           type="button"
           onClick={handleSubmit(onSubmit)}
-          className="flex-1 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-11 rounded-xl"
+          className="flex-1 gap-2 h-12 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
         >
           Continue
           <ArrowRight className="h-4 w-4" />

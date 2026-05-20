@@ -179,7 +179,7 @@ export default function RiskAttitudeQuiz({ onSave }: QuizProps) {
           variant="outline"
           onClick={handlePrevious}
           disabled={step === 1}
-          className="flex-1 gap-1 disabled:opacity-30 border-gray-300"
+          className="flex-1 h-12 gap-1 disabled:opacity-30 border-gray-300"
         >
           <ChevronLeft className="h-4 w-4" />
           Back
@@ -187,7 +187,7 @@ export default function RiskAttitudeQuiz({ onSave }: QuizProps) {
         <Button
           onClick={handleNext}
           disabled={!canGoNext}
-          className="flex-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground"
+          className="flex-2 h-12 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground"
         >
           {step >= totalSteps ? "Submit" : "Continue"}
         </Button>

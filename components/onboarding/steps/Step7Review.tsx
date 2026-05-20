@@ -244,14 +244,14 @@ export function Step7Review({
   const preferredCurrency = identity?.currency || "USD";
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6 sm:space-y-10">
       {isSubmitting && <SetupOverlay />}
       {/* Header */}
       <div className="max-w-xl">
-        <h1 className="text-3xl font-semibold text-slate-900 leading-tight">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
           Review and finish setup
         </h1>
-        <p className="mt-3 text-slate-500">
+        <p className="mt-2 text-slate-500 text-sm">
           Take a moment to check your details. You can edit anything before
           completing your setup.
         </p>
@@ -355,13 +355,13 @@ export function Step7Review({
       )}
 
       {/* CTA */}
-      <div className="flex gap-3">
+      <div className="flex justify-between gap-3">
         {onBack && (
           <Button
             type="button"
             variant="outline"
             onClick={onBack}
-            className="flex-1 gap-1 h-12 text-base rounded-xl"
+            className="flex-1 gap-1 h-12 rounded-xl"
           >
             <ChevronLeft className="h-4 w-4" />
             Back
@@ -371,7 +371,7 @@ export function Step7Review({
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="flex-1 gap-2 bg-primary hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl disabled:opacity-70 cursor-pointer"
+          className="flex-1 gap-2 h-12 bg-primary hover:bg-[#1e1b55] text-white rounded-xl disabled:opacity-70 cursor-pointer"
         >
           <CheckCircle2 className="h-4 w-4" />
           Complete setup

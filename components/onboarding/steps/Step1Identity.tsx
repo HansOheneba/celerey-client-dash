@@ -650,13 +650,13 @@ export function Step1Identity({
       </div>
 
       {/* CTA */}
-      <div className="flex gap-3">
+      <div className="flex justify-between gap-3">
         {onBack && (
           <Button
             type="button"
             variant="outline"
             onClick={onBack}
-            className="flex-1 gap-1 h-12 text-base rounded-xl"
+            className="flex-1 gap-1 h-12 rounded-xl"
           >
             <ChevronLeft className="h-4 w-4" />
             Back
@@ -666,7 +666,7 @@ export function Step1Identity({
           type="button"
           onClick={handleSubmit(onSubmit)}
           disabled={!canContinue}
-          className="flex-1 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white h-12 text-base rounded-xl"
+          className="flex-1 gap-2 h-12 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
         >
           Continue
           <ArrowRight className="h-4 w-4" />

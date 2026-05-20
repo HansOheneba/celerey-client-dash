@@ -58,13 +58,13 @@ export function Step5EmergencyFund({
   const isZero = balanceNum === 0;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6 sm:space-y-10">
       {/* Header */}
       <div className="max-w-xl">
-        <h1 className="text-3xl font-semibold text-slate-900">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
           Your emergency fund
         </h1>
-        <p className="mt-3 text-slate-500">
+        <p className="mt-2 text-slate-500 text-sm">
           This is the money you can access quickly if something unexpected
           happens. Think job loss, medical bills, or urgent expenses.
         </p>
@@ -91,17 +91,18 @@ export function Step5EmergencyFund({
             Coverage goal
           </p>
           <p className="text-sm text-slate-500 mt-1">
-            How many months of your basic expenses do you think this fund should cover?
+            How many months of your basic expenses do you think this fund should
+            cover?
           </p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="grid grid-cols-4 gap-2">
           {[3, 6, 9, 12].map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => setTargetMonths(m)}
-              className={`flex-1 rounded-xl border py-2.5 text-sm font-medium ${
+              className={`rounded-xl border py-2.5 text-xs sm:text-sm font-medium text-center ${
                 targetMonths === m
                   ? "border-primary bg-primary text-white"
                   : "border-slate-200 bg-white text-slate-700 hover:border-primary/50"
@@ -114,7 +115,7 @@ export function Step5EmergencyFund({
       </div>
 
       {/* Input */}
-      <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+      <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm">
         <div>
           <p className="text-sm font-semibold text-slate-800">
             How much do you currently have saved?
@@ -176,7 +177,7 @@ export function Step5EmergencyFund({
             type="button"
             variant="outline"
             onClick={onBack}
-            className="flex-1 gap-1 h-12 text-base rounded-xl"
+            className="flex-1 gap-1 h-12 rounded-xl"
           >
             <ChevronLeft className="h-4 w-4" />
             Back
@@ -185,7 +186,7 @@ export function Step5EmergencyFund({
         <Button
           type="button"
           onClick={handleSubmit(onSubmit)}
-          className="flex-1 h-12 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white text-base rounded-xl"
+          className="flex-1 gap-2 h-12 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
         >
           Continue
           <ArrowRight className="h-4 w-4" />

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -290,6 +290,12 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
   const [showForm, setShowForm] = useState(defaultValues.length === 0);
   const store = useOnboardingStore();
   const preferredCurrency = store.identity?.currency || "USD";
+  const setStoreIncomes = useOnboardingStore((s) => s.setIncomes);
+
+  // Keep store in sync so navigating back/forward preserves entered data
+  useEffect(() => {
+    setStoreIncomes(incomes);
+  }, [incomes, setStoreIncomes]);
 
   const {
     register,
@@ -519,13 +525,13 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
       )}
 
       {/* Navigation */}
-      <div className="flex gap-3 pt-1">
+      <div className="flex justify-between gap-3 pt-1">
         {onBack && (
           <Button
             type="button"
             variant="outline"
             onClick={onBack}
-            className="flex-1 gap-1 h-11 rounded-xl"
+            className="flex-1 gap-1 h-12 rounded-xl"
           >
             <ChevronLeft className="h-4 w-4" /> Back
           </Button>
@@ -533,7 +539,7 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
         <Button
           onClick={() => onComplete(incomes)}
           disabled={incomes.length === 0}
-          className="flex-1 h-11 gap-2 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
+          className="flex-1 gap-2 h-12 bg-[#151339] hover:bg-[#1e1b55] text-white rounded-xl"
         >
           Continue <ArrowRight className="h-4 w-4" />
         </Button>

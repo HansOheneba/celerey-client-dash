@@ -152,15 +152,16 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                   scale: isActive ? 1.08 : 1,
                 }}
                 transition={{ duration: 0.25 }}
-                className="flex h-9 w-9 items-center justify-center rounded-full border-2"
+                className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-full border-2"
               >
                 {isCompleted ? (
                   <motion.svg
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.2 }}
-                    width="14"
-                    height="14"
+                    width="12"
+                    height="12"
+                    className="sm:w-3.5 sm:h-3.5"
                     viewBox="0 0 14 14"
                     fill="none"
                   >
@@ -174,7 +175,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                   </motion.svg>
                 ) : (
                   <span
-                    className={`text-sm font-semibold ${
+                    className={`text-xs sm:text-sm font-semibold ${
                       isActive ? "text-white" : "text-gray-400"
                     }`}
                   >
@@ -195,7 +196,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
 
             {/* Connector line between nodes */}
             {i < STAGES.length - 1 && (
-              <div className="relative mx-2 mb-5 h-0.5 w-16 sm:w-24 bg-gray-200 overflow-hidden">
+              <div className="relative mx-1 sm:mx-2 mb-5 h-0.5 w-8 sm:w-16 md:w-24 bg-gray-200 overflow-hidden">
                 <motion.div
                   initial={false}
                   animate={{ width: isCompleted ? "100%" : "0%" }}
@@ -251,7 +252,7 @@ export function OnboardingShell({
       )
     `,
         }}
-        className="relative flex min-h-screen flex-col overflow-hidden"
+        className="relative flex min-h-svh flex-col overflow-x-hidden"
       >
         {/* ── Ambient blur + grid texture ── */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -288,7 +289,7 @@ export function OnboardingShell({
         </header>
 
         {/* ── Content ───────────────── */}
-        <main className="flex flex-1 justify-center items-center px-4 pt-4 pb-10 sm:px-6">
+        <main className="flex flex-1 justify-center items-start md:items-center px-4 pt-4 pb-10 sm:px-6">
           <div
             className="
               w-full

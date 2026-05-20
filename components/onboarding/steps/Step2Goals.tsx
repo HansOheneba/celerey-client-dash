@@ -339,7 +339,7 @@ export function Step2Goals({
       )}
 
       {/* Navigation */}
-      <div className="flex gap-3">
+      <div className="flex justify-between gap-3">
         {onBack && (
           <Button
             type="button"

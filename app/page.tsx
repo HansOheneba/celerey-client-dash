@@ -297,17 +297,58 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex justify-center items-center bg-muted/40 px-4 py-5 md:px-7 md:py-8">
-      <div className="mx-auto w-full max-w-6xl rounded-sm bg-background shadow-sm ring-1 ring-border">
-        <div className="grid h-190 grid-cols-1 gap-0 md:grid-cols-2">
+    <div className="relative min-h-svh flex flex-col justify-center items-center overflow-x-hidden md:bg-muted/40 md:px-7 md:py-8">
+      {/* ── Mobile decorative background (hidden on desktop) ── */}
+      <div
+        aria-hidden
+        className="pointer-events-none md:hidden absolute inset-0 z-0"
+        style={{
+          background: `
+            radial-gradient(circle at top left, rgba(59,130,246,0.18), transparent 32%),
+            radial-gradient(circle at top right, rgba(168,85,247,0.14), transparent 30%),
+            radial-gradient(circle at bottom left, rgba(14,165,233,0.12), transparent 28%),
+            radial-gradient(circle at bottom right, rgba(99,102,241,0.14), transparent 35%),
+            linear-gradient(135deg, #f8fafc 0%, #f1f5f9 35%, #eef2ff 65%, #f8fafc 100%)
+          `,
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none md:hidden absolute inset-0 z-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, #0f172a 1px, transparent 1px),
+            linear-gradient(to bottom, #0f172a 1px, transparent 1px)
+          `,
+          backgroundSize: "48px 48px",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none md:hidden absolute -top-32 -left-32 h-96 w-96 rounded-full bg-blue-500/15 blur-3xl z-0"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none md:hidden absolute top-1/3 -right-24 h-96 w-96 rounded-full bg-violet-500/15 blur-3xl z-0"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none md:hidden absolute bottom-10 left-1/4 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl z-0"
+      />
+
+      {/* ── Card ── */}
+      <div className="relative z-10 w-full px-4 py-8 md:px-0 md:py-0 md:mx-auto md:max-w-6xl md:rounded-sm md:bg-background md:shadow-sm md:ring-1 md:ring-border">
+        <div className="grid grid-cols-1 gap-0 md:grid-cols-2 md:h-190">
           {/* LEFT: carousel */}
           <LoginCarousel />
 
           {/* RIGHT: auth forms */}
-          <section className="relative flex items-start justify-center px-6 pb-6 pt-8 md:px-10 md:pb-10 md:pt-10">
-            <div className="w-full max-w-md flex flex-col justify-between h-full">
+        
+              <div className="relative flex w-full bg-white rounded-lg md:shadow-none shadow-md">
+          <section className="relative w-full flex items-center justify-center md:items-start md:justify-center px-6 py-10 md:px-10 md:pb-10 md:pt-10">
+            <div className="w-full max-w-md md:flex md:flex-col md:justify-between md:h-full">
               {/* Logo */}
-              <div className="mb-10 flex items-center justify-start gap-2 md:mb-12">
+              <div className="mb-10 flex items-center justify-center md:justify-start gap-2 md:mb-12">
                 <Image
                   src="https://i.ibb.co/d0v22fZp/logo-Dark.png"
                   alt="Celerey logo"
@@ -316,40 +357,40 @@ export default function Home() {
                   priority
                 />
               </div>
+                {/* Step content */}
+                {step === "email" ? (
+                  <EmailForm
+                    onSubmit={handleEmailSubmit}
+                    mode={mode}
+                    onModeToggle={handleModeToggle}
+                    isSubmitting={isSubmitting}
+                    errorMessage={errorMessage}
+                    infoMessage={infoMessage}
+                  />
+                ) : (
+                  <OtpForm
+                    email={email}
+                    mode={mode}
+                    onVerify={handleOtpVerify}
+                    onBack={handleBack}
+                    isSubmitting={isSubmitting}
+                    errorMessage={errorMessage}
+                    infoMessage={infoMessage}
+                  />
+                )}
 
-              {/* Step content */}
-              {step === "email" ? (
-                <EmailForm
-                  onSubmit={handleEmailSubmit}
-                  mode={mode}
-                  onModeToggle={handleModeToggle}
-                  isSubmitting={isSubmitting}
-                  errorMessage={errorMessage}
-                  infoMessage={infoMessage}
-                />
-              ) : (
-                <OtpForm
-                  email={email}
-                  mode={mode}
-                  onVerify={handleOtpVerify}
-                  onBack={handleBack}
-                  isSubmitting={isSubmitting}
-                  errorMessage={errorMessage}
-                  infoMessage={infoMessage}
-                />
-              )}
-
-              {/* Footer */}
-              <div className="mt-6 text-xs text-muted-foreground">
-                <Link
-                  href="/support"
-                  className="hover:text-foreground underline underline-offset-4"
-                >
-                  Need help?
-                </Link>
+                {/* Footer */}
+                <div className="mt-6 text-xs text-muted-foreground">
+                  <Link
+                    href="/support"
+                    className="hover:text-foreground underline underline-offset-4"
+                  >
+                    Need help?
+                  </Link>
+                </div>
               </div>
-            </div>
           </section>
+            </div>
         </div>
       </div>
     </div>
