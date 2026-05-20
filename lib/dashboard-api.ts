@@ -20,6 +20,7 @@ import type {
 } from "@/lib/client-data";
 import { calculateAge } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { type GoalsMeta, EMPTY_GOALS_META } from "@/lib/goals-meta";
 
 // ── Session-expiry error ───────────────────────────────────────────────────
 
@@ -103,19 +104,10 @@ interface ApiGoal {
   updated_at?: string;
 }
 
-export interface GoalsMeta {
-  totalMonthlyNeeded: number;
-  totalGoals: number;
-  completedGoals: number;
-  activeGoals: number;
-}
-
-export const EMPTY_GOALS_META: GoalsMeta = {
-  totalMonthlyNeeded: 0,
-  totalGoals: 0,
-  completedGoals: 0,
-  activeGoals: 0,
-};
+// GoalsMeta and EMPTY_GOALS_META live in lib/goals-meta.ts to avoid a circular
+// dependency with store/financialStore.ts.
+export type { GoalsMeta } from "@/lib/goals-meta";
+export { EMPTY_GOALS_META } from "@/lib/goals-meta";
 
 interface ApiGoalsMeta {
   total_monthly_needed?: number;

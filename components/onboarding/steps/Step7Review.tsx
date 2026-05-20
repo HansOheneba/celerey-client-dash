@@ -3,12 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import { submitOnboarding, TokenExpiredError } from "@/lib/onboarding/api";
 import { prefetchDashboardSummary } from "@/lib/dashboard-api";
+import { ReverifyOtpDialog } from "@/components/onboarding/ReverifyOtpDialog";
 import type { OnboardingPayload } from "@/lib/onboarding/types";
 import {
   setOnboarded,
@@ -164,10 +164,9 @@ export function Step7Review({
   email,
 }: Step7ReviewProps) {
   const store = useOnboardingStore();
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [sessionExpired, setSessionExpired] = useState(false);
+  const [reverifyOpen, setReverifyOpen] = useState(false);
 
   const { identity, goals, incomes, emergencyFund, retirement } = store;
 
@@ -226,15 +225,9 @@ export function Step7Review({
       onComplete();
     } catch (err) {
       if (err instanceof TokenExpiredError) {
-        // Stash the email so the next OTP verify treats this as a re-verify
-        // (not a fresh signup) and preserves the onboarding progress.
-        try {
-          localStorage.setItem("onboarding_reverify_email", email);
-        } catch {
-          /* noop */
-        }
-        setSessionExpired(true);
+        // Open the in-place reverify dialog instead of bouncing the user home.
         setSubmitError("");
+        setReverifyOpen(true);
       } else {
         setSubmitError(
           "Something went wrong. Please try again. Your progress is saved.",
@@ -343,26 +336,15 @@ export function Step7Review({
         </p>
       </div>
 
-      {sessionExpired && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 space-y-3">
-          <p className="text-sm font-semibold text-amber-800">
-            Your onboarding session has expired
-          </p>
-
-          <p className="text-sm text-amber-700 leading-relaxed">
-            Your onboarding session expired while you were away, for security
-            reasons. Your progress is saved, reverify your email to continue.
-          </p>
-
-          <Button
-            type="button"
-            className="h-9 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm px-4"
-            onClick={() => router.push("/")}
-          >
-            Re-verify your email →
-          </Button>
-        </div>
-      )}
+      <ReverifyOtpDialog
+        open={reverifyOpen}
+        email={email}
+        onOpenChange={setReverifyOpen}
+        onVerified={() => {
+          // Token cookie has been refreshed by the dialog. Retry submit.
+          void handleSubmit();
+        }}
+      />
 
       {submitError && (
         <p className="text-sm text-red-600 font-medium rounded-xl bg-red-50 border border-red-100 px-4 py-3">

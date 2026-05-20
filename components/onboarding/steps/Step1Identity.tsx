@@ -38,7 +38,13 @@ import {
 import type { IdentityData } from "@/lib/onboarding/types";
 import { ONBOARDING_COPY } from "@/lib/onboarding/copy";
 import { useOnboardingStore } from "@/store/onboardingStore";
-import { ArrowRight, ChevronsUpDown, Check, ChevronLeft } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronsUpDown,
+  Check,
+  ChevronLeft,
+  ChevronDown,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Build sorted country list from countries-list ───────────────────────────
@@ -121,6 +127,14 @@ export function Step1Identity({
   );
   const [countryOpen, setCountryOpen] = React.useState(false);
   const [dialCodeOpen, setDialCodeOpen] = React.useState(false);
+  const [showOptional, setShowOptional] = React.useState(() =>
+    Boolean(
+      defaultValues?.prefix ||
+      defaultValues?.gender ||
+      defaultValues?.marital_status ||
+      defaultValues?.occupation,
+    ),
+  );
 
   const { accountMode } = useOnboardingStore();
   const isSolo = accountMode === "solo";
@@ -241,9 +255,8 @@ export function Step1Identity({
           {heading}
         </h1>
         <p className="mt-2 text-slate-500 text-sm sm:text-base">
-          {subheading} All fields marked{" "}
-          <span className="text-slate-800 font-medium">(optional)</span> can be
-          filled later.
+          {subheading} Only the essentials are shown. You can add more details
+          later, or expand the section below.
         </p>
       </div>
 
@@ -255,32 +268,8 @@ export function Step1Identity({
           </p>
 
           {isSolo ? (
-            /* ── SOLO: collect prefix + first name + last name ── */
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label>
-                  Prefix{" "}
-                  <span className="text-slate-400">(optional)</span>
-                </Label>
-                <Controller
-                  control={control}
-                  name="prefix"
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PREFIXES.map((p) => (
-                          <SelectItem key={p} value={p}>
-                            {p}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
+            /* ── SOLO: first name + last name (prefix moved to optional) ── */
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>First name</Label>
                 <Input {...register("first_name")} />
@@ -373,7 +362,7 @@ export function Step1Identity({
                             variant="outline"
                             role="combobox"
                             aria-expanded={dialCodeOpen}
-                            className="w-33 shrink-0 justify-between font-normal h-10"
+                            className="w-28 shrink-0 justify-between font-normal px-2"
                           >
                             <span className="truncate">
                               {selectedDialCodeCountry?.flag ?? "🌍"} {dialCode}
@@ -435,69 +424,107 @@ export function Step1Identity({
             </div>
           </div>
 
-          {/* Gender + Marital + Occupation */}
+          {/* Gender + Marital + Occupation + Prefix — collapsed by default */}
           {isSolo && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label>
-                  Gender{" "}
-                  <span className="text-slate-400">(optional)</span>
-                </Label>
-                <Controller
-                  control={control}
-                  name="gender"
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {GENDERS.map((g) => (
-                          <SelectItem key={g.value} value={g.value}>
-                            {g.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setShowOptional((s) => !s)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                aria-expanded={showOptional}
+              >
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 transition-transform",
+                    showOptional && "rotate-180",
                   )}
                 />
-              </div>
+                {showOptional ? "Hide" : "Add"} personal details (optional)
+              </button>
 
-              <div className="space-y-1.5">
-                <Label>
-                  Marital status{" "}
-                  <span className="text-slate-400">(optional)</span>
-                </Label>
-                <Controller
-                  control={control}
-                  name="marital_status"
-                  render={({ field }) => (
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? ""}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MARITAL_STATUSES.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>
-                            {s.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
+              {showOptional && (
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Prefix</Label>
+                    <Controller
+                      control={control}
+                      name="prefix"
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value ?? ""}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PREFIXES.map((p) => (
+                              <SelectItem key={p} value={p}>
+                                {p}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
 
-              <div className="space-y-1.5">
-                <Label>
-                  Occupation{" "}
-                  <span className="text-slate-400">(optional)</span>
-                </Label>
-                <Input {...register("occupation")} />
-              </div>
+                  <div className="space-y-1.5">
+                    <Label>Gender</Label>
+                    <Controller
+                      control={control}
+                      name="gender"
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value ?? ""}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {GENDERS.map((g) => (
+                              <SelectItem key={g.value} value={g.value}>
+                                {g.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Marital status</Label>
+                    <Controller
+                      control={control}
+                      name="marital_status"
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value ?? ""}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MARITAL_STATUSES.map((s) => (
+                              <SelectItem key={s.value} value={s.value}>
+                                {s.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Occupation</Label>
+                    <Input {...register("occupation")} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -573,7 +600,9 @@ export function Step1Identity({
                 </PopoverContent>
               </Popover>
               {errors.resident_country && (
-                <p className="text-xs text-red-500">{errors.resident_country.message}</p>
+                <p className="text-xs text-red-500">
+                  {errors.resident_country.message}
+                </p>
               )}
             </div>
 
@@ -614,9 +643,7 @@ export function Step1Identity({
               )}
             />
             {errors.currency && (
-              <p className="text-xs text-red-500">
-                {errors.currency.message}
-              </p>
+              <p className="text-xs text-red-500">{errors.currency.message}</p>
             )}
           </div>
         </div>

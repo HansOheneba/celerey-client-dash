@@ -283,7 +283,11 @@ export default function DashboardSidebar() {
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0, opacity: 0 }}
-                      transition={{ type: "spring", damping: 16, stiffness: 300 }}
+                      transition={{
+                        type: "spring",
+                        damping: 16,
+                        stiffness: 300,
+                      }}
                       className="pointer-events-none absolute top-1.5 right-1.5 flex size-2"
                     >
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />

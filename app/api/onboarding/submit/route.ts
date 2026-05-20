@@ -69,13 +69,21 @@ export async function POST(req: NextRequest) {
     upstream = await callUpstream();
   } catch (err) {
     // Retry once on transient network/abort errors.
-    const reason = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-    console.error("[onboarding/submit] upstream fetch failed, retrying:", reason);
+    const reason =
+      err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    console.error(
+      "[onboarding/submit] upstream fetch failed, retrying:",
+      reason,
+    );
     try {
       upstream = await callUpstream();
     } catch (err2) {
-      const reason2 = err2 instanceof Error ? `${err2.name}: ${err2.message}` : String(err2);
-      console.error("[onboarding/submit] upstream fetch failed (retry):", reason2);
+      const reason2 =
+        err2 instanceof Error ? `${err2.name}: ${err2.message}` : String(err2);
+      console.error(
+        "[onboarding/submit] upstream fetch failed (retry):",
+        reason2,
+      );
       return NextResponse.json(
         {
           error: "Could not reach the upstream API. Please try again.",
@@ -88,6 +96,7 @@ export async function POST(req: NextRequest) {
 
   const data = (await upstream.json().catch(() => null)) as {
     success?: boolean;
+    status?: number;
     data?: { session_token?: string; [key: string]: unknown };
     [key: string]: unknown;
   } | null;
@@ -97,7 +106,19 @@ export async function POST(req: NextRequest) {
   console.log("Body   :", JSON.stringify(data, null, 2));
   console.log("──────────────────────────────────────────────────────────\n");
 
-  const res = NextResponse.json(data ?? {}, { status: upstream.status });
+  // Upstream sometimes returns HTTP 200 with a body indicating a 401
+  // (expired onboarding token). Normalize that to a real 401 so the
+  // client can trigger the re-verify flow consistently.
+  let responseStatus = upstream.status;
+  if (
+    upstream.status === 200 &&
+    data?.success === false &&
+    data?.status === 401
+  ) {
+    responseStatus = 401;
+  }
+
+  const res = NextResponse.json(data ?? {}, { status: responseStatus });
 
   // If the API returned a session_token, store it as an HttpOnly cookie
   // so JS never has to read or store it on the client.

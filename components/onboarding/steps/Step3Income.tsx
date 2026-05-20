@@ -227,7 +227,11 @@ function IncomeAccordionItem({
         </p>
         <p className="text-sm font-semibold text-slate-900 tabular-nums shrink-0">
           {formatCurrencyAmount(income.amount_monthly, preferredCurrency)}
-          <span className="text-xs text-slate-400 font-normal">/mo</span>
+          {income.is_recurring ? (
+            <span className="text-xs text-slate-400 font-normal">/mo</span>
+          ) : (
+            <span className="text-xs text-slate-400 font-normal"> one-off</span>
+          )}
         </p>
         <ChevronDown
           className={`h-4 w-4 text-slate-400 transition-transform shrink-0 ${

@@ -46,9 +46,11 @@ function getGoalsHeading(mode?: "solo" | "partner" | "family") {
 }
 
 function getGoalsSubheading(mode?: "solo" | "partner" | "family") {
-  if (mode === "partner") return "Add 1–3 goals that matter to your household.";
-  if (mode === "family") return "Add 1–3 goals that matter to your family.";
-  return "Add 1–3 financial goals. These guide your personalised plan.";
+  if (mode === "partner")
+    return "Add your goals one at a time. You can save up to 3 before moving on.";
+  if (mode === "family")
+    return "Add your goals one at a time. You can save up to 3 before moving on.";
+  return "Add your goals one at a time. Fill in the details below and save each one before moving on.";
 }
 
 function naturalCountdown(date: Date): string {
@@ -146,21 +148,26 @@ export function Step2Goals({
 
       {/* Suggestions — only shown when form is open */}
       {showForm && (
-        <div className="flex flex-wrap gap-2">
-          {SUGGESTED_GOALS.map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => applySuggestion(g)}
-              className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                titleValue === g
-                  ? "border-[#151339] bg-[#151339] text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-[#151339] hover:text-[#151339]"
-              }`}
-            >
-              {g}
-            </button>
-          ))}
+        <div className="space-y-2">
+          <p className="text-xs text-slate-400">
+            Not sure what to name it? Tap one to pre-fill the goal name:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {SUGGESTED_GOALS.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => applySuggestion(g)}
+                className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                  titleValue === g
+                    ? "border-[#151339] bg-[#151339] text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-[#151339] hover:text-[#151339]"
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

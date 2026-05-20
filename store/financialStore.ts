@@ -29,8 +29,8 @@ import type {
   RetirementData,
   EmergencyFundData,
 } from "@/lib/onboarding/types";
-import type { DashboardBootstrapData, GoalsMeta } from "@/lib/dashboard-api";
-import { EMPTY_GOALS_META } from "@/lib/dashboard-api";
+import type { DashboardBootstrapData } from "@/lib/dashboard-api";
+import { type GoalsMeta, EMPTY_GOALS_META } from "@/lib/goals-meta";
 
 // ── Legacy types ──────────────────────────────────────────────────────────────
 
