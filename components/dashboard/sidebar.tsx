@@ -229,6 +229,7 @@ export default function DashboardSidebar() {
 
             return (
               <SidebarMenuItem key={item.href}>
+                
                 <SidebarMenuButton
                   asChild
                   isActive={active}
@@ -263,8 +264,8 @@ export default function DashboardSidebar() {
                             text-sm whitespace-nowrap
                             ${
                               active
-                                ? "text-white font-medium"
-                                : "text-white/60"
+                                ? "text-white font-bold"
+                                : "text-white"
                             }
                           `}
                         >
@@ -288,10 +289,10 @@ export default function DashboardSidebar() {
                         damping: 16,
                         stiffness: 300,
                       }}
-                      className="pointer-events-none absolute top-1.5 right-1.5 flex size-2"
+                      className="pointer-events-none absolute top-1.5 left-1.5 flex size-2"
                     >
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
-                      <span className="relative inline-flex size-2 rounded-full bg-blue-500" />
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                      <span className="relative inline-flex size-2 rounded-full bg-blue-200" />
                     </motion.span>
                   )}
                 </AnimatePresence>
