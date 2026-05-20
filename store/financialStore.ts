@@ -106,6 +106,7 @@ interface ScoreInput {
   holdings: AssetHolding[];
   accounts: Account[];
   insurancePolicies: InsurancePolicy[];
+  propertyAssets: Property[];
 }
 
 function computeProfileCompletionScore(s: ScoreInput): number {
@@ -122,10 +123,16 @@ function computeProfileCompletionScore(s: ScoreInput): number {
     s.retirement.currentInvested > 0 || s.retirement.existingPensionBalance > 0
       ? 10
       : 0,
-    s.liabilities.length > 0 ? 5 : 0,
+    s.liabilities.length > 0 ||
+    s.propertyAssets.some((p) => p.is_active && !!p.mortgage)
+      ? 5
+      : 0,
     s.emergencyFund.currentCashBalance > 0 ? 5 : 0,
     s.holdings.length > 0 || s.accounts.length > 0 ? 10 : 0,
-    s.insurancePolicies.length > 0 ? 5 : 0,
+    s.insurancePolicies.length > 0 ||
+    s.propertyAssets.some((p) => p.is_active && p.insurance.length > 0)
+      ? 5
+      : 0,
     !!s.user?.risk_profile ? 10 : 0,
   ].reduce((a, b) => a + b, 0);
 }
@@ -455,7 +462,10 @@ export const useFinancialStore = create<FinancialState>()(
           const propertyAssets = [...s.propertyAssets, property];
           return {
             propertyAssets,
-            profileCompletionScore: computeProfileCompletionScore(s),
+            profileCompletionScore: computeProfileCompletionScore({
+              ...s,
+              propertyAssets,
+            }),
           };
         }),
 
@@ -466,7 +476,10 @@ export const useFinancialStore = create<FinancialState>()(
           );
           return {
             propertyAssets,
-            profileCompletionScore: computeProfileCompletionScore(s),
+            profileCompletionScore: computeProfileCompletionScore({
+              ...s,
+              propertyAssets,
+            }),
           };
         }),
 
@@ -477,7 +490,10 @@ export const useFinancialStore = create<FinancialState>()(
           );
           return {
             propertyAssets,
-            profileCompletionScore: computeProfileCompletionScore(s),
+            profileCompletionScore: computeProfileCompletionScore({
+              ...s,
+              propertyAssets,
+            }),
           };
         }),
 

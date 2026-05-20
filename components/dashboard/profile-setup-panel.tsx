@@ -165,10 +165,14 @@ export function ProfileSetupPanel() {
     store.retirement.currentInvested > 0 ||
     store.retirement.existingPensionBalance > 0;
   const hasRiskProfile = !!store.user?.risk_profile;
-  const hasLiabilities = store.liabilities.length > 0;
+  const hasLiabilities =
+    store.liabilities.length > 0 ||
+    store.propertyAssets.some((p) => p.is_active && !!p.mortgage);
   const hasEmergencyFund = store.emergencyFund.currentCashBalance > 0;
   const hasAssets = store.holdings.length > 0 || store.accounts.length > 0;
-  const hasInsurance = store.insurancePolicies.length > 0;
+  const hasInsurance =
+    store.insurancePolicies.length > 0 ||
+    store.propertyAssets.some((p) => p.is_active && p.insurance.length > 0);
 
   const score = store.profileCompletionScore;
 

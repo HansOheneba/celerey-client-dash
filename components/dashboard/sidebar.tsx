@@ -141,14 +141,20 @@ export default function DashboardSidebar() {
     if (!s.goals.length) hrefs.add("/dashboard/goals");
     if (!s.holdings.length && !s.accounts.length)
       hrefs.add("/dashboard/assets");
-    if (!s.insurancePolicies.length) hrefs.add("/dashboard/insurance");
+    const hasAnyInsurance =
+      s.insurancePolicies.length > 0 ||
+      s.propertyAssets.some((p) => p.is_active && p.insurance.length > 0);
+    if (!hasAnyInsurance) hrefs.add("/dashboard/insurance");
     if (
       !s.incomeRows.length ||
       !s.expenseCategories.length ||
       !s.emergencyFund.currentCashBalance
     )
       hrefs.add("/dashboard/cash-flow");
-    if (!s.liabilities.length) hrefs.add("/dashboard/liabilities");
+    const hasAnyLiability =
+      s.liabilities.length > 0 ||
+      s.propertyAssets.some((p) => p.is_active && !!p.mortgage);
+    if (!hasAnyLiability) hrefs.add("/dashboard/liabilities");
     if (!s.retirement.desiredMonthlyIncome || !s.retirement.retirementAge)
       hrefs.add("/dashboard/retirement");
     return hrefs;
@@ -158,6 +164,7 @@ export default function DashboardSidebar() {
     store.holdings,
     store.accounts,
     store.insurancePolicies,
+    store.propertyAssets,
     store.incomeRows,
     store.expenseCategories,
     store.emergencyFund,

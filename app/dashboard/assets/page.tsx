@@ -2149,7 +2149,7 @@ export default function AssetsPage() {
           </motion.div>
 
           {/* ── Accounts ── */}
-          <motion.div variants={mi}>
+          {/* <motion.div variants={mi}>
             <div className="flex items-center justify-between mb-3">
               <SectionLabel>Accounts</SectionLabel>
               <span className="text-xs text-muted-foreground">
@@ -2202,7 +2202,7 @@ export default function AssetsPage() {
                 </motion.div>
               ))}
             </div>
-          </motion.div>
+          </motion.div> */}
 
           {/* ── Manual valuation notice ── */}
           {holdings.some((h) => h.valuation_method === "manual") && (
