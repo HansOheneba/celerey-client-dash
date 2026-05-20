@@ -33,7 +33,6 @@ import {
   type MoneyRow,
 } from "@/components/dashboard/cash-flow/row-item";
 import { SettingsDialog } from "@/components/dashboard/cash-flow/settings-dialog";
-import { CelereyInsights } from "@/components/dashboard/cash-flow/celerey-insights";
 import { NetWorthCard } from "@/components/dashboard/cash-flow/net-worth-card";
 import {
   DeleteConfirmDialog,
@@ -79,6 +78,7 @@ import {
   deleteExpense,
   updateEmergencyFund,
   fetchCashFlowSummary,
+  type ApiCashFlowSummary,
 } from "@/lib/dashboard-api";
 import { usePageData } from "@/hooks/usePageData";
 import { toast } from "sonner";
@@ -108,14 +108,13 @@ function avgFromHistory(
 export default function CashFlowPage() {
   const { loading } = usePageData("cash-flow");
 
+  const [cashFlowSummary, setCashFlowSummary] =
+    React.useState<ApiCashFlowSummary | null>(null);
+
   React.useEffect(() => {
     fetchCashFlowSummary()
-      .then((summary) =>
-        console.log("[CashFlowPage] cashflow.summary response:", summary),
-      )
-      .catch((err) =>
-        console.warn("[CashFlowPage] cashflow.summary failed:", err),
-      );
+      .then((summary) => setCashFlowSummary(summary))
+      .catch(() => {});
   }, []);
 
   // ── Store subscriptions ───────────────────────────────────────────────────
@@ -201,16 +200,21 @@ export default function CashFlowPage() {
   const incMom = momChange(storeCashFlowHistory, "income");
   const expMom = momChange(storeCashFlowHistory, "expenses");
 
-  const insights = React.useMemo(
-    () =>
-      deriveInsights(
-        totalIncome,
-        totalExpenses,
-        savingsRate,
-        storeCashFlowHistory,
-      ),
-    [totalIncome, totalExpenses, savingsRate, storeCashFlowHistory],
-  );
+  const insights = React.useMemo(() => {
+    const apiIn = cashFlowSummary?.insights_inputs;
+    return deriveInsights(
+      apiIn?.totalIncome ?? totalIncome,
+      apiIn?.totalExpenses ?? totalExpenses,
+      apiIn?.savingsRate ?? savingsRate,
+      storeCashFlowHistory,
+    );
+  }, [
+    cashFlowSummary,
+    totalIncome,
+    totalExpenses,
+    savingsRate,
+    storeCashFlowHistory,
+  ]);
 
   const financialData: FinancialDomainData = React.useMemo(
     () => ({
@@ -567,7 +571,7 @@ export default function CashFlowPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
             Analytics
           </p>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 @sm/dash:grid-cols-2 @4xl/dash:grid-cols-4">
             <BurnRateCard
               burn={burn}
               income={totalIncome}
@@ -673,24 +677,6 @@ export default function CashFlowPage() {
           </div>
         </motion.div>
 
-        {/* Insights */}
-        {insights.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-          >
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-              Insights
-            </p>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {insights.map((ins) => (
-                <InsightCard key={ins.id} insight={ins} />
-              ))}
-            </div>
-          </motion.div>
-        )}
-
         {/* Breakdown */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -700,11 +686,11 @@ export default function CashFlowPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
             Breakdown
           </p>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <div className="lg:col-span-1">
+          <div className="grid grid-cols-1 gap-4 @3xl/dash:grid-cols-3">
+            <div className="@3xl/dash:col-span-1">
               <NetWorthCard breakdown={netWorth} />
             </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:col-span-2">
+            <div className="grid grid-cols-1 gap-4 @sm/dash:grid-cols-2 @3xl/dash:col-span-2">
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -795,8 +781,23 @@ export default function CashFlowPage() {
             </div>
           </div>
         </motion.div>
-
-        <CelereyInsights />
+        {/* Insights */}
+        {insights.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+              Insights
+            </p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {insights.map((ins) => (
+                <InsightCard key={ins.id} insight={ins} />
+              ))}
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Dialogs */}

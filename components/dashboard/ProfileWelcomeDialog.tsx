@@ -46,10 +46,8 @@ export function ProfileWelcomeDialog() {
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-            <UserCog className="h-5 w-5" />
-          </div>
-          <DialogTitle>Welcome back, {firstName}</DialogTitle>
+        
+          <DialogTitle className=" py-3">Welcome, {firstName}</DialogTitle>
           <DialogDescription>
             Your profile is {score}% complete. Finish a few more steps to unlock
             sharper insights, tailored recommendations, and a more accurate

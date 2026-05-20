@@ -223,12 +223,46 @@ interface ApiScenario {
   monthly_multiplier?: number;
 }
 
-interface ApiCashFlowSummary {
-  total_income?: number;
-  total_expenses?: number;
-  surplus?: number;
-  savings_rate?: number;
-  burn_rate?: number;
+export interface ApiCashFlowSummary {
+  dashboard_currency?: string;
+  fx_rates_as_of?: string | null;
+  fx_unavailable?: boolean;
+  current_month?: {
+    totalIncome: number;
+    totalExpenses: number;
+    surplus: number;
+    savingsRate: number;
+    burnRate: number;
+  };
+  month_over_month?: {
+    incomeChange_pct: number;
+    expenseChange_pct: number;
+    surplusChange_pct: number;
+  };
+  averages?: {
+    avgMonthlyIncome: number;
+    avgMonthlyExpenses: number;
+    avgMonthlySurplus: number;
+    based_on_months: number;
+  };
+  emergency_fund?: {
+    current_cash_balance: number;
+    monthly_baseline: number;
+    target_amount: number;
+    target_months: number;
+    runway_months: number;
+    funded_pct: number;
+    shortfall: number;
+  };
+  insights_inputs?: {
+    savingsRate: number;
+    burnRate: number;
+    incomeChange_pct: number;
+    expenseChange_pct: number;
+    surplus: number;
+    totalIncome: number;
+    totalExpenses: number;
+  };
   [key: string]: unknown;
 }
 
