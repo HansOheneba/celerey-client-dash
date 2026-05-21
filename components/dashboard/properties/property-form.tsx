@@ -637,7 +637,9 @@ export function PropertyForm({
                   <SummaryRow
                     label="Market Value"
                     value={
-                      marketValueNum > 0 ? formatCurrency(marketValueNum, userCurrency) : "—"
+                      marketValueNum > 0
+                        ? formatCurrency(marketValueNum, userCurrency)
+                        : "—"
                     }
                   />
                   <SummaryRow
@@ -652,7 +654,11 @@ export function PropertyForm({
                   />
                   <SummaryRow
                     label="Equity"
-                    value={marketValueNum > 0 ? formatCurrency(equity, userCurrency) : "—"}
+                    value={
+                      marketValueNum > 0
+                        ? formatCurrency(equity, userCurrency)
+                        : "—"
+                    }
                   />
                   <SummaryRow
                     label="LVR"

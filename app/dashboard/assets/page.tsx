@@ -98,6 +98,7 @@ import {
   createAssetValuation,
 } from "@/lib/dashboard-api";
 import { DateInput } from "@/components/ui/date-input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { usePageData } from "@/hooks/usePageData";
 import { toast } from "sonner";
 
@@ -713,24 +714,17 @@ function AddHoldingDialog({
                 <Label className="text-xs font-semibold">
                   How much did you invest?
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    {currencySymbol}
-                  </span>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0"
-                    className="pl-6"
-                    value={draft.cost_basis}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        cost_basis: formatNumericInput(e.target.value),
-                      }))
-                    }
-                  />
-                </div>
+                <CurrencyInput
+                  currency={userCurrency}
+                  placeholder="0"
+                  value={draft.cost_basis}
+                  onChange={(v) =>
+                    setDraft((d) => ({
+                      ...d,
+                      cost_basis: formatNumericInput(v),
+                    }))
+                  }
+                />
                 <p className="text-xs text-muted-foreground">
                   Total you paid - your cost basis.
                 </p>
@@ -745,47 +739,33 @@ function AddHoldingDialog({
                 <Label className="text-xs font-semibold">
                   How much did you invest?
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    {currencySymbol}
-                  </span>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0"
-                    className="pl-6"
-                    value={draft.cost_basis}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        cost_basis: formatNumericInput(e.target.value),
-                      }))
-                    }
-                  />
-                </div>
+                <CurrencyInput
+                  currency={userCurrency}
+                  placeholder="0"
+                  value={draft.cost_basis}
+                  onChange={(v) =>
+                    setDraft((d) => ({
+                      ...d,
+                      cost_basis: formatNumericInput(v),
+                    }))
+                  }
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">
                   What is it worth today?
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    {currencySymbol}
-                  </span>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0"
-                    className="pl-6"
-                    value={draft.current_value}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        current_value: formatNumericInput(e.target.value),
-                      }))
-                    }
-                  />
-                </div>
+                <CurrencyInput
+                  currency={userCurrency}
+                  placeholder="0"
+                  value={draft.current_value}
+                  onChange={(v) =>
+                    setDraft((d) => ({
+                      ...d,
+                      current_value: formatNumericInput(v),
+                    }))
+                  }
+                />
                 <p className="text-xs text-muted-foreground">
                   Current NAV from your statement.
                 </p>
@@ -801,24 +781,17 @@ function AddHoldingDialog({
                   <Label className="text-xs font-semibold">
                     Face / par value
                   </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                      {currencySymbol}
-                    </span>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="100,000"
-                      className="pl-6"
-                      value={draft.cost_basis}
-                      onChange={(e) =>
-                        setDraft((d) => ({
-                          ...d,
-                          cost_basis: formatNumericInput(e.target.value),
-                        }))
-                      }
-                    />
-                  </div>
+                  <CurrencyInput
+                    currency={userCurrency}
+                    placeholder="100,000"
+                    value={draft.cost_basis}
+                    onChange={(v) =>
+                      setDraft((d) => ({
+                        ...d,
+                        cost_basis: formatNumericInput(v),
+                      }))
+                    }
+                  />
                   <p className="text-xs text-muted-foreground">
                     Principal paid back at maturity. Used as cost basis.
                   </p>
@@ -866,24 +839,17 @@ function AddHoldingDialog({
                 <Label className="text-xs font-semibold">
                   Opening balance / principal
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    {currencySymbol}
-                  </span>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="25,000"
-                    className="pl-6"
-                    value={draft.cost_basis}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        cost_basis: formatNumericInput(e.target.value),
-                      }))
-                    }
-                  />
-                </div>
+                <CurrencyInput
+                  currency={userCurrency}
+                  placeholder="25,000"
+                  value={draft.cost_basis}
+                  onChange={(v) =>
+                    setDraft((d) => ({
+                      ...d,
+                      cost_basis: formatNumericInput(v),
+                    }))
+                  }
+                />
                 <p className="text-xs text-muted-foreground">
                   Your starting balance / cost basis.
                 </p>
@@ -914,24 +880,17 @@ function AddHoldingDialog({
                   <Label className="text-xs font-semibold">
                     Current balance (manual)
                   </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                      {currencySymbol}
-                    </span>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="25,000"
-                      className="pl-6"
-                      value={draft.current_value}
-                      onChange={(e) =>
-                        setDraft((d) => ({
-                          ...d,
-                          current_value: formatNumericInput(e.target.value),
-                        }))
-                      }
-                    />
-                  </div>
+                  <CurrencyInput
+                    currency={userCurrency}
+                    placeholder="25,000"
+                    value={draft.current_value}
+                    onChange={(v) =>
+                      setDraft((d) => ({
+                        ...d,
+                        current_value: formatNumericInput(v),
+                      }))
+                    }
+                  />
                 </div>
               )}
             </div>
@@ -944,47 +903,33 @@ function AddHoldingDialog({
                 <Label className="text-xs font-semibold">
                   How much did you invest?
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    {currencySymbol}
-                  </span>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0"
-                    className="pl-6"
-                    value={draft.cost_basis}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        cost_basis: formatNumericInput(e.target.value),
-                      }))
-                    }
-                  />
-                </div>
+                <CurrencyInput
+                  currency={userCurrency}
+                  placeholder="0"
+                  value={draft.cost_basis}
+                  onChange={(v) =>
+                    setDraft((d) => ({
+                      ...d,
+                      cost_basis: formatNumericInput(v),
+                    }))
+                  }
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">
                   What is it worth today?
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    {currencySymbol}
-                  </span>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0"
-                    className="pl-6"
-                    value={draft.current_value}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        current_value: formatNumericInput(e.target.value),
-                      }))
-                    }
-                  />
-                </div>
+                <CurrencyInput
+                  currency={userCurrency}
+                  placeholder="0"
+                  value={draft.current_value}
+                  onChange={(v) =>
+                    setDraft((d) => ({
+                      ...d,
+                      current_value: formatNumericInput(v),
+                    }))
+                  }
+                />
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <FontAwesomeIcon
                     icon={faInfoCircle}
