@@ -76,7 +76,7 @@ function useRiskQuiz() {
 
 // ─── Results screen shown after submission ────────────────────────────────────
 
-function RiskResultScreen({
+export function RiskResultScreen({
   result,
   onDone,
 }: {

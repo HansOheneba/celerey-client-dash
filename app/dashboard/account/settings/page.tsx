@@ -56,6 +56,8 @@ import {
   getSymbolFromCurrency,
 } from "country-data-list";
 import RiskAttitudeQuiz from "@/components/dashboard/risk/quiz";
+import { RiskResultScreen } from "@/components/dashboard/risk/quizCard";
+import { type RiskAssessmentResult } from "@/lib/dashboard-api";
 
 const countryOptions = allCountries.all
   .filter((c) => c.status === "assigned" && c.name)
@@ -128,9 +130,14 @@ export default function AccountSettingsPage() {
   const [quizOpen, setQuizOpen] = useState(false);
   const [quizEverOpened, setQuizEverOpened] = useState(false);
   const [quizConfirmOpen, setQuizConfirmOpen] = useState(false);
+  const [quizSubmitting, setQuizSubmitting] = useState(false);
+  const [quizResult, setQuizResult] = useState<RiskAssessmentResult | null>(null);
 
   useEffect(() => {
-    if (quizOpen) setQuizEverOpened(true);
+    if (quizOpen) {
+      setQuizEverOpened(true);
+      setQuizResult(null);
+    }
   }, [quizOpen]);
 
   const baseUser: User = storeUser ?? {
@@ -218,7 +225,7 @@ export default function AccountSettingsPage() {
     answers: Record<number, OptionScore>;
     responses: Record<string, number>;
   }) {
-    setQuizOpen(false);
+    setQuizSubmitting(true);
     try {
       const submitted = await submitRiskAssessment({
         questionnaire_version: "1.0",
@@ -238,12 +245,14 @@ export default function AccountSettingsPage() {
             risk_profile: riskProfile as User["risk_profile"],
           }));
         }
-        toast.success("Risk profile updated.");
+        setQuizResult(submitted);
       } else {
         toast.error("Failed to save risk profile. Please try again.");
       }
     } catch {
       toast.error("Failed to save risk profile. Please try again.");
+    } finally {
+      setQuizSubmitting(false);
     }
   }
 
@@ -792,7 +801,7 @@ export default function AccountSettingsPage() {
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay
             forceMount
-            onClick={() => setQuizConfirmOpen(true)}
+            onClick={() => { if (!quizResult) setQuizConfirmOpen(true); }}
             className={[
               "fixed inset-0 z-50 bg-black/50",
               quizOpen
@@ -808,7 +817,7 @@ export default function AccountSettingsPage() {
             onInteractOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => {
               e.preventDefault();
-              setQuizConfirmOpen(true);
+              if (!quizResult) setQuizConfirmOpen(true);
             }}
             className={[
               "fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col overflow-hidden border-l bg-background shadow-lg outline-none sm:max-w-lg",
@@ -825,15 +834,34 @@ export default function AccountSettingsPage() {
             <DialogPrimitive.Description className="sr-only">
               Answer honestly - there are no right or wrong answers.
             </DialogPrimitive.Description>
-            <button
-              type="button"
-              onClick={() => setQuizConfirmOpen(true)}
-              className="absolute right-4 top-4 z-10 rounded-sm p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
-            >
-              <XIcon className="h-4 w-4" />
-            </button>
+            {!quizResult && (
+              <button
+                type="button"
+                onClick={() => setQuizConfirmOpen(true)}
+                className="absolute right-4 top-4 z-10 rounded-sm p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            )}
             <div className="flex-1 overflow-auto">
-              <RiskAttitudeQuiz onSave={handleQuizSave} />
+              {quizResult ? (
+                <RiskResultScreen
+                  result={quizResult}
+                  onDone={() => {
+                    setQuizOpen(false);
+                    setQuizResult(null);
+                  }}
+                />
+              ) : quizSubmitting ? (
+                <div className="flex flex-col items-center justify-center h-full gap-4">
+                  <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                  <p className="text-sm text-muted-foreground">
+                    Analysing your responses...
+                  </p>
+                </div>
+              ) : (
+                <RiskAttitudeQuiz onSave={handleQuizSave} />
+              )}
             </div>
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
