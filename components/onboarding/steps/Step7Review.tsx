@@ -299,14 +299,16 @@ export function Step7Review({
           icon={<Shield className="h-5 w-5 text-primary" />}
           title="Emergency fund"
           summary={
-            emergencyFund != null
+            emergencyFund != null && Number(emergencyFund.cash_balance) > 0
               ? `${formatCurrencyAmount(
                   emergencyFund.cash_balance,
                   preferredCurrency,
                 )} saved`
-              : "Not completed"
+              : emergencyFund != null
+                ? "No emergency fund added"
+                : "Not completed"
           }
-          step={6}
+          step={5}
           onEdit={onEditStep}
         />
 
@@ -317,10 +319,12 @@ export function Step7Review({
             retirement
               ? retirement.retirement_target_year
                 ? `Target year ${retirement.retirement_target_year} · ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)} per month`
-                : `Target age ${retirement.retirement_age} · ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)} per month`
+                : retirement.retirement_age
+                  ? `Target age ${retirement.retirement_age} · ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)} per month`
+                  : `Desired ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)} per month`
               : "Not completed"
           }
-          step={7}
+          step={6}
           onEdit={onEditStep}
         />
       </div>

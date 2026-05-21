@@ -11,15 +11,9 @@ import {
   currentValue,
   gainLoss,
   assetTypeLabel,
+  formatCurrency,
 } from "@/lib/client-data";
-
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
+import { useFinancialStore } from "@/store/financialStore";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -33,6 +27,7 @@ export function HoldingRow({
   valuations: AssetValuation[];
 }) {
   const current = currentValue(holding, valuations);
+  const userCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
   const gl = gainLoss(holding, valuations);
   const isPositive = gl.amount >= 0;
 
@@ -73,7 +68,7 @@ export function HoldingRow({
             <div>
               <div className="text-xs text-muted-foreground">Current Value</div>
               <div className="text-sm font-semibold tabular-nums">
-                {formatCurrency(current)}
+                {formatCurrency(current, userCurrency)}
               </div>
             </div>
 
@@ -86,6 +81,7 @@ export function HoldingRow({
                   holding.amount_invested ??
                     holding.initial_value ??
                     holding.cost_basis,
+                  userCurrency,
                 )}
               </div>
             </div>
@@ -101,7 +97,7 @@ export function HoldingRow({
                 )}
               >
                 {isPositive ? "+" : ""}
-                {formatCurrency(gl.amount)}
+                {formatCurrency(gl.amount, userCurrency)}
               </div>
             </div>
 

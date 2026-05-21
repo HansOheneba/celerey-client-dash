@@ -31,6 +31,7 @@ import {
   COUNTRY_OPTIONS,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { formatCurrency } from "@/lib/client-data";
 import {
   createProperty,
   updateProperty as apiUpdateProperty,
@@ -80,14 +81,6 @@ function toNumber(value: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function currency(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
 // ── Component ───────────────────────────────────────────────────
 export function PropertyForm({
   editingProperty,
@@ -97,6 +90,7 @@ export function PropertyForm({
 }: PropertyFormProps) {
   const router = useRouter();
   const isEditing = !!editingProperty;
+  const userCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
 
   const insuranceSectionRef = React.useRef<HTMLDivElement>(null);
   const mortgageSectionRef = React.useRef<HTMLDivElement>(null);
@@ -207,20 +201,20 @@ export function PropertyForm({
     if (lvr > 60) {
       return {
         tone: "info",
-        message: `Your LVR is ${lvr}%. You have ${currency(equity)} in equity - consider if refinancing could improve your rate.`,
+        message: `Your LVR is ${lvr}%. You have ${formatCurrency(equity, userCurrency)} in equity - consider if refinancing could improve your rate.`,
       };
     }
     if (mortgageNum === 0 && marketValueNum > 0) {
       return {
         tone: "good",
-        message: `This property is fully paid off with ${currency(marketValueNum)} in equity. Great position!`,
+        message: `This property is fully paid off with ${formatCurrency(marketValueNum, userCurrency)} in equity. Great position!`,
       };
     }
     return {
       tone: "good",
-      message: `Healthy LVR of ${lvr}% with ${currency(equity)} in equity.`,
+      message: `Healthy LVR of ${lvr}% with ${formatCurrency(equity, userCurrency)} in equity.`,
     };
-  }, [form.name, marketValueNum, mortgageNum, lvr, equity]);
+  }, [form.name, marketValueNum, mortgageNum, lvr, equity, userCurrency]);
 
   const insightClasses = React.useMemo(() => {
     switch (insight.tone) {
@@ -427,11 +421,11 @@ export function PropertyForm({
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="purchase-price">Purchase price</Label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                      $
-                    </div>
-                    <Input
+                  <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                    <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                      {userCurrency}
+                    </span>
+                    <input
                       id="purchase-price"
                       type="text"
                       inputMode="numeric"
@@ -440,7 +434,7 @@ export function PropertyForm({
                       onChange={(e) =>
                         handleMoneyInput("purchasePrice", e.target.value)
                       }
-                      className="pl-7"
+                      className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -457,11 +451,11 @@ export function PropertyForm({
                       </span>
                     )}
                   </Label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                      $
-                    </div>
-                    <Input
+                  <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                    <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                      {userCurrency}
+                    </span>
+                    <input
                       id="market-value"
                       type="text"
                       inputMode="numeric"
@@ -470,8 +464,8 @@ export function PropertyForm({
                       onChange={(e) =>
                         handleMoneyInput("marketValue", e.target.value)
                       }
-                      className="pl-7"
                       disabled={form.valueUncertain}
+                      className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                     />
                   </div>
                   <div className="flex items-center gap-2 pt-1">
@@ -500,7 +494,7 @@ export function PropertyForm({
                     <span>
                       Equity:{" "}
                       <span className="font-medium text-foreground">
-                        {currency(equity)}
+                        {formatCurrency(equity, userCurrency)}
                       </span>
                     </span>
                     <span>
@@ -532,6 +526,7 @@ export function PropertyForm({
               >
                 <MortgageSection
                   mortgage={form.mortgage}
+                  currency={userCurrency}
                   onChange={(mortgage) => {
                     update("mortgage", mortgage);
                     // Keep the simple mortgageBalance field in sync
@@ -555,6 +550,7 @@ export function PropertyForm({
               >
                 <InsuranceSection
                   policies={form.insurance}
+                  currency={userCurrency}
                   onChange={(policies) => update("insurance", policies)}
                 />
               </div>
@@ -641,22 +637,22 @@ export function PropertyForm({
                   <SummaryRow
                     label="Market Value"
                     value={
-                      marketValueNum > 0 ? currency(marketValueNum) : "\u2014"
+                      marketValueNum > 0 ? formatCurrency(marketValueNum, userCurrency) : "—"
                     }
                   />
                   <SummaryRow
                     label="Mortgage"
                     value={
                       mortgageNum > 0
-                        ? currency(mortgageNum)
+                        ? formatCurrency(mortgageNum, userCurrency)
                         : marketValueNum > 0
                           ? "Paid off"
-                          : "\u2014"
+                          : "—"
                     }
                   />
                   <SummaryRow
                     label="Equity"
-                    value={marketValueNum > 0 ? currency(equity) : "\u2014"}
+                    value={marketValueNum > 0 ? formatCurrency(equity, userCurrency) : "—"}
                   />
                   <SummaryRow
                     label="LVR"
@@ -693,20 +689,22 @@ export function PropertyForm({
                       />
                       <SummaryRow
                         label="Coverage"
-                        value={currency(
+                        value={formatCurrency(
                           form.insurance.reduce(
                             (s, i) => s + i.coverage_amount,
                             0,
                           ),
+                          userCurrency,
                         )}
                       />
                       <SummaryRow
                         label="Premium/yr"
-                        value={currency(
+                        value={formatCurrency(
                           form.insurance.reduce(
                             (s, i) => s + i.annual_premium,
                             0,
                           ),
+                          userCurrency,
                         )}
                       />
                     </>

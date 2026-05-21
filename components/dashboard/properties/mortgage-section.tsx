@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { type PropertyMortgage } from "@/lib/client-data";
+import { formatCurrency } from "@/lib/client-data";
 import { DateInput } from "@/components/ui/date-input";
 
 // ── Helpers ─────────────────────────────────────────────────────
@@ -28,14 +29,6 @@ function formatNumberWithCommas(value: string): string {
 function toNumber(value: string): number {
   const n = Number(value.replace(/,/g, ""));
   return Number.isFinite(n) ? n : 0;
-}
-
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
 }
 
 // ── Form state ───────────────────────────────────────────────────
@@ -76,9 +69,11 @@ function mortgageToForm(m: PropertyMortgage): MortgageFormValues {
 // ── Component ───────────────────────────────────────────────────
 export function MortgageSection({
   mortgage,
+  currency = "USD",
   onChange,
 }: {
   mortgage: PropertyMortgage | null;
+  currency?: string;
   onChange: (mortgage: PropertyMortgage | null) => void;
 }) {
   const [editing, setEditing] = React.useState(false);
@@ -185,19 +180,19 @@ export function MortgageSection({
               <div>
                 <p className="text-muted-foreground">Outstanding balance</p>
                 <p className="font-semibold tabular-nums text-red-500">
-                  {formatCurrency(mortgage.balance)}
+                  {formatCurrency(mortgage.balance, currency)}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Min payment</p>
                 <p className="font-semibold tabular-nums">
-                  {formatCurrency(mortgage.min_payment_monthly)}/mo
+                  {formatCurrency(mortgage.min_payment_monthly, currency)}/mo
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Annual interest</p>
                 <p className="font-semibold tabular-nums text-amber-600">
-                  {formatCurrency(annualInterest)}
+                  {formatCurrency(annualInterest, currency)}
                 </p>
               </div>
               {mortgage.due_day && (
@@ -220,7 +215,7 @@ export function MortgageSection({
                 <div>
                   <p className="text-muted-foreground">Original loan</p>
                   <p className="font-semibold tabular-nums">
-                    {formatCurrency(mortgage.original_loan_amount)}
+                    {formatCurrency(mortgage.original_loan_amount, currency)}
                   </p>
                 </div>
               )}
@@ -316,18 +311,18 @@ export function MortgageSection({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="mortgage-balance">Outstanding balance</Label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                  $
-                </div>
-                <Input
+              <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                  {currency}
+                </span>
+                <input
                   id="mortgage-balance"
                   type="text"
                   inputMode="numeric"
                   placeholder="450,000"
                   value={form.balance}
                   onChange={(e) => handleMoneyInput("balance", e.target.value)}
-                  className="pl-7"
+                  className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -352,11 +347,11 @@ export function MortgageSection({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="mortgage-payment">Min monthly payment</Label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                  $
-                </div>
-                <Input
+              <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                  {currency}
+                </span>
+                <input
                   id="mortgage-payment"
                   type="text"
                   inputMode="numeric"
@@ -365,7 +360,7 @@ export function MortgageSection({
                   onChange={(e) =>
                     handleMoneyInput("minPaymentMonthly", e.target.value)
                   }
-                  className="pl-7"
+                  className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                 />
               </div>
             </div>
@@ -401,11 +396,11 @@ export function MortgageSection({
                   (optional)
                 </span>
               </Label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                  $
-                </div>
-                <Input
+              <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                  {currency}
+                </span>
+                <input
                   id="mortgage-original"
                   type="text"
                   inputMode="numeric"
@@ -414,7 +409,7 @@ export function MortgageSection({
                   onChange={(e) =>
                     handleMoneyInput("originalLoanAmount", e.target.value)
                   }
-                  className="pl-7"
+                  className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                 />
               </div>
             </div>

@@ -25,6 +25,7 @@ import {
   type PropertyInsurance,
   type PropertyInsuranceType,
   PROPERTY_INSURANCE_TYPE_OPTIONS,
+  formatCurrency,
 } from "@/lib/client-data";
 import { InsurancePolicyCard } from "@/components/dashboard/properties/insurance-policy-card";
 
@@ -65,9 +66,11 @@ function toNumber(value: string): number {
 // ── Component ───────────────────────────────────────────────────
 export function InsuranceSection({
   policies,
+  currency = "USD",
   onChange,
 }: {
   policies: PropertyInsurance[];
+  currency?: string;
   onChange: (policies: PropertyInsurance[]) => void;
 }) {
   const [showForm, setShowForm] = React.useState(false);
@@ -163,21 +166,13 @@ export function InsuranceSection({
                 <span>
                   Total Coverage:{" "}
                   <span className="font-medium text-foreground">
-                    {new Intl.NumberFormat(undefined, {
-                      style: "currency",
-                      currency: "USD",
-                      maximumFractionDigits: 0,
-                    }).format(totalCoverage)}
+                    {formatCurrency(totalCoverage, currency)}
                   </span>
                 </span>
                 <span>
                   Total Premium/yr:{" "}
                   <span className="font-medium text-foreground">
-                    {new Intl.NumberFormat(undefined, {
-                      style: "currency",
-                      currency: "USD",
-                      maximumFractionDigits: 0,
-                    }).format(totalPremium)}
+                    {formatCurrency(totalPremium, currency)}
                   </span>
                 </span>
               </div>
@@ -245,11 +240,11 @@ export function InsuranceSection({
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="coverage-amount">Coverage amount</Label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                    $
-                  </div>
-                  <Input
+                <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                  <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                    {currency}
+                  </span>
+                  <input
                     id="coverage-amount"
                     type="text"
                     inputMode="numeric"
@@ -258,19 +253,19 @@ export function InsuranceSection({
                     onChange={(e) =>
                       handleMoneyInput("coverageAmount", e.target.value)
                     }
-                    className="pl-7"
                     required
+                    className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="annual-premium">Annual premium</Label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                    $
-                  </div>
-                  <Input
+                <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                  <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                    {currency}
+                  </span>
+                  <input
                     id="annual-premium"
                     type="text"
                     inputMode="numeric"
@@ -279,19 +274,19 @@ export function InsuranceSection({
                     onChange={(e) =>
                       handleMoneyInput("annualPremium", e.target.value)
                     }
-                    className="pl-7"
                     required
+                    className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="deductible">Deductible</Label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                    $
-                  </div>
-                  <Input
+                <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                  <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                    {currency}
+                  </span>
+                  <input
                     id="deductible"
                     type="text"
                     inputMode="numeric"
@@ -300,7 +295,7 @@ export function InsuranceSection({
                     onChange={(e) =>
                       handleMoneyInput("deductible", e.target.value)
                     }
-                    className="pl-7"
+                    className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                   />
                 </div>
               </div>

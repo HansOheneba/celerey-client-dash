@@ -29,6 +29,7 @@ import {
   supportsMarket,
   symbolsForType,
   isSymbolHeld,
+  formatCurrency,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 import { createAsset, updateAsset } from "@/lib/dashboard-api";
@@ -73,14 +74,6 @@ function toNumber(value: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function currency(n: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
 // ── Component ───────────────────────────────────────────────────
 export function HoldingForm({
   editingHolding,
@@ -91,6 +84,7 @@ export function HoldingForm({
   const isEditing = !!editingHolding;
   const storeHoldings = useFinancialStore((s) => s.holdings);
   const setHoldings = useFinancialStore((s) => s.setHoldings);
+  const userCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
 
   // ── Initialise form ─────────────────────────────────────────
   const [form, setForm] = React.useState<HoldingFormValues>(() => {
@@ -265,20 +259,20 @@ export function HoldingForm({
     if (insightRefValue > 500_000) {
       return {
         tone: "warn",
-        message: `A single position worth ${currency(insightRefValue)} is significant. Make sure this doesn\u2019t create too much concentration risk.`,
+        message: `A single position worth ${formatCurrency(insightRefValue, userCurrency)} is significant. Make sure this doesn\u2019t create too much concentration risk.`,
       };
     }
     if (isBond && faceValueNum > 0 && couponRateNum > 0 && form.maturityDate) {
       return {
         tone: "good",
-        message: `Bond with a ${couponRateNum}% coupon rate. Projected value at maturity: ~${currency(projectedBondValue)}.`,
+        message: `Bond with a ${couponRateNum}% coupon rate. Projected value at maturity: ~${formatCurrency(projectedBondValue, userCurrency)}.`,
       };
     }
     return {
       tone: "good",
       message: isMarket
         ? `We\u2019ll automatically update the valuation for ${form.symbol} using market prices.`
-        : `This holding will be tracked manually starting from ${currency(insightRefValue)}.`,
+        : `This holding will be tracked manually starting from ${formatCurrency(insightRefValue, userCurrency)}.`,
     };
   }, [
     isDuplicate,
@@ -620,11 +614,11 @@ export function HoldingForm({
                       <Label htmlFor="amount-invested">
                         How much did you invest?
                       </Label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                          $
-                        </div>
-                        <Input
+                      <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                        <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                          {userCurrency}
+                        </span>
+                        <input
                           id="amount-invested"
                           type="text"
                           inputMode="numeric"
@@ -633,7 +627,7 @@ export function HoldingForm({
                           onChange={(e) =>
                             handleMoneyInput("amountInvested", e.target.value)
                           }
-                          className="pl-7"
+                          className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -655,11 +649,11 @@ export function HoldingForm({
                       <Label htmlFor="amount-invested-mf">
                         How much did you invest?
                       </Label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                          $
-                        </div>
-                        <Input
+                      <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                        <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                          {userCurrency}
+                        </span>
+                        <input
                           id="amount-invested-mf"
                           type="text"
                           inputMode="numeric"
@@ -668,7 +662,7 @@ export function HoldingForm({
                           onChange={(e) =>
                             handleMoneyInput("amountInvested", e.target.value)
                           }
-                          className="pl-7"
+                          className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -680,11 +674,11 @@ export function HoldingForm({
                       <Label htmlFor="current-value-mf">
                         What is it worth today?
                       </Label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                          $
-                        </div>
-                        <Input
+                      <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                        <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                          {userCurrency}
+                        </span>
+                        <input
                           id="current-value-mf"
                           type="text"
                           inputMode="numeric"
@@ -693,7 +687,7 @@ export function HoldingForm({
                           onChange={(e) =>
                             handleMoneyInput("currentValue", e.target.value)
                           }
-                          className="pl-7"
+                          className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -712,11 +706,11 @@ export function HoldingForm({
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="face-value">Face / par value</Label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                          $
-                        </div>
-                        <Input
+                      <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                        <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                          {userCurrency}
+                        </span>
+                        <input
                           id="face-value"
                           type="text"
                           inputMode="numeric"
@@ -725,7 +719,7 @@ export function HoldingForm({
                           onChange={(e) =>
                             handleMoneyInput("faceValue", e.target.value)
                           }
-                          className="pl-7"
+                          className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -767,11 +761,11 @@ export function HoldingForm({
                       <Label htmlFor="amount-invested-bond">
                         How much did you invest?
                       </Label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                          $
-                        </div>
-                        <Input
+                      <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                        <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                          {userCurrency}
+                        </span>
+                        <input
                           id="amount-invested-bond"
                           type="text"
                           inputMode="numeric"
@@ -780,7 +774,7 @@ export function HoldingForm({
                           onChange={(e) =>
                             handleMoneyInput("amountInvested", e.target.value)
                           }
-                          className="pl-7"
+                          className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -802,11 +796,11 @@ export function HoldingForm({
                       <Label htmlFor="current-value-cash">
                         What is it worth today?
                       </Label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                          $
-                        </div>
-                        <Input
+                      <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                        <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                          {userCurrency}
+                        </span>
+                        <input
                           id="current-value-cash"
                           type="text"
                           inputMode="numeric"
@@ -815,7 +809,7 @@ export function HoldingForm({
                           onChange={(e) =>
                             handleMoneyInput("currentValue", e.target.value)
                           }
-                          className="pl-7"
+                          className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -856,11 +850,11 @@ export function HoldingForm({
                       <Label htmlFor="amount-invested-alt">
                         How much did you invest?
                       </Label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                          $
-                        </div>
-                        <Input
+                      <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                        <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                          {userCurrency}
+                        </span>
+                        <input
                           id="amount-invested-alt"
                           type="text"
                           inputMode="numeric"
@@ -869,7 +863,7 @@ export function HoldingForm({
                           onChange={(e) =>
                             handleMoneyInput("amountInvested", e.target.value)
                           }
-                          className="pl-7"
+                          className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -881,11 +875,11 @@ export function HoldingForm({
                       <Label htmlFor="current-value-alt">
                         What is it worth today?
                       </Label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
-                          $
-                        </div>
-                        <Input
+                      <div className="flex h-9 w-full overflow-hidden rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                        <span className="flex shrink-0 select-none items-center border-r border-input bg-muted/50 px-2.5 text-xs font-medium text-muted-foreground">
+                          {userCurrency}
+                        </span>
+                        <input
                           id="current-value-alt"
                           type="text"
                           inputMode="numeric"
@@ -894,7 +888,7 @@ export function HoldingForm({
                           onChange={(e) =>
                             handleMoneyInput("currentValue", e.target.value)
                           }
-                          className="pl-7"
+                          className="flex-1 bg-transparent px-3 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -995,7 +989,7 @@ export function HoldingForm({
                   {isMarket && amountInvestedNum > 0 && (
                     <SummaryRow
                       label="Amount invested"
-                      value={currency(amountInvestedNum)}
+                      value={formatCurrency(amountInvestedNum, userCurrency)}
                     />
                   )}
                   {isMarket && (
@@ -1006,19 +1000,19 @@ export function HoldingForm({
                   {isMutual && amountInvestedNum > 0 && (
                     <SummaryRow
                       label="Amount invested"
-                      value={currency(amountInvestedNum)}
+                      value={formatCurrency(amountInvestedNum, userCurrency)}
                     />
                   )}
                   {isMutual && currentValueNum > 0 && (
                     <SummaryRow
                       label="Current value"
-                      value={currency(currentValueNum)}
+                      value={formatCurrency(currentValueNum, userCurrency)}
                     />
                   )}
                   {isMutual && amountInvestedNum > 0 && currentValueNum > 0 && (
                     <SummaryRow
                       label="Gain / loss"
-                      value={`${currentValueNum - amountInvestedNum >= 0 ? "+" : ""}${currency(currentValueNum - amountInvestedNum)}`}
+                      value={`${currentValueNum - amountInvestedNum >= 0 ? "+" : ""}${formatCurrency(currentValueNum - amountInvestedNum, userCurrency)}`}
                     />
                   )}
 
@@ -1026,7 +1020,7 @@ export function HoldingForm({
                   {isBond && faceValueNum > 0 && (
                     <SummaryRow
                       label="Face value"
-                      value={currency(faceValueNum)}
+                      value={formatCurrency(faceValueNum, userCurrency)}
                     />
                   )}
                   {isBond && couponRateNum > 0 && (
@@ -1041,13 +1035,13 @@ export function HoldingForm({
                   {isBond && projectedBondValue > 0 && (
                     <SummaryRow
                       label="Projected at maturity"
-                      value={`~${currency(projectedBondValue)}`}
+                      value={`~${formatCurrency(projectedBondValue, userCurrency)}`}
                     />
                   )}
                   {isBond && amountInvestedNum > 0 && (
                     <SummaryRow
                       label="Amount invested"
-                      value={currency(amountInvestedNum)}
+                      value={formatCurrency(amountInvestedNum, userCurrency)}
                     />
                   )}
 
@@ -1055,7 +1049,7 @@ export function HoldingForm({
                   {isCash && currentValueNum > 0 && (
                     <SummaryRow
                       label="Account balance"
-                      value={currency(currentValueNum)}
+                      value={formatCurrency(currentValueNum, userCurrency)}
                     />
                   )}
                   {isCash && couponRateNum > 0 && (
@@ -1069,19 +1063,19 @@ export function HoldingForm({
                   {isManual && amountInvestedNum > 0 && (
                     <SummaryRow
                       label="Amount invested"
-                      value={currency(amountInvestedNum)}
+                      value={formatCurrency(amountInvestedNum, userCurrency)}
                     />
                   )}
                   {isManual && currentValueNum > 0 && (
                     <SummaryRow
                       label="Current value"
-                      value={currency(currentValueNum)}
+                      value={formatCurrency(currentValueNum, userCurrency)}
                     />
                   )}
                   {isManual && amountInvestedNum > 0 && currentValueNum > 0 && (
                     <SummaryRow
                       label="Gain / loss"
-                      value={`${currentValueNum - amountInvestedNum >= 0 ? "+" : ""}${currency(currentValueNum - amountInvestedNum)}`}
+                      value={`${currentValueNum - amountInvestedNum >= 0 ? "+" : ""}${formatCurrency(currentValueNum - amountInvestedNum, userCurrency)}`}
                     />
                   )}
 

@@ -31,6 +31,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+import currencyCodes from "currency-codes";
+
 import {
   identitySchema,
   type IdentityFormValues,
@@ -76,23 +78,18 @@ function stripDialCode(phoneNumber: string | undefined, dialCode: string) {
     : phoneNumber;
 }
 
-// ─── Currencies ──────────────────────────────────────────────────────────────
-const CURRENCIES = [
-  { code: "USD", label: "USD — US Dollar" },
-  { code: "GBP", label: "GBP — British Pound" },
-  { code: "EUR", label: "EUR — Euro" },
-  { code: "GHS", label: "GHS — Ghanaian Cedi" },
-  { code: "NGN", label: "NGN — Nigerian Naira" },
-  { code: "KES", label: "KES — Kenyan Shilling" },
-  { code: "ZAR", label: "ZAR — South African Rand" },
-  { code: "CAD", label: "CAD — Canadian Dollar" },
-  { code: "AUD", label: "AUD — Australian Dollar" },
-  { code: "CHF", label: "CHF — Swiss Franc" },
-  { code: "JPY", label: "JPY — Japanese Yen" },
-  { code: "SGD", label: "SGD — Singapore Dollar" },
-  { code: "AED", label: "AED — UAE Dirham" },
-  { code: "INR", label: "INR — Indian Rupee" },
-];
+// ─── Currencies (all ISO 4217 via currency-codes) ───────────────────────────
+const CURRENCY_LIST = currencyCodes
+  .codes()
+  .map((code) => {
+    const entry = currencyCodes.code(code);
+    return entry ? { code: entry.code, name: entry.currency } : null;
+  })
+  .filter(Boolean)
+  .sort((a, b) => a!.name.localeCompare(b!.name)) as {
+  code: string;
+  name: string;
+}[];
 
 const MARITAL_STATUSES = [
   { value: "single", label: "Single" },
@@ -127,6 +124,7 @@ export function Step1Identity({
   );
   const [countryOpen, setCountryOpen] = React.useState(false);
   const [dialCodeOpen, setDialCodeOpen] = React.useState(false);
+  const [currencyOpen, setCurrencyOpen] = React.useState(false);
   const [showOptional, setShowOptional] = React.useState(() =>
     Boolean(
       defaultValues?.prefix ||
@@ -204,7 +202,7 @@ export function Step1Identity({
     setValue("account_mode", accountMode);
   }, [accountMode, setValue]);
 
-  // ─── Auto-detect country via IP ────────
+  // ─── Auto-detect country + currency via IP ────────
   React.useEffect(() => {
     fetch("https://ipapi.co/json/")
       .then((res) => res.json())
@@ -219,6 +217,10 @@ export function Step1Identity({
               setDialCode(match.dialCode);
             }
           }
+        }
+        if (!defaultValues?.currency && data?.currency) {
+          const matched = CURRENCY_LIST.find((c) => c.code === data.currency);
+          if (matched) setValue("currency", matched.code);
         }
       })
       .catch(() => {});
@@ -618,29 +620,71 @@ export function Step1Identity({
             </div>
           </div>
 
-          {/* Currency */}
+          {/* Currency - searchable combobox */}
           <div className="space-y-1.5">
             <Label>Preferred currency</Label>
             <Controller
               control={control}
               name="currency"
-              render={({ field }) => (
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value ?? ""}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map((c) => (
-                      <SelectItem key={c.code} value={c.code}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              render={({ field }) => {
+                const selected = CURRENCY_LIST.find(
+                  (c) => c.code === field.value,
+                );
+                return (
+                  <Popover open={currencyOpen} onOpenChange={setCurrencyOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={currencyOpen}
+                        className={cn(
+                          "w-full justify-between font-normal h-10",
+                          !field.value && "text-slate-400",
+                        )}
+                      >
+                        {selected
+                          ? `${selected.code} - ${selected.name}`
+                          : "Select currency"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search currency or code..." />
+                        <CommandList>
+                          <CommandEmpty>No currency found.</CommandEmpty>
+                          <CommandGroup>
+                            {CURRENCY_LIST.map((c) => (
+                              <CommandItem
+                                key={c.code}
+                                value={`${c.code} ${c.name}`}
+                                onSelect={() => {
+                                  field.onChange(c.code);
+                                  setCurrencyOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === c.code
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                <span className="font-medium">{c.code}</span>
+                                <span className="ml-2 text-slate-500 truncate">
+                                  {c.name}
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                );
+              }}
             />
             {errors.currency && (
               <p className="text-xs text-red-500">{errors.currency.message}</p>
