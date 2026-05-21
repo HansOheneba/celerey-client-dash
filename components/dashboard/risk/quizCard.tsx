@@ -139,12 +139,16 @@ function RiskResultScreen({
           {qScore != null && (
             <div className="flex justify-between">
               <span className="text-slate-500">Questionnaire score</span>
-              <span className="font-medium tabular-nums">{qScore.toFixed(2)}</span>
+              <span className="font-medium tabular-nums">
+                {qScore.toFixed(2)}
+              </span>
             </div>
           )}
           {modEntries.map(([key, val]) => (
             <div key={key} className="flex justify-between">
-              <span className="text-slate-500">{modLabel[key] ?? key} modifier</span>
+              <span className="text-slate-500">
+                {modLabel[key] ?? key} modifier
+              </span>
               <span
                 className={`font-medium tabular-nums ${
                   val > 0 ? "text-green-600" : "text-red-500"
@@ -158,7 +162,9 @@ function RiskResultScreen({
           {finalScore != null && (
             <div className="flex justify-between border-t pt-2 mt-1">
               <span className="font-semibold text-slate-700">Final score</span>
-              <span className="font-bold tabular-nums">{finalScore.toFixed(2)} / 5</span>
+              <span className="font-bold tabular-nums">
+                {finalScore.toFixed(2)} / 5
+              </span>
             </div>
           )}
         </div>
@@ -192,7 +198,8 @@ function RiskResultScreen({
             <div className="flex justify-between">
               <span className="text-slate-500">Emergency fund</span>
               <span className="font-medium capitalize">
-                {snap.emergency_fund_status?.replace("_", " ") ?? "Not provided"}
+                {snap.emergency_fund_status?.replace("_", " ") ??
+                  "Not provided"}
               </span>
             </div>
           </div>
@@ -299,10 +306,7 @@ export function RiskQuizDialog({
 
             <div className="flex-1 overflow-auto">
               {assessmentResult ? (
-                <RiskResultScreen
-                  result={assessmentResult}
-                  onDone={onClose}
-                />
+                <RiskResultScreen result={assessmentResult} onDone={onClose} />
               ) : submitting ? (
                 <div className="flex flex-col items-center justify-center h-full gap-4">
                   <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
@@ -386,9 +390,7 @@ export default function QuizCard() {
     prevQuizOpen.current = riskQuizOpen;
   }, [riskQuizOpen]);
 
-  const profileLabel = result
-    ? (result.result?.risk_band ?? "Unknown")
-    : null;
+  const profileLabel = result ? (result.result?.risk_band ?? "Unknown") : null;
   const scoreValue = result?.scoring?.final_score;
 
   return (

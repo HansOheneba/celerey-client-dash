@@ -228,9 +228,15 @@ export default function AccountSettingsPage() {
         const riskProfile = submitted.result?.risk_band;
         const storeUser = useFinancialStore.getState().user;
         if (storeUser && riskProfile) {
-          const next = { ...storeUser, risk_profile: riskProfile as User["risk_profile"] };
+          const next = {
+            ...storeUser,
+            risk_profile: riskProfile as User["risk_profile"],
+          };
           setUser(next);
-          setForm((f) => ({ ...f, risk_profile: riskProfile as User["risk_profile"] }));
+          setForm((f) => ({
+            ...f,
+            risk_profile: riskProfile as User["risk_profile"],
+          }));
         }
         toast.success("Risk profile updated.");
       } else {
