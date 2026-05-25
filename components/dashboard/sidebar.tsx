@@ -353,7 +353,7 @@ export default function DashboardSidebar() {
         )}
       </AnimatePresence> */}
 
-      {/* ── Upgrade to Premium Widget ── */}
+      {/* ── Upgrade to Pro Widget ── */}
       <AnimatePresence initial={false}>
         {showUpgradeWidget && (
           <motion.div
@@ -385,7 +385,7 @@ export default function DashboardSidebar() {
                 </p>
               </div>
               <p className="relative text-[11px] text-white/80 leading-snug">
-                Upgrade to Premium for full access to all Celerey features.
+                Upgrade to Pro for full access to all Celerey features.
               </p>
 
               <button
@@ -394,7 +394,7 @@ export default function DashboardSidebar() {
                 disabled={upgrading}
                 className="relative w-full rounded-md bg-white/15 backdrop-blur-sm border border-white/25 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-white/25 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {upgrading ? "Starting checkout…" : "Upgrade to Premium"}
+                {upgrading ? "Starting checkout…" : "Upgrade to Pro"}
               </button>
             </div>
           </motion.div>

@@ -262,7 +262,7 @@ export default function ProfilePage() {
               <p className="text-sm text-muted-foreground">{user?.email}</p>
               {isPro && (
                 <p className="text-xs text-violet-600 font-medium mt-0.5">
-                  Premium member
+                  Pro member
                 </p>
               )}
               {isTrialing && trialDaysLeft !== null && (

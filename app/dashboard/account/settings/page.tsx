@@ -131,7 +131,9 @@ export default function AccountSettingsPage() {
   const [quizEverOpened, setQuizEverOpened] = useState(false);
   const [quizConfirmOpen, setQuizConfirmOpen] = useState(false);
   const [quizSubmitting, setQuizSubmitting] = useState(false);
-  const [quizResult, setQuizResult] = useState<RiskAssessmentResult | null>(null);
+  const [quizResult, setQuizResult] = useState<RiskAssessmentResult | null>(
+    null,
+  );
 
   useEffect(() => {
     if (quizOpen) {
@@ -801,7 +803,9 @@ export default function AccountSettingsPage() {
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay
             forceMount
-            onClick={() => { if (!quizResult) setQuizConfirmOpen(true); }}
+            onClick={() => {
+              if (!quizResult) setQuizConfirmOpen(true);
+            }}
             className={[
               "fixed inset-0 z-50 bg-black/50",
               quizOpen

@@ -70,9 +70,10 @@ export default function OnboardingPage() {
       router.replace("/");
       return;
     }
-    // If already onboarded, go straight to dashboard
+    // If already onboarded, go to choose-plan (DashboardGuard will forward
+    // to /dashboard if they already have an active subscription)
     if (isOnboarded()) {
-      router.replace("/dashboard");
+      router.replace("/choose-plan");
     }
   }, [ready, auth, router]);
 

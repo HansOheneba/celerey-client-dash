@@ -23,9 +23,7 @@ export function Step8Complete({
   const router = useRouter();
 
   function handleCta() {
-    // Paywall redirect to /choose-plan is temporarily disabled while
-    // backend subscription_status sync is being fixed.
-    router.push("/dashboard");
+    router.push("/choose-plan");
   }
 
   useEffect(() => {
@@ -114,7 +112,7 @@ export function Step8Complete({
           onClick={handleCta}
           className="w-full bg-white hover:bg-white/90 text-[#0b0a23] h-12 text-base rounded-xl"
         >
-          Go to dashboard
+          Choose your plan
         </Button>
 
         <p className="mt-3 text-xs text-white/50">

@@ -8,17 +8,13 @@ import { Info, ArrowRight } from "lucide-react";
 import { useClientGate } from "../../lib/useClientGate";
 import { isOnboarded } from "../../lib/client-data";
 import { createCheckoutSession } from "../../lib/dashboard-api";
-import {
-  mockStartTrialIfMissing,
-  mockUpgradeToPro,
-} from "../../lib/client-data";
 import { CelereyLoader } from "../../components/login/celerey-loader";
 
 type FeatureRow = {
   label: string;
   helper?: string;
   trial: boolean;
-  premium: boolean;
+  pro: boolean;
 };
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -186,7 +182,7 @@ export default function ChoosePlanPage() {
   const [splashDone, setSplashDone] = useState(false);
   const [contentVisible, setContentVisible] = useState(false);
   const [trialUpgrading, setTrialUpgrading] = useState(false);
-  const [premiumUpgrading, setPremiumUpgrading] = useState(false);
+  const [proUpgrading, setProUpgrading] = useState(false);
 
   // Reveal content right after splash exits
   const handleSplashDone = React.useCallback(() => {
@@ -219,22 +215,28 @@ export default function ChoosePlanPage() {
   async function startTrial(): Promise<void> {
     setTrialUpgrading(true);
     try {
-      // MOCK: bypass Stripe while backend webhook is unreliable.
-      mockStartTrialIfMissing();
-      router.replace("/dashboard");
+      const result = await createCheckoutSession("trial");
+      if (result?.url) {
+        window.location.href = result.url;
+      } else {
+        setTrialUpgrading(false);
+      }
     } catch {
       setTrialUpgrading(false);
     }
   }
 
-  async function goPremiumNow(): Promise<void> {
-    setPremiumUpgrading(true);
+  async function goProNow(): Promise<void> {
+    setProUpgrading(true);
     try {
-      // MOCK: bypass Stripe while backend webhook is unreliable.
-      mockUpgradeToPro();
-      router.replace("/dashboard");
+      const result = await createCheckoutSession("pro");
+      if (result?.url) {
+        window.location.href = result.url;
+      } else {
+        setProUpgrading(false);
+      }
     } catch {
-      setPremiumUpgrading(false);
+      setProUpgrading(false);
     }
   }
 
@@ -244,68 +246,68 @@ export default function ChoosePlanPage() {
         label: "Dashboard access",
         helper: "Explore the dashboard experience and core tracking views.",
         trial: true,
-        premium: true,
+        pro: true,
       },
       {
         label: "Clarity call",
         helper:
           "A one-on-one session with a Celerey Advisor to understand your goals and set a clear path.",
         trial: true,
-        premium: true,
+        pro: true,
       },
       {
         label: "Portfolio tracking and performance insights",
         helper: "Monitor allocations, performance snapshots, and key changes.",
         trial: true,
-        premium: true,
+        pro: true,
       },
       {
         label: "Financial health scan and baseline score",
         helper: "Capture your starting point and your key gaps.",
         trial: true,
-        premium: true,
+        pro: true,
       },
       {
         label: "Goals and roadmap builder",
         helper: "Turn goals into clear milestones and a structured plan.",
         trial: true,
-        premium: true,
+        pro: true,
       },
       {
         label: "Continuous portfolio intelligence",
         helper: "Highlights risks and opportunities as your data changes.",
         trial: true,
-        premium: true,
+        pro: true,
       },
       {
         label: "Two advisory sessions per year",
         helper: "Direct sessions with a certified Celerey Advisor.",
         trial: false,
-        premium: true,
+        pro: true,
       },
       {
         label: "Quarterly progress reviews",
         helper: "Structured reviews with tailored recommendations.",
         trial: false,
-        premium: true,
+        pro: true,
       },
       {
         label: "Monthly accountability check-ins",
         helper: "Lightweight check-ins to keep momentum and clarity.",
         trial: false,
-        premium: true,
+        pro: true,
       },
       {
         label: "Priority email and WhatsApp support",
         helper: "Faster response times and guided follow ups.",
         trial: false,
-        premium: true,
+        pro: true,
       },
       {
         label: "Member webinars and masterclasses",
         helper: "Learning sessions and partner benefits.",
         trial: false,
-        premium: true,
+        pro: true,
       },
     ],
     [],
@@ -316,10 +318,10 @@ export default function ChoosePlanPage() {
     return "not-included";
   };
 
-  const premiumVariant = (
+  const proVariant = (
     r: FeatureRow,
   ): "full" | "limited" | "not-included" => {
-    if (r.premium) return "full";
+    if (r.pro) return "full";
     return "not-included";
   };
 
@@ -382,11 +384,11 @@ export default function ChoosePlanPage() {
           </p>
 
           <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
-            Start free, or go Premium now
+            Start free, or go Pro now
           </h1>
 
           <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
-            Trial gives you limited access to explore the dashboard. Premium
+            Trial gives you limited access to explore the dashboard. Pro
             gives you full access plus advisory support, reviews, and
             accountability.
           </p>
@@ -406,7 +408,7 @@ export default function ChoosePlanPage() {
                 What you get
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Trial is 7 days. Premium is billed annually at $300.
+                Trial is 7 days. Pro is billed annually at $300.
               </p>
             </div>
 
@@ -451,7 +453,7 @@ export default function ChoosePlanPage() {
                 </p>
               </div>
 
-              {/* Premium card */}
+              {/* Pro card */}
               <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5">
                 <div
                   className="absolute inset-0 z-0 opacity-[0.14]"
@@ -490,20 +492,20 @@ export default function ChoosePlanPage() {
 
                   <button
                     type="button"
-                    onClick={goPremiumNow}
-                    disabled={premiumUpgrading}
+                    onClick={goProNow}
+                    disabled={proUpgrading}
                     className={cn(
                       "mt-4 relative inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3",
                       "text-white font-semibold shadow-sm",
                       "transition-transform translate-y-px active:translate-y-1",
-                      premiumUpgrading && "opacity-70 cursor-not-allowed",
+                      proUpgrading && "opacity-70 cursor-not-allowed",
                     )}
                     style={{
                       background: `linear-gradient(90deg, ${BRAND.navy} 0%, ${BRAND.navy2} 60%, ${BRAND.ink} 100%)`,
                     }}
                   >
-                    {premiumUpgrading ? "Processing…" : "Go Premium now"}
-                    {!premiumUpgrading && <ArrowRight className="h-4 w-4" />}
+                    {proUpgrading ? "Processing…" : "Go Pro now"}
+                    {!proUpgrading && <ArrowRight className="h-4 w-4" />}
                   </button>
 
                   <p className="mt-2 text-center text-xs text-slate-500">
@@ -558,7 +560,7 @@ export default function ChoosePlanPage() {
                         className="text-xs font-semibold tracking-[0.12em]"
                         style={{ color: BRAND.navy }}
                       >
-                        PREMIUM
+                        PRO
                       </p>
                       <div className="mt-2">
                         {r.label === "Clarity call" ? (
@@ -566,7 +568,7 @@ export default function ChoosePlanPage() {
                             Included
                           </span>
                         ) : (
-                          <AccessPill variant={premiumVariant(r)} />
+                          <AccessPill variant={proVariant(r)} />
                         )}
                       </div>
                     </div>
@@ -577,7 +579,7 @@ export default function ChoosePlanPage() {
 
             <div className="border-t border-slate-200 bg-slate-50/60 p-5">
               <p className="text-sm text-slate-600">
-                Start with the trial if you want to explore. Go Premium if you
+                Start with the trial if you want to explore. Go Pro if you
                 want advisory support and structured progress reviews
                 immediately.
               </p>
@@ -592,7 +594,7 @@ export default function ChoosePlanPage() {
                   What you get
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
-                  Trial is 7 days. Premium is billed annually at $300.
+                  Trial is 7 days. Pro is billed annually at $300.
                 </p>
               </div>
 
@@ -708,7 +710,7 @@ export default function ChoosePlanPage() {
                         </span>
                       </div>
                     ) : (
-                      <AccessPill variant={premiumVariant(r)} />
+                      <AccessPill variant={proVariant(r)} />
                     )}
                   </div>
                 </div>
@@ -718,7 +720,7 @@ export default function ChoosePlanPage() {
             <div className="grid grid-cols-[1.25fr_1fr_1fr] gap-0 border-t border-slate-200 bg-slate-50/60">
               <div className="p-5 sm:p-6">
                 <p className="text-sm text-slate-600">
-                  Start with the trial if you want to explore. Go Premium if you
+                  Start with the trial if you want to explore. Go Pro if you
                   want advisory support and structured progress reviews
                   immediately.
                 </p>
@@ -748,20 +750,20 @@ export default function ChoosePlanPage() {
               <div className="border-l border-slate-200 p-5 sm:p-6">
                 <button
                   type="button"
-                  onClick={goPremiumNow}
-                  disabled={premiumUpgrading}
+                  onClick={goProNow}
+                  disabled={proUpgrading}
                   className={cn(
                     "relative inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3",
                     "text-white font-semibold shadow-sm",
                     "transition-transform translate-y-px active:translate-y-1",
-                    premiumUpgrading && "opacity-70 cursor-not-allowed",
+                    proUpgrading && "opacity-70 cursor-not-allowed",
                   )}
                   style={{
                     background: `linear-gradient(90deg, ${BRAND.navy} 0%, ${BRAND.navy2} 60%, ${BRAND.ink} 100%)`,
                   }}
                 >
-                  {premiumUpgrading ? "Processing…" : "Go Premium now"}
-                  {!premiumUpgrading && <ArrowRight className="h-4 w-4" />}
+                  {proUpgrading ? "Processing…" : "Go Pro now"}
+                  {!proUpgrading && <ArrowRight className="h-4 w-4" />}
                 </button>
 
                 <p className="mt-2 text-center text-xs text-slate-500">
@@ -815,7 +817,7 @@ export default function ChoosePlanPage() {
             contentVisible && "visible",
           )}
         >
-          Trial shows limited access. Premium shows full access.
+          Trial shows limited access. Pro shows full access.
         </p>
       </div>
     </>

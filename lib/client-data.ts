@@ -834,7 +834,7 @@ export function pushNetWorthSnapshot(
 // ENTITLEMENTS
 // ============================================================================
 
-export type FeatureKey = "premiumInsights" | "exportData" | "advisorChat";
+export type FeatureKey = "proInsights" | "exportData" | "advisorChat";
 
 export function canAccessFeature(sub: SubState, feature: FeatureKey): boolean {
   if (sub.isEnterprise) return true;
@@ -843,7 +843,7 @@ export function canAccessFeature(sub: SubState, feature: FeatureKey): boolean {
   // Trial — check server-authoritative entitlements
   if (sub.status === "trialing") {
     switch (feature) {
-      case "premiumInsights":
+      case "proInsights":
         return sub.entitlements.insights_full;
       case "exportData":
         return sub.entitlements.export_data;

@@ -405,7 +405,7 @@ export default function DashboardPage() {
       return;
     }
     // Subscription paywall redirect is temporarily disabled while the
-    // backend subscription_status sync is being fixed. Premium features
+    // backend subscription_status sync is being fixed. Pro features
     // remain gated by canAccessFeature() below.
   }, [ready, auth, router]);
 
@@ -427,7 +427,7 @@ export default function DashboardPage() {
     };
     const has = (k: FeatureKey) => canAccessFeature(effectiveSub, k);
     return {
-      premiumInsights: has("premiumInsights"),
+      proInsights: has("proInsights"),
       exportData: has("exportData"),
       advisorChat: has("advisorChat"),
     };

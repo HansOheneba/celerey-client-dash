@@ -82,7 +82,7 @@ export default function AdvisorPage() {
         <div className="max-w-lg text-center">
           <h2 className="text-xl font-semibold">Feature locked</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Advisor access is available for Premium members only.
+            Advisor access is available for Pro members only.
           </p>
           <div className="mt-4">
             <button
@@ -94,7 +94,7 @@ export default function AdvisorPage() {
               }}
               className="inline-flex h-10 items-center justify-center rounded-md px-4 bg-[#0B102A] text-white"
             >
-              Upgrade to Premium
+              Upgrade to Pro
             </button>
           </div>
         </div>

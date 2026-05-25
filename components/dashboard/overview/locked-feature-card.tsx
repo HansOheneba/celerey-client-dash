@@ -56,7 +56,7 @@ export function LockedFeatureCard({
             onClick={onUpgrade}
             style={{ background: "#0B102A", boxShadow: "none" }}
           >
-            Upgrade to Premium <ArrowUpRight className="h-4 w-4" />
+            Upgrade to Pro <ArrowUpRight className="h-4 w-4" />
           </Button>
         )}
       </CardContent>
