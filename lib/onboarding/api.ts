@@ -30,10 +30,20 @@ export interface SubmitOnboardingResult {
 export async function submitOnboarding(
   payload: OnboardingPayload,
 ): Promise<SubmitOnboardingResult> {
+  const body = {
+    ...payload,
+    incomes: payload.incomes.map(({ name, amount_monthly, category, is_recurring }) => ({
+      name,
+      amount_monthly,
+      category,
+      is_recurring,
+    })),
+  };
+
   const response = await fetch("/api/onboarding/submit", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
 
   const data = (await response.json().catch(() => null)) as

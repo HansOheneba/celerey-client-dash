@@ -184,7 +184,12 @@ export function Step7Review({
         email, // injected from auth state
       },
       goals,
-      incomes,
+      incomes: incomes.map((i) => ({
+        name: i.name,
+        amount_monthly: i.amount_monthly,
+        category: i.category,
+        is_recurring: i.is_recurring,
+      })),
       emergencyFund,
       retirement,
     };

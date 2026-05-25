@@ -1,6 +1,11 @@
 import * as React from "react";
 import { ArrowUpRight } from "lucide-react";
-import { DashCard, CardContent, CardHeader, CardTitle } from "@/components/dashboard/dash-card";
+import {
+  DashCard,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/dashboard/dash-card";
 import { Button } from "@/components/ui/button";
 
 interface LockedFeatureCardProps {

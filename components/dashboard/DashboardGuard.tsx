@@ -68,4 +68,3 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
   if (state !== "allowed") return null;
   return <>{children}</>;
 }
-

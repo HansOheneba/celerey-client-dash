@@ -318,9 +318,7 @@ export default function ChoosePlanPage() {
     return "not-included";
   };
 
-  const proVariant = (
-    r: FeatureRow,
-  ): "full" | "limited" | "not-included" => {
+  const proVariant = (r: FeatureRow): "full" | "limited" | "not-included" => {
     if (r.pro) return "full";
     return "not-included";
   };
@@ -388,9 +386,8 @@ export default function ChoosePlanPage() {
           </h1>
 
           <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
-            Trial gives you limited access to explore the dashboard. Pro
-            gives you full access plus advisory support, reviews, and
-            accountability.
+            Trial gives you limited access to explore the dashboard. Pro gives
+            you full access plus advisory support, reviews, and accountability.
           </p>
         </div>
 
@@ -579,9 +576,8 @@ export default function ChoosePlanPage() {
 
             <div className="border-t border-slate-200 bg-slate-50/60 p-5">
               <p className="text-sm text-slate-600">
-                Start with the trial if you want to explore. Go Pro if you
-                want advisory support and structured progress reviews
-                immediately.
+                Start with the trial if you want to explore. Go Pro if you want
+                advisory support and structured progress reviews immediately.
               </p>
             </div>
           </div>

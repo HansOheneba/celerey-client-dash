@@ -112,8 +112,9 @@ interface ScoreInput {
 function computeProfileCompletionScore(s: ScoreInput): number {
   return [
     !!s.user?.display_name && !!s.user?.email && !!s.user?.resident_country
-      ? 10
+      ? 7
       : 0,
+    !!s.user?.gender && !!s.user?.prefix ? 3 : 0,
     s.incomeRows.length > 0 ? 15 : 0,
     s.expenseCategories.length > 0 ? 10 : 0,
     s.goals.length > 0 ? 10 : 0,

@@ -5,7 +5,11 @@ import { motion } from "framer-motion";
 import { getUserFullName, type User } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 import { usePageData } from "@/hooks/usePageData";
-import { updateUser, submitRiskAssessment } from "@/lib/dashboard-api";
+import {
+  updateUser,
+  submitRiskAssessment,
+  updateRiskProfileFactors,
+} from "@/lib/dashboard-api";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -127,6 +131,8 @@ export default function AccountSettingsPage() {
   const setUser = useFinancialStore((s) => s.setUser);
 
   const [saving, setSaving] = useState(false);
+  const [riskFactorDeps, setRiskFactorDeps] = useState<number | "">(0);
+  const [savingRiskFactors, setSavingRiskFactors] = useState(false);
   const [quizOpen, setQuizOpen] = useState(false);
   const [quizEverOpened, setQuizEverOpened] = useState(false);
   const [quizConfirmOpen, setQuizConfirmOpen] = useState(false);
@@ -152,6 +158,12 @@ export default function AccountSettingsPage() {
     updated_at: "",
     user_type: "regular",
   };
+
+  useEffect(() => {
+    if (storeUser?.dependents != null) {
+      setRiskFactorDeps(storeUser.dependents);
+    }
+  }, [storeUser?.dependents]);
 
   const [form, setForm] = useState<User & { citizenships: string[] }>({
     ...baseUser,
@@ -255,6 +267,23 @@ export default function AccountSettingsPage() {
       toast.error("Failed to save risk profile. Please try again.");
     } finally {
       setQuizSubmitting(false);
+    }
+  }
+
+  async function handleRiskFactorsSave() {
+    if (riskFactorDeps === "") return;
+    setSavingRiskFactors(true);
+    try {
+      await updateRiskProfileFactors({ dependents: riskFactorDeps });
+      setUser({
+        ...useFinancialStore.getState().user!,
+        dependents: riskFactorDeps,
+      });
+      toast.success("Risk factors updated.");
+    } catch {
+      toast.error("Failed to update risk factors. Please try again.");
+    } finally {
+      setSavingRiskFactors(false);
     }
   }
 
@@ -495,26 +524,24 @@ export default function AccountSettingsPage() {
                 </div>
               )}
 
-              {/* Dependents - partner/family accounts */}
-              {!isSolo && (
-                <div className="space-y-2 w-fit">
-                  <Label>Number of Dependents</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.dependents ?? ""}
-                    onChange={(e) =>
-                      handleChange(
-                        "dependents",
-                        e.target.value === ""
-                          ? undefined
-                          : Number(e.target.value),
-                      )
-                    }
-                    className="w-32"
-                  />
-                </div>
-              )}
+              {/* Dependents - all account types */}
+              <div className="space-y-2 w-fit">
+                <Label>Number of Dependents</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.dependents ?? ""}
+                  onChange={(e) =>
+                    handleChange(
+                      "dependents",
+                      e.target.value === ""
+                        ? undefined
+                        : Number(e.target.value),
+                    )
+                  }
+                  className="w-32"
+                />
+              </div>
 
               {/* Bio */}
               <div className="space-y-2">
@@ -643,27 +670,58 @@ export default function AccountSettingsPage() {
               <Skeleton className="h-9 w-36" />
             </div>
           ) : (
-            <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-4">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                  Current risk profile
-                </p>
-                <p className="mt-1 text-sm font-semibold">
-                  {form.risk_profile
-                    ? riskBandLabel(form.risk_profile)
-                    : "Not assessed yet"}
-                </p>
+            <>
+              <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                    Current risk profile
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {form.risk_profile
+                      ? riskBandLabel(form.risk_profile)
+                      : "Not assessed yet"}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setQuizOpen(true)}
+                >
+                  <ClipboardList className="h-4 w-4" />
+                  {form.risk_profile ? "Retake quiz" : "Take quiz"}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setQuizOpen(true)}
-              >
-                <ClipboardList className="h-4 w-4" />
-                {form.risk_profile ? "Retake quiz" : "Take quiz"}
-              </Button>
-            </div>
+
+              {/* Dependents - feeds risk.profile-factors */}
+              <div className="flex items-end gap-4">
+                <div className="space-y-2">
+                  <Label>Number of Dependents</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Used to personalise your risk profile calculation.
+                  </p>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={riskFactorDeps}
+                    onChange={(e) =>
+                      setRiskFactorDeps(
+                        e.target.value === "" ? "" : Number(e.target.value),
+                      )
+                    }
+                    className="w-32"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRiskFactorsSave}
+                  disabled={savingRiskFactors || riskFactorDeps === ""}
+                >
+                  {savingRiskFactors ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

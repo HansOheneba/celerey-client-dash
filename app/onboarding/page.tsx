@@ -63,6 +63,23 @@ export default function OnboardingPage() {
     resetOnboarding,
   } = store;
 
+  // Sanitize any stale API-format income objects that may be persisted in
+  // localStorage from a previous onboarding run (API objects carry extra
+  // fields like id, user_id, recurring_type that must not be sent back).
+  useEffect(() => {
+    if (!incomes.length) return;
+    if (!(incomes as any[]).some((i) => "id" in i || "user_id" in i)) return;
+    setIncomes(
+      (incomes as any[]).map((i) => ({
+        name: i.name ?? "",
+        amount_monthly: Number(i.amount_monthly ?? i.amount ?? 0),
+        category: i.category ?? "",
+        is_recurring: i.is_recurring ?? (i.recurring_type !== "one-time"),
+      }))
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!ready) return;
@@ -133,6 +150,9 @@ export default function OnboardingPage() {
       }
     }
     setOnboarded();
+    // Clear all persisted form data now that submission has succeeded.
+    // This ensures the next onboarding run (e.g. a test reset) starts fresh.
+    resetOnboarding();
     setStep(8);
   }
 

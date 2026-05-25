@@ -44,6 +44,16 @@ function ucFirst(s?: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+function ucGender(g?: string | null): string {
+  const map: Record<string, string> = {
+    M: "Male",
+    F: "Female",
+    O: "Non-binary / Other",
+    X: "Prefer not to say",
+  };
+  return g ? (map[g] ?? g) : "-";
+}
+
 function Section({
   title,
   fields,
@@ -70,7 +80,16 @@ function Section({
           : fields.map((field) => (
               <div key={field.label}>
                 <p className="text-xs text-muted-foreground">{field.label}</p>
-                <p className="text-sm font-medium">{field.value || "-"}</p>
+                {field.value ? (
+                  <p className="text-sm font-medium">{field.value}</p>
+                ) : (
+                  <Link
+                    href="/dashboard/account/settings"
+                    className="text-xs text-muted-foreground/60 italic hover:text-muted-foreground transition-colors"
+                  >
+                    Not set - add in settings
+                  </Link>
+                )}
               </div>
             ))}
       </div>
@@ -123,16 +142,14 @@ export default function ProfilePage() {
       ? [
           { label: "Marital Status", value: ucFirst(user?.marital_status) },
           { label: "Occupation", value: user?.occupation ?? "" },
+          { label: "Prefix", value: user?.prefix ?? "" },
+          { label: "Gender", value: ucGender(user?.gender) },
         ]
       : []),
-    ...(!isSolo
-      ? [
-          {
-            label: "Dependents",
-            value: user?.dependents != null ? String(user.dependents) : "",
-          },
-        ]
-      : []),
+    {
+      label: "Dependents",
+      value: user?.dependents != null ? String(user.dependents) : "0",
+    },
   ];
 
   // ── Contact ────────────────────────────────────────────────────────────────
@@ -154,7 +171,6 @@ export default function ProfilePage() {
 
   // ── Account Information ────────────────────────────────────────────────────
   const accountFields: ProfileField[] = [
-    { label: "Client ID", value: user?.user_id ?? "" },
     { label: "Account Currency", value: user?.currency ?? "" },
     {
       label: "Member Since",
@@ -246,9 +262,7 @@ export default function ProfilePage() {
                 {isPro && (
                   <Badge
                     className="text-xs text-white border-0 gap-1"
-                    style={{
-                      background: "linear-gradient(135deg, #7c3aed, #3b1fa8)",
-                    }}
+                  
                   >
                     Pro
                   </Badge>
@@ -261,7 +275,7 @@ export default function ProfilePage() {
               </div>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
               {isPro && (
-                <p className="text-xs text-violet-600 font-medium mt-0.5">
+                <p className="text-xs text-primary font-medium mt-0.5">
                   Pro member
                 </p>
               )}
@@ -293,6 +307,15 @@ export default function ProfilePage() {
         fields={accountFields}
         loading={loading}
       />
+      {/* Client ID - secondary / greyed, not part of primary display */}
+      {!loading && user?.user_id && (
+        <div className="rounded-xl border border-dashed bg-white px-6 py-3 flex items-center gap-3">
+          <p className="text-xs text-muted-foreground/60 shrink-0">Client ID</p>
+          <p className="text-xs font-mono text-muted-foreground/50 truncate">
+            {user.user_id}
+          </p>
+        </div>
+      )}
       <Section
         title="Financial Profile"
         fields={user?.bio ? [{ label: "Bio", value: user.bio }] : []}

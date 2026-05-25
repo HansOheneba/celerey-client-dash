@@ -268,6 +268,11 @@ export default function DashboardTopbar() {
                         : ""}
                     </AvatarFallback>
                   </Avatar>
+                  {isPro && (
+                    <span className="absolute -top-1 -right-9 -translate-x-1/2 rounded-full px-1.5 py-px text-[9px] font-bold leading-none bg-blue-100 border border-blue-600 text-blue-800 whitespace-nowrap">
+                      PRO
+                    </span>
+                  )}
                 </div>
                 <ChevronDown className="hidden sm:block h-3.5 w-3.5 text-gray-400 shrink-0" />
               </button>

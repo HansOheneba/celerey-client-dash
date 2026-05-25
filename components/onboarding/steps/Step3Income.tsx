@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -163,9 +163,15 @@ function EditIncomePopover({
           </div>
 
           <div className="flex items-center gap-2">
-            <Switch
-              checked={isRecurring}
-              onCheckedChange={(v) => setValue("is_recurring", v)}
+            <Controller
+              control={control}
+              name="is_recurring"
+              render={({ field }) => (
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              )}
             />
             <span className="text-sm text-slate-600">Monthly recurring</span>
           </div>
@@ -286,7 +292,15 @@ function IncomeAccordionItem({
 
 /* ─── Main Step ─────────────────────────────────────────────────── */
 export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
-  const [incomes, setIncomes] = useState<IncomeData[]>(defaultValues);
+  const [incomes, setIncomes] = useState<IncomeData[]>(
+    // Strip any stale API-response fields - only keep the fields the form owns
+    (defaultValues as any[]).map((i) => ({
+      name: i.name ?? "",
+      amount_monthly: Number(i.amount_monthly ?? i.amount ?? 0),
+      category: i.category ?? "",
+      is_recurring: i.is_recurring ?? i.recurring_type !== "one-time",
+    })),
+  );
   const [showForm, setShowForm] = useState(defaultValues.length === 0);
   const store = useOnboardingStore();
   const preferredCurrency = store.identity?.currency || "USD";
@@ -503,9 +517,15 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
             </div>
 
             <div className="flex items-center gap-2.5 pb-0.5">
-              <Switch
-                checked={isRecurring}
-                onCheckedChange={(v) => setValue("is_recurring", v)}
+              <Controller
+                control={control}
+                name="is_recurring"
+                render={({ field }) => (
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
               />
               <span className="text-sm text-slate-600">Monthly recurring</span>
             </div>
