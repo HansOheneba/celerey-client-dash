@@ -1,15 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { getUserFullName, type User } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { useClientGate } from "@/lib/useClientGate";
 import { usePageData } from "@/hooks/usePageData";
 import {
   updateUser,
   submitRiskAssessment,
   updateRiskProfileFactors,
+  deleteAccount,
 } from "@/lib/dashboard-api";
+import { resetSession } from "@/lib/session-reset";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +56,11 @@ import {
   Building2,
   ClipboardList,
   XIcon,
+  CreditCard,
+  AlertTriangle,
+  Trash2,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import {
@@ -126,9 +135,11 @@ function accountModeLabel(mode?: string) {
 }
 
 export default function AccountSettingsPage() {
+  const router = useRouter();
   const { loading } = usePageData("profile");
   const storeUser = useFinancialStore((s) => s.user);
   const setUser = useFinancialStore((s) => s.setUser);
+  const { sub, ready: subReady } = useClientGate();
 
   const [saving, setSaving] = useState(false);
   const [riskFactorDeps, setRiskFactorDeps] = useState<number | "">(0);
@@ -140,6 +151,9 @@ export default function AccountSettingsPage() {
   const [quizResult, setQuizResult] = useState<RiskAssessmentResult | null>(
     null,
   );
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (quizOpen) {
@@ -284,6 +298,24 @@ export default function AccountSettingsPage() {
       toast.error("Failed to update risk factors. Please try again.");
     } finally {
       setSavingRiskFactors(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    try {
+      const ok = await deleteAccount();
+      if (ok) {
+        resetSession();
+        router.replace("/");
+      } else {
+        toast.error("Failed to delete account. Please try again.");
+      }
+    } catch {
+      toast.error("Failed to delete account. Please try again.");
+    } finally {
+      setDeleting(false);
+      setDeleteOpen(false);
     }
   }
 
@@ -850,6 +882,94 @@ export default function AccountSettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      
+
+      {/* Danger Zone */}
+      <div className="rounded-xl border border-red-200 bg-white">
+        <div className="border-b border-red-200 px-6 py-4 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <h3 className="text-sm font-semibold text-red-600">Danger Zone</h3>
+        </div>
+        <div className="px-6 py-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Delete Account</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Permanently delete your account and all associated data. This
+              action cannot be undone.
+            </p>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="shrink-0"
+            onClick={() => {
+              setDeleteConfirmText("");
+              setDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Account
+          </Button>
+        </div>
+      </div>
+
+      {/* Delete Account confirmation dialog */}
+      <AlertDialog
+        open={deleteOpen}
+        onOpenChange={(v) => {
+          if (!v) {
+            setDeleteOpen(false);
+            setDeleteConfirmText("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete your account?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                This will permanently delete your account and all your data -
+                goals, assets, cash flow records, and everything else. There is
+                no way to recover this.
+              </span>
+              <span className="block mt-3 font-medium text-foreground">
+                To confirm, type{" "}
+                <span className="font-mono bg-muted px-1 rounded">
+                  delete my account
+                </span>{" "}
+                below.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="py-2">
+            <Input
+              placeholder="delete my account"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              className="border-red-200 focus-visible:ring-red-400"
+            />
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-white"
+              disabled={deleteConfirmText !== "delete my account" || deleting}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteAccount();
+              }}
+            >
+              {deleting ? "Deleting..." : "Permanently delete account"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Risk quiz - right-side sheet */}
       <DialogPrimitive.Root

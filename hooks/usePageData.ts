@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFinancialStore } from "@/store/financialStore";
+import { setSubscriptionData } from "@/lib/client-data";
 import {
   fetchGoals,
   fetchIncome,
@@ -161,6 +162,18 @@ export function usePageData(key: PageDataKey) {
                 created_at: user.created_at ?? "",
                 updated_at: user.updated_at ?? "",
               });
+              if (user.subscription_status) {
+                setSubscriptionData({
+                  subscription_status: user.subscription_status,
+                  subscription_plan: user.subscription_plan ?? null,
+                  trial_started_at: user.trial_started_at ?? null,
+                  trial_ends_at: user.trial_ends_at ?? null,
+                  renewed_at: user.renewed_at ?? null,
+                  is_enterprise: user.is_enterprise ?? false,
+                  entitlements: user.entitlements,
+                  record_limits: user.record_limits,
+                });
+              }
             }
             break;
           }

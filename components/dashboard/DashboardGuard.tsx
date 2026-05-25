@@ -39,20 +39,19 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Verify subscription status with the backend
-    fetchSubscription()
-      .then((data) => {
-        const status = data?.subscription_status;
-        if (status === "trialing" || status === "active") {
-          if (data) setSubscriptionData(data);
-          setState("allowed");
-        } else {
-          router.replace("/choose-plan");
-          setState("redirecting");
-        }
-      })
-      .catch(() => {
-        // API error - fall back to locally cached subscription to avoid
+    // Verify subscription status with the backend.
+    // Race against an 8-second timeout so a slow backend never leaves the
+    // user staring at the loader indefinitely.
+    const timeoutId = { current: 0 };
+    const timeoutPromise = new Promise<null>((resolve) => {
+      timeoutId.current = window.setTimeout(() => resolve(null), 8_000);
+    });
+
+    Promise.race([fetchSubscription(), timeoutPromise]).then((data) => {
+      clearTimeout(timeoutId.current);
+
+      if (data === null) {
+        // API error or timeout - fall back to cached subscription to avoid
         // falsely locking out users with a known valid subscription
         const local = getSubscription();
         if (local.status === "trialing" || local.status === "active") {
@@ -61,7 +60,18 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
           router.replace("/choose-plan");
           setState("redirecting");
         }
-      });
+        return;
+      }
+
+      const status = data.subscription_status;
+      if (status === "trialing" || status === "active") {
+        setSubscriptionData(data);
+        setState("allowed");
+      } else {
+        router.replace("/choose-plan");
+        setState("redirecting");
+      }
+    });
   }, [router]);
 
   if (state === "checking") return <CelereyLoader />;

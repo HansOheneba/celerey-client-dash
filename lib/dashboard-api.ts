@@ -194,6 +194,30 @@ interface ApiUser {
   bio?: string | null;
   citizenships?: string[] | null;
   preferred_contact?: string | null;
+  subscription_status?: string | null;
+  subscription_plan?: string | null;
+  trial_started_at?: string | null;
+  trial_ends_at?: string | null;
+  renewed_at?: string | null;
+  is_enterprise?: boolean;
+  entitlements?: {
+    insights_full?: boolean;
+    advisor_chat?: boolean;
+    concierge_requests?: boolean;
+    export_data?: boolean;
+    retirement_scenarios?: boolean;
+    live_market_data?: boolean;
+    portfolio_charts?: boolean;
+    cash_flow_projections?: boolean;
+    goal_scenarios?: boolean;
+  };
+  record_limits?: {
+    goals?: number | null;
+    assets?: number | null;
+    properties?: number | null;
+    liabilities?: number | null;
+    insurance_policies?: number | null;
+  };
 }
 
 interface ApiLiability {
@@ -1483,6 +1507,16 @@ export async function fetchSubscription(): Promise<SubscriptionApiData | null> {
 // Frontend redirects to that URL — Stripe handles all card/payment UI.
 // plan "trial" → 7-day free trial, card captured but not charged until trial ends
 // plan "pro"   → immediate charge, no trial
+export async function deleteAccount(): Promise<boolean> {
+  try {
+    await proxyCall("user.delete", "DELETE");
+    return true;
+  } catch (err) {
+    console.error("[deleteAccount] failed:", err);
+    return false;
+  }
+}
+
 export async function createCheckoutSession(
   plan: "trial" | "pro",
 ): Promise<{ url: string } | null> {

@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2 } from "lucide-react";
+import { Building2, CheckCircle2, XCircle, CreditCard } from "lucide-react";
 import { useFinancialStore } from "@/store/financialStore";
 import { usePageData } from "@/hooks/usePageData";
 import { getUserFullName, getUserAge } from "@/lib/client-data";
@@ -260,10 +260,7 @@ export default function ProfilePage() {
                   </Badge>
                 )}
                 {isPro && (
-                  <Badge
-                    className="text-xs text-white border-0 gap-1"
-                  
-                  >
+                  <Badge className="text-xs text-white border-0 gap-1">
                     Pro
                   </Badge>
                 )}
@@ -347,6 +344,8 @@ export default function ProfilePage() {
           loading={loading}
         />
       )}
+
+     
     </motion.div>
   );
 }
