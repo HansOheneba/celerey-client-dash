@@ -19,16 +19,13 @@ import {
   faArrowTrendUp,
   faArrowTrendDown,
   faCalendarDays,
-  faWallet,
-  faShield,
-  faCommentDots,
-  faPiggyBank,
   faCircleExclamation,
   faCircleCheck,
   faClock,
-  faFire,
   faBullseye,
   faInfoCircle,
+  faCreditCard,
+  faBuilding,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useClientGate } from "../../lib/useClientGate";
@@ -48,6 +45,7 @@ import {
   selectEmergencyFundMetrics,
   calculateNetWorth,
   projectMonthlyAmount,
+  propertyEquity,
   type FinancialDomainData,
   type CashFlowPoint,
   type RecurringType,
@@ -99,16 +97,6 @@ type Snapshot = {
   retirementOnTrack: boolean;
   yearsToRetirement: number;
   projectedRetirementBalance: number;
-};
-
-type UpcomingItem = { id: string; title: string; time: string; meta?: string };
-
-type ActivityRow = {
-  id: string;
-  title: string;
-  category: "Goal" | "Portfolio" | "Cash Flow" | "Insurance";
-  date: string;
-  status: "Pending" | "Completed";
 };
 
 // ─── Chart config ─────────────────────────────────────────────────────────────
@@ -670,37 +658,48 @@ export default function DashboardPage() {
     [store.goals],
   );
 
-  // ── Upcoming & activity ───────────────────────────────────────────────────
+  // ── Liabilities ────────────────────────────────────────────────────────────
 
-  const upcoming: UpcomingItem[] = useMemo(() => {
-    const items: UpcomingItem[] = [];
-    if (items.length === 0)
-      items.push({ id: "u-fallback", title: "No upcoming items", time: "-" });
-    return items;
-  }, []);
+  const totalDebt = useMemo(
+    () => store.liabilities.reduce((s, l) => s + l.balance, 0),
+    [store.liabilities],
+  );
 
-  const activity: ActivityRow[] = useMemo(() => {
-    const rows: ActivityRow[] = [];
-    store.goals.slice(0, 3).forEach((g) =>
-      rows.push({
-        id: `g-${g.id}`,
-        title: g.completed ? `Completed: ${g.title}` : `${g.title} updated`,
-        category: "Goal",
-        date: g.completedDate ?? new Date().toLocaleDateString(),
-        status: g.completed ? "Completed" : "Pending",
-      }),
-    );
-    store.incomeRows.slice(0, 2).forEach((c) =>
-      rows.push({
-        id: `c-${c.id}`,
-        title: `${c.name} recorded`,
-        category: "Cash Flow",
-        date: new Date().toLocaleDateString(),
-        status: "Completed",
-      }),
-    );
-    return rows;
-  }, [store.goals, store.incomeRows]);
+  const totalMonthlyPayments = useMemo(
+    () => store.liabilities.reduce((s, l) => s + l.minPaymentMonthly, 0),
+    [store.liabilities],
+  );
+
+  const dti = useMemo(
+    () =>
+      snapshot.monthlyIncome > 0
+        ? (totalMonthlyPayments / snapshot.monthlyIncome) * 100
+        : 0,
+    [snapshot.monthlyIncome, totalMonthlyPayments],
+  );
+
+  const topLiabilities = useMemo(
+    () =>
+      [...store.liabilities].sort((a, b) => b.balance - a.balance).slice(0, 3),
+    [store.liabilities],
+  );
+
+  // ── Properties ────────────────────────────────────────────────────────────
+
+  const activeProperties = useMemo(
+    () => store.propertyAssets.filter((p) => p.is_active),
+    [store.propertyAssets],
+  );
+
+  const totalPropertyValue = useMemo(
+    () => activeProperties.reduce((s, p) => s + p.market_value, 0),
+    [activeProperties],
+  );
+
+  const totalPropertyEquity = useMemo(
+    () => activeProperties.reduce((s, p) => s + propertyEquity(p), 0),
+    [activeProperties],
+  );
 
   // ── Greeting ──────────────────────────────────────────────────────────────
 
@@ -1221,22 +1220,20 @@ export default function DashboardPage() {
                 </Card>
               </motion.div>
 
-              {/* Recent Activity */}
+              {/* Liabilities */}
               <motion.div variants={mi}>
-                <SectionLabel>Recent activity</SectionLabel>
+                <SectionLabel>Liabilities</SectionLabel>
                 <Card>
-                  <CardHeader className="pb-2">
+                  <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">
-                        Latest updates
-                      </CardTitle>
+                      <CardTitle className="text-base">Debt overview</CardTitle>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-xs gap-1"
-                        onClick={() => router.push("/activity")}
+                        onClick={() => router.push("/dashboard/liabilities")}
                       >
-                        View all{" "}
+                        View details{" "}
                         <FontAwesomeIcon
                           icon={faArrowUpRightFromSquare}
                           className="h-3 w-3"
@@ -1245,70 +1242,79 @@ export default function DashboardPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {store.goals.length === 0 &&
-                    store.incomeRows.length === 0 ? (
+                    {store.liabilities.length === 0 ? (
                       <EmptyNudge
-                        message="Your activity will appear here as you add income, expenses, and goals."
-                        buttonLabel="Get started"
-                        onAction={() => router.push("/dashboard/profile/setup")}
+                        message="No liabilities added yet. Track your debts to get a complete picture of your net worth."
+                        buttonLabel="Add a liability"
+                        onAction={() => router.push("/dashboard/liabilities")}
                       />
                     ) : (
-                      <div className="w-full overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="text-left text-muted-foreground border-b">
-                              <th className="py-2.5 pr-4 font-medium text-xs">
-                                Item
-                              </th>
-                              <th className="py-2.5 pr-4 font-medium text-xs">
-                                Category
-                              </th>
-                              <th className="py-2.5 pr-4 font-medium text-xs">
-                                Date
-                              </th>
-                              <th className="py-2.5 font-medium text-xs text-right">
-                                Status
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {activity.map((row) => (
-                              <tr
-                                key={row.id}
-                                className="border-b last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer"
-                                onClick={() => router.push("/activity")}
-                              >
-                                <td className="py-3 pr-4 font-medium">
-                                  {row.title}
-                                </td>
-                                <td className="py-3 pr-4">
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs font-normal"
-                                  >
-                                    {row.category}
-                                  </Badge>
-                                </td>
-                                <td className="py-3 pr-4 text-muted-foreground text-xs">
-                                  {row.date}
-                                </td>
-                                <td className="py-3 text-right">
-                                  <Badge
-                                    variant="outline"
-                                    className={`text-xs ${
-                                      row.status === "Completed"
-                                        ? "text-emerald-600 border-emerald-200 bg-emerald-50"
-                                        : "text-amber-600 border-amber-200 bg-amber-50"
-                                    }`}
-                                  >
-                                    {row.status}
-                                  </Badge>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <>
+                        <div className="flex gap-6 flex-wrap mb-4">
+                          {loading ? (
+                            <>
+                              <Skeleton className="h-8 w-28" />
+                              <Skeleton className="h-8 w-28" />
+                              <Skeleton className="h-8 w-28" />
+                            </>
+                          ) : (
+                            <>
+                              <StatPill
+                                label="Total debt"
+                                value={formatCurrency(totalDebt)}
+                                tip="Sum of all outstanding liability balances."
+                              />
+                              <StatPill
+                                label="Monthly payments"
+                                value={formatCurrency(totalMonthlyPayments)}
+                                tip="Minimum monthly payments across all liabilities."
+                              />
+                              <StatPill
+                                label="Debt-to-income"
+                                value={`${dti.toFixed(1)}%`}
+                                positive={dti <= 36}
+                                tip="Monthly debt payments as a percentage of monthly income. Below 36% is considered healthy."
+                              />
+                            </>
+                          )}
+                        </div>
+                        <Separator className="mb-4" />
+                        <div className="space-y-3">
+                          {topLiabilities.map((l) => (
+                            <div
+                              key={l.id}
+                              className="flex items-center justify-between text-sm"
+                            >
+                              <div className="flex items-center gap-2">
+                                <FontAwesomeIcon
+                                  icon={faCreditCard}
+                                  className="h-3.5 w-3.5 text-muted-foreground"
+                                />
+                                <span className="font-medium">{l.name}</span>
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs font-normal capitalize"
+                                >
+                                  {l.type.replace(/_/g, " ")}
+                                </Badge>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold tabular-nums">
+                                  {formatCurrency(l.balance)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatCurrency(l.minPaymentMonthly)}/mo
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {store.liabilities.length > 3 && (
+                          <p className="text-xs text-muted-foreground mt-3">
+                            +{store.liabilities.length - 3} more liabilities
+                          </p>
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </Card>
@@ -1490,43 +1496,79 @@ export default function DashboardPage() {
                 </Card>
               </motion.div>
 
-              {/* Upcoming */}
+              {/* Properties */}
               <motion.div variants={mi}>
-                <SectionLabel>Upcoming</SectionLabel>
-                <Card>
-                  <CardContent className="pt-5 space-y-3">
-                    {upcoming.map((item) => (
-                      <div
-                        key={item.id}
-                        className="rounded-md border px-3 py-3 flex items-start justify-between gap-3 hover:bg-muted/30 transition-colors cursor-pointer"
-                        onClick={() => router.push("/schedule")}
-                      >
-                        <div className="space-y-0.5">
-                          <div className="text-sm font-medium">
-                            {item.title}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {item.time}
-                            {item.meta ? ` · ${item.meta}` : ""}
-                          </div>
-                        </div>
-                        <FontAwesomeIcon
-                          icon={faArrowUpRightFromSquare}
-                          className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0"
-                        />
-                      </div>
-                    ))}
-                    <Button
-                      variant="secondary"
-                      className="w-full justify-between text-xs"
-                      onClick={() => router.push("/schedule/new")}
-                    >
-                      Add new schedule{" "}
-                      <FontAwesomeIcon
-                        icon={faArrowUpRightFromSquare}
-                        className="h-3 w-3"
+                <SectionLabel>Properties</SectionLabel>
+                <Card
+                  className="cursor-pointer hover:bg-muted/20 transition-colors"
+                  onClick={() => router.push("/dashboard/properties")}
+                >
+                  <CardContent className="pt-5 space-y-4">
+                    {activeProperties.length === 0 ? (
+                      <EmptyNudge
+                        message="No properties added yet. Track your real estate to include it in your net worth."
+                        buttonLabel="Add a property"
+                        onAction={() => router.push("/dashboard/properties")}
                       />
-                    </Button>
+                    ) : (
+                      <>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-sm font-semibold">Real estate</p>
+                            <p className="text-xs text-muted-foreground">
+                              {activeProperties.length} active{" "}
+                              {activeProperties.length === 1
+                                ? "property"
+                                : "properties"}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <FontAwesomeIcon
+                              icon={faBuilding}
+                              className="h-3 w-3"
+                            />
+                            {formatCurrency(totalPropertyValue)}
+                          </Badge>
+                        </div>
+
+                        <Separator />
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <StatPill
+                            label="Total value"
+                            value={formatCurrency(totalPropertyValue)}
+                            tip="Combined market value of all active properties."
+                          />
+                          <StatPill
+                            label="Total equity"
+                            value={formatCurrency(totalPropertyEquity)}
+                            positive={totalPropertyEquity > 0}
+                            tip="Market value minus outstanding mortgage and lien balances."
+                          />
+                        </div>
+
+                        <Separator />
+
+                        {activeProperties.slice(0, 2).map((p) => (
+                          <div
+                            key={p.property_id}
+                            className="flex items-center justify-between text-xs"
+                          >
+                            <span className="text-muted-foreground truncate pr-2">
+                              {p.name}
+                            </span>
+                            <span className="font-medium tabular-nums shrink-0">
+                              {formatCurrency(propertyEquity(p))} equity
+                            </span>
+                          </div>
+                        ))}
+                        {activeProperties.length > 2 && (
+                          <p className="text-xs text-muted-foreground">
+                            +{activeProperties.length - 2} more
+                          </p>
+                        )}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>

@@ -93,7 +93,7 @@ export default function DashboardSidebar() {
   const collapsed = state === "collapsed";
 
   const user = useFinancialStore((s) => s.user);
-  const displayName = getUserFullName(user ?? undefined);
+  const displayName = user ? getUserFullName(user) : "";
   const userEmail = user?.email ?? "";
   const [mounted, setMounted] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);

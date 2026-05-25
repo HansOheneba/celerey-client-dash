@@ -88,7 +88,7 @@ export default function DashboardTopbar() {
     }
   }
 
-  const displayName = getUserFullName(user ?? undefined);
+  const displayName = user ? getUserFullName(user) : "";
   const userEmail = user?.email ?? "";
   const initials = mounted
     ? displayName
