@@ -74,10 +74,10 @@ export default function OnboardingPage() {
         name: i.name ?? "",
         amount_monthly: Number(i.amount_monthly ?? i.amount ?? 0),
         category: i.category ?? "",
-        is_recurring: i.is_recurring ?? (i.recurring_type !== "one-time"),
-      }))
+        is_recurring: i.is_recurring ?? i.recurring_type !== "one-time",
+      })),
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Redirect if not authenticated

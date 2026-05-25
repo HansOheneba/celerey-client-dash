@@ -32,12 +32,14 @@ export async function submitOnboarding(
 ): Promise<SubmitOnboardingResult> {
   const body = {
     ...payload,
-    incomes: payload.incomes.map(({ name, amount_monthly, category, is_recurring }) => ({
-      name,
-      amount_monthly,
-      category,
-      is_recurring,
-    })),
+    incomes: payload.incomes.map(
+      ({ name, amount_monthly, category, is_recurring }) => ({
+        name,
+        amount_monthly,
+        category,
+        is_recurring,
+      }),
+    ),
   };
 
   const response = await fetch("/api/onboarding/submit", {
