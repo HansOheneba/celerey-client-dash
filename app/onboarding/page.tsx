@@ -12,6 +12,7 @@ import { Step0AccountMode } from "@/components/onboarding/steps/Step0AccountMode
 import { Step1Identity } from "@/components/onboarding/steps/Step1Identity";
 import { Step2Goals } from "@/components/onboarding/steps/Step2Goals";
 import { Step3Income } from "@/components/onboarding/steps/Step3Income";
+import { Step4Expenses } from "@/components/onboarding/steps/Step4Expenses";
 import { Step5EmergencyFund } from "@/components/onboarding/steps/Step5EmergencyFund";
 import { Step6Retirement } from "@/components/onboarding/steps/Step6Retirement";
 import { Step7Review } from "@/components/onboarding/steps/Step7Review";
@@ -22,21 +23,23 @@ import type {
   IdentityData,
   GoalData,
   IncomeData,
+  ExpenseData,
   EmergencyFundData,
   RetirementData,
 } from "@/lib/onboarding/types";
 import type { AccountMode } from "@/lib/onboarding/copy";
 
 // Step layout (1-indexed):
-//   1  → Account Mode selection  (Step0AccountMode)
-//   2  → Identity                (Step1Identity)
-//   3  → Goals                   (Step2Goals)
-//   4  → Income                  (Step3Income)
-//   5  → Emergency Fund          (Step5EmergencyFund)
-//   6  → Retirement              (Step6Retirement)
-//   7  → Review                  (Step7Review)
-//   8  → Complete                (Step8Complete — bypasses shell)
-const TOTAL_STEPS = 8;
+//   1  -> Account Mode selection  (Step0AccountMode)
+//   2  -> Identity                (Step1Identity)
+//   3  -> Goals                   (Step2Goals)
+//   4  -> Income                  (Step3Income)
+//   5  -> Expenses                (Step4Expenses)
+//   6  -> Emergency Fund          (Step5EmergencyFund)
+//   7  -> Retirement              (Step6Retirement)
+//   8  -> Review                  (Step7Review)
+//   9  -> Complete                (Step8Complete - bypasses shell)
+const TOTAL_STEPS = 9;
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -51,6 +54,7 @@ export default function OnboardingPage() {
     identity,
     goals,
     incomes,
+    expenses,
     emergencyFund,
     retirement,
     setStep,
@@ -58,6 +62,7 @@ export default function OnboardingPage() {
     setIdentity,
     setGoals,
     setIncomes,
+    setExpenses,
     setEmergencyFund,
     setRetirement,
     resetOnboarding,
@@ -119,17 +124,22 @@ export default function OnboardingPage() {
     setStep(5);
   }
 
-  function handleStep5(data: EmergencyFundData) {
-    setEmergencyFund(data);
+  function handleStep5(data: ExpenseData[]) {
+    setExpenses(data);
     setStep(6);
   }
 
-  function handleStep6(data: RetirementData) {
-    setRetirement(data);
+  function handleStep6(data: EmergencyFundData) {
+    setEmergencyFund(data);
     setStep(7);
   }
 
-  function handleStep7Complete() {
+  function handleStep7(data: RetirementData) {
+    setRetirement(data);
+    setStep(8);
+  }
+
+  function handleStep8Complete() {
     // Seed the financial store from onboarding data before marking complete
     if (identity) {
       seedFromOnboarding({
@@ -153,7 +163,7 @@ export default function OnboardingPage() {
     // Clear all persisted form data now that submission has succeeded.
     // This ensures the next onboarding run (e.g. a test reset) starts fresh.
     resetOnboarding();
-    setStep(8);
+    setStep(9);
   }
 
   if (!ready) return <CelereyLoader />;
@@ -192,28 +202,39 @@ export default function OnboardingPage() {
         />
       )}
       {currentStep === 5 && (
-        <Step5EmergencyFund
-          defaultValues={emergencyFund}
+        <Step4Expenses
+          defaultValues={expenses}
           onComplete={handleStep5}
           onBack={handleBack}
         />
       )}
       {currentStep === 6 && (
-        <Step6Retirement
-          defaultValues={retirement}
+        <Step5EmergencyFund
+          defaultValues={emergencyFund}
+          totalMonthlyExpenses={expenses.reduce(
+            (s, e) => s + Number(e.amount_monthly),
+            0,
+          )}
           onComplete={handleStep6}
           onBack={handleBack}
         />
       )}
       {currentStep === 7 && (
+        <Step6Retirement
+          defaultValues={retirement}
+          onComplete={handleStep7}
+          onBack={handleBack}
+        />
+      )}
+      {currentStep === 8 && (
         <Step7Review
-          onComplete={handleStep7Complete}
+          onComplete={handleStep8Complete}
           onEditStep={(step) => setStep(step)}
           onBack={handleBack}
           email={auth.email ?? ""}
         />
       )}
-      {currentStep === 8 && (
+      {currentStep === 9 && (
         <Step8Complete
           displayName={displayName}
           goalCount={goals.length}

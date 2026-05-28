@@ -5,6 +5,7 @@ import type {
   IdentityData,
   GoalData,
   IncomeData,
+  ExpenseData,
   LiabilityData,
   EmergencyFundData,
   RetirementData,
@@ -19,6 +20,7 @@ interface OnboardingState {
   identity: IdentityData | null;
   goals: GoalData[];
   incomes: IncomeData[];
+  expenses: ExpenseData[];
   liabilities: LiabilityData[];
   emergencyFund: EmergencyFundData | null;
   retirement: RetirementData | null;
@@ -33,6 +35,7 @@ interface OnboardingState {
   addIncome: (income: IncomeData) => void;
   removeIncome: (index: number) => void;
   setIncomes: (incomes: IncomeData[]) => void;
+  setExpenses: (expenses: ExpenseData[]) => void;
   addLiability: (liability: LiabilityData) => void;
   removeLiability: (index: number) => void;
   setLiabilities: (liabilities: LiabilityData[]) => void;
@@ -48,6 +51,7 @@ const initialState = {
   identity: null,
   goals: [],
   incomes: [],
+  expenses: [],
   liabilities: [],
   emergencyFund: null,
   retirement: null,
@@ -78,6 +82,8 @@ export const useOnboardingStore = create<OnboardingState>()(
           incomes: state.incomes.filter((_, i) => i !== index),
         })),
       setIncomes: (incomes) => set({ incomes }),
+
+      setExpenses: (expenses) => set({ expenses }),
 
       addLiability: (liability) =>
         set((state) => ({ liabilities: [...state.liabilities, liability] })),

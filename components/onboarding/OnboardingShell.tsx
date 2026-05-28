@@ -10,19 +10,19 @@ const STEP_LABELS: Record<number, string> = {
   2: "Personal Info",
   3: "Your Goals",
   4: "Income",
-  5: "Emergency Fund",
-  6: "Retirement",
-  7: "Review",
-  8: "All Done",
+  5: "Expenses",
+  6: "Emergency Fund",
+  7: "Retirement",
+  8: "Review",
+  9: "All Done",
 };
 
 // Map each step to one of the named stages shown in the indicator
-// We group the 8 steps into 4 visible stages
 const STAGES = [
   { label: "Account", steps: [1] },
   { label: "Profile", steps: [2] },
-  { label: "Finances", steps: [3, 4, 5, 6] },
-  { label: "Review", steps: [7, 8] },
+  { label: "Finances", steps: [3, 4, 5, 6, 7] },
+  { label: "Review", steps: [8, 9] },
 ];
 
 /* ─── Premium Splash Loader ───────────────────────────────────── */
@@ -226,8 +226,8 @@ export function OnboardingShell({
 }: OnboardingShellProps) {
   const [splashDone, setSplashDone] = useState(false);
 
-  // Step 8 (Complete) bypasses shell
-  if (currentStep === 8) {
+  // Step 9 (Complete) bypasses shell
+  if (currentStep === 9) {
     return <>{children}</>;
   }
 

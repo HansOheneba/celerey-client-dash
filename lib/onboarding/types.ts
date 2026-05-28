@@ -43,6 +43,12 @@ export interface IncomeData {
   is_recurring: boolean;
 }
 
+export interface ExpenseData {
+  name: string;
+  amount_monthly: number;
+  category: string;
+}
+
 export interface LiabilityData {
   name: string;
   liability_type: string;
@@ -80,6 +86,7 @@ export interface OnboardingPayload {
   identity: IdentityData;
   goals: GoalData[];
   incomes: IncomeData[];
+  expenses: ExpenseData[];
   liabilities?: LiabilityData[];
   emergencyFund: EmergencyFundData;
   retirement: RetirementData;

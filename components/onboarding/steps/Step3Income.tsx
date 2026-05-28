@@ -391,7 +391,7 @@ export function Step3Income({ defaultValues = [], onComplete, onBack }: any) {
       <div className="rounded-2xl bg-[#151339] text-white px-5 py-4 flex items-center justify-between">
         <div>
           <p className="text-[11px] font-medium text-white/50 uppercase tracking-widest">
-            Total monthly income
+            Your income this month
           </p>
           <motion.p
             key={totalMonthlyIncome}

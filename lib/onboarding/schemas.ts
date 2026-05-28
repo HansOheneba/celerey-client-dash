@@ -89,6 +89,14 @@ export const liabilitySchema = z.object({
   due_date: z.string().optional(),
 });
 
+export const expenseSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  amount_monthly: num(0),
+  category: z.string().min(1, "Category is required").max(50),
+});
+
+export type ExpenseFormValues = z.infer<typeof expenseSchema>;
+
 export const emergencyFundSchema = z.object({
   cash_balance: num(0),
 });

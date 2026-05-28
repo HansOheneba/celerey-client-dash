@@ -22,6 +22,7 @@ import {
   User,
   Target,
   Banknote,
+  Wallet,
   Shield,
   Sunset,
 } from "lucide-react";
@@ -168,7 +169,8 @@ export function Step7Review({
   const [submitError, setSubmitError] = useState("");
   const [reverifyOpen, setReverifyOpen] = useState(false);
 
-  const { identity, goals, incomes, emergencyFund, retirement } = store;
+  const { identity, goals, incomes, expenses, emergencyFund, retirement } =
+    store;
 
   async function handleSubmit() {
     if (!identity || !emergencyFund || !retirement) {
@@ -190,6 +192,7 @@ export function Step7Review({
         category: i.category,
         is_recurring: i.is_recurring,
       })),
+      expenses: expenses ?? [],
       emergencyFund,
       retirement,
     };
@@ -301,6 +304,21 @@ export function Step7Review({
         />
 
         <SectionCard
+          icon={<Wallet className="h-5 w-5 text-primary" />}
+          title="Your expenses"
+          summary={
+            expenses && expenses.length > 0
+              ? `${expenses.length} expense${expenses.length > 1 ? "s" : ""} · ${formatCurrencyAmount(
+                  expenses.reduce((s, e) => s + Number(e.amount_monthly), 0),
+                  preferredCurrency,
+                )}/mo`
+              : "No expenses added"
+          }
+          step={5}
+          onEdit={onEditStep}
+        />
+
+        <SectionCard
           icon={<Shield className="h-5 w-5 text-primary" />}
           title="Emergency fund"
           summary={
@@ -313,7 +331,7 @@ export function Step7Review({
                 ? "No emergency fund added"
                 : "Not completed"
           }
-          step={5}
+          step={6}
           onEdit={onEditStep}
         />
 
@@ -329,7 +347,7 @@ export function Step7Review({
                   : `Desired ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)} per month`
               : "Not completed"
           }
-          step={6}
+          step={7}
           onEdit={onEditStep}
         />
       </div>

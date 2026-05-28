@@ -762,6 +762,7 @@ export function Step1Identity({
                       variant="outline"
                       role="combobox"
                       aria-expanded={cityOpen}
+                      disabled={statesAvailable && !selectedState}
                       className={cn(
                         "w-full justify-between font-normal h-10",
                         !watchedResidentCity && "text-slate-400",
@@ -813,8 +814,13 @@ export function Step1Identity({
                   render={({ field }) => (
                     <Input
                       {...field}
+                      disabled={statesAvailable && !selectedState}
                       placeholder={
-                        statesAvailable ? "Enter city name" : "eg. Cairo"
+                        statesAvailable && !selectedState
+                          ? "Select a region first"
+                          : statesAvailable
+                            ? "Enter city name"
+                            : "eg. Cairo"
                       }
                     />
                   )}

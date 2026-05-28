@@ -109,24 +109,19 @@ export function Step2Goals({
       target_date: data.target_date,
       status: "active",
     };
-    setGoals((prev) => {
-      const next = [...prev, newGoal];
-      store.setGoals(next);
-      return next;
-    });
+    const next = [...goals, newGoal];
+    setGoals(next);
+    store.setGoals(next);
     reset({ title: "", target_amount: 0, target_date: "" });
-    // Hide the form after saving — user can re-open with "+ Add another goal"
+    // Hide the form after saving - user can re-open with "+ Add another goal"
     setShowForm(false);
   }
 
   function removeGoal(i: number) {
-    setGoals((prev) => {
-      const next = prev.filter((_, idx) => idx !== i);
-      store.setGoals(next);
-      // If all goals removed, reopen the form automatically
-      if (next.length === 0) setShowForm(true);
-      return next;
-    });
+    const next = goals.filter((_, idx) => idx !== i);
+    setGoals(next);
+    store.setGoals(next);
+    if (next.length === 0) setShowForm(true);
   }
 
   function applySuggestion(label: string) {
