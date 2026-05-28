@@ -177,8 +177,10 @@ export function usePageData(key: PageDataKey) {
                         goals: user.record_limits.goals ?? undefined,
                         assets: user.record_limits.assets ?? undefined,
                         properties: user.record_limits.properties ?? undefined,
-                        liabilities: user.record_limits.liabilities ?? undefined,
-                        insurance_policies: user.record_limits.insurance_policies ?? undefined,
+                        liabilities:
+                          user.record_limits.liabilities ?? undefined,
+                        insurance_policies:
+                          user.record_limits.insurance_policies ?? undefined,
                       }
                     : undefined,
                 });

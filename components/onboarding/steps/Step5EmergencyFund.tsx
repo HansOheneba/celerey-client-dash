@@ -7,13 +7,36 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { CurrencyNumberInputField } from "@/components/ui/currency-number-input-field";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   emergencyFundSchema,
   type EmergencyFundFormValues,
 } from "@/lib/onboarding/schemas";
 import type { EmergencyFundData } from "@/lib/onboarding/types";
-import { ArrowRight, ChevronLeft } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+} from "lucide-react";
 import { formatCurrencyAmount, getCurrencyPrefix } from "@/lib/utils";
 import { useOnboardingStore } from "@/store/onboardingStore";
+
+const STORAGE_LOCATIONS = [
+  { value: "savings_account", label: "Savings Account" },
+  { value: "checking_account", label: "Checking Account" },
+  { value: "money_market", label: "Money Market Account" },
+  { value: "fixed_deposit", label: "Fixed Deposit / CD" },
+  { value: "physical_cash", label: "Physical Cash" },
+  { value: "other", label: "Other" },
+];
 
 interface Step5EmergencyFundProps {
   defaultValues?: EmergencyFundData | null;
@@ -34,6 +57,9 @@ export function Step5EmergencyFund({
   const [targetMonths, setTargetMonths] = useState<number>(
     defaultValues?.target_months ?? 6,
   );
+  const [storageLocation, setStorageLocation] = useState<string>(
+    defaultValues?.storage_location ?? "",
+  );
 
   const {
     control,
@@ -44,20 +70,102 @@ export function Step5EmergencyFund({
     resolver: zodResolver(emergencyFundSchema) as never,
     defaultValues: {
       cash_balance: defaultValues?.cash_balance ?? 0,
+      storage_location: defaultValues?.storage_location ?? "",
     },
   });
 
   const balance = watch("cash_balance");
   const balanceNum = Number(balance) || 0;
 
+  const targetAmount =
+    totalMonthlyExpenses > 0 ? totalMonthlyExpenses * targetMonths : 0;
+  const currentRunwayMonths =
+    totalMonthlyExpenses > 0 ? balanceNum / totalMonthlyExpenses : null;
+  const fundedPct =
+    targetAmount > 0 ? Math.min(100, (balanceNum / targetAmount) * 100) : null;
+
+  function getInsight(): {
+    icon: React.ReactNode;
+    color: string;
+    bg: string;
+    border: string;
+    title: string;
+    body: string;
+  } {
+    if (balanceNum === 0) {
+      return {
+        icon: <Info className="h-4 w-4 shrink-0" />,
+        color: "text-blue-800",
+        bg: "bg-blue-50",
+        border: "border-blue-100",
+        title: "No fund yet?... That is totally fine.",
+        body: "Many people start here. Even saving one month of expenses is a meaningful first step.",
+      };
+    }
+    if (currentRunwayMonths !== null) {
+      const months = currentRunwayMonths;
+      if (months < 1) {
+        return {
+          icon: <AlertTriangle className="h-4 w-4 shrink-0" />,
+          color: "text-amber-800",
+          bg: "bg-amber-50",
+          border: "border-amber-100",
+          title: "You have less than a month of coverage.",
+          body: `Building to just ${formatCurrencyAmount(totalMonthlyExpenses, preferredCurrency)} would give you a full month of runway - start there.`,
+        };
+      }
+      if (months < 3) {
+        return {
+          icon: <AlertTriangle className="h-4 w-4 shrink-0" />,
+          color: "text-amber-800",
+          bg: "bg-amber-50",
+          border: "border-amber-100",
+          title: `About ${months.toFixed(1)} months of coverage.`,
+          body: `You are ${Math.round(fundedPct ?? 0)}% toward your ${targetMonths}-month target. Aim for 3 months minimum before investing aggressively.`,
+        };
+      }
+      if (months < targetMonths) {
+        return {
+          icon: <TrendingUp className="h-4 w-4 shrink-0" />,
+          color: "text-indigo-800",
+          bg: "bg-indigo-50",
+          border: "border-indigo-100",
+          title: `${months.toFixed(1)} months covered - ${Math.round(fundedPct ?? 0)}% of your goal.`,
+          body: `You need ${formatCurrencyAmount(Math.max(0, targetAmount - balanceNum), preferredCurrency)} more to hit your ${targetMonths}-month target.`,
+        };
+      }
+      return {
+        icon: <CheckCircle2 className="h-4 w-4 shrink-0" />,
+        color: "text-green-800",
+        bg: "bg-green-50",
+        border: "border-green-100",
+        title: `You are fully covered - ${months.toFixed(1)} months of runway.`,
+        body:
+          months > targetMonths
+            ? "You are above your target. Any excess could be working harder in investments."
+            : "You have hit your target. Keep it liquid and accessible.",
+      };
+    }
+    // No expense data - just show balance-based feedback
+    return {
+      icon: <CheckCircle2 className="h-4 w-4 shrink-0" />,
+      color: "text-green-800",
+      bg: "bg-green-50",
+      border: "border-green-100",
+      title: "Good - you already have a buffer.",
+      body: `${formatCurrencyAmount(balanceNum, preferredCurrency)} saved so far.`,
+    };
+  }
+
   function onSubmit(data: EmergencyFundFormValues) {
     onComplete({
       cash_balance: data.cash_balance as number,
       target_months: targetMonths,
+      storage_location: storageLocation || undefined,
     });
   }
 
-  const isZero = balanceNum === 0;
+  const insight = getInsight();
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -72,15 +180,14 @@ export function Step5EmergencyFund({
         </p>
       </div>
 
-      {/* Coverage */}
+      {/* Coverage target */}
       <div className="space-y-3">
         <div>
           <p className="text-sm font-medium text-slate-800">
-            Based on your expenses, how many months could you survive if your
-            income stopped today?
+            How many months of expenses do you want as your safety net?
           </p>
           <p className="text-xs text-slate-400 mt-1">
-            Most advisors recommend 3 to 6 months as a minimum buffer.
+            Most advisors recommend 3 to 6 months as a minimum.
           </p>
         </div>
 
@@ -90,7 +197,7 @@ export function Step5EmergencyFund({
               key={m}
               type="button"
               onClick={() => setTargetMonths(m)}
-              className={`rounded-xl border py-2.5 text-xs sm:text-sm font-medium text-center ${
+              className={`rounded-xl border py-2.5 text-xs sm:text-sm font-medium text-center transition-colors ${
                 targetMonths === m
                   ? "border-primary bg-primary text-white"
                   : "border-slate-200 bg-white text-slate-700 hover:border-primary/50"
@@ -116,14 +223,10 @@ export function Step5EmergencyFund({
         )}
       </div>
 
-      {/* Input */}
-      <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4 sm:p-5 shadow-sm">
-        <p className="text-sm font-semibold text-slate-800">
-          How much do you have saved right now?
-        </p>
-
+      {/* Balance + storage */}
+      <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-4 sm:p-5 shadow-sm">
         <div className="space-y-2">
-          <Label>Current emergency fund</Label>
+          <Label>How much do you have saved right now?</Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
               {getCurrencyPrefix(preferredCurrency)}
@@ -141,25 +244,95 @@ export function Step5EmergencyFund({
             </p>
           )}
         </div>
+
+        <div className="space-y-2">
+          <Label className={balanceNum === 0 ? "text-slate-400" : undefined}>
+            Where is this money kept?
+          </Label>
+          <Select
+            value={storageLocation}
+            onValueChange={setStorageLocation}
+            disabled={balanceNum === 0}
+          >
+            <SelectTrigger
+              className={`h-11 rounded-xl ${balanceNum === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              <SelectValue placeholder="Select a location" />
+            </SelectTrigger>
+            <SelectContent>
+              {STORAGE_LOCATIONS.map((loc) => (
+                <SelectItem key={loc.value} value={loc.value}>
+                  {loc.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {balanceNum === 0 && (
+            <p className="text-xs text-slate-400">
+              Enter a balance above to choose where it is kept.
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Feedback */}
-      {isZero ? (
+      {/* Smart insight */}
+      <div
+        className={`rounded-xl border px-4 py-3 ${insight.bg} ${insight.border}`}
+      >
+        <div className={`flex items-start gap-2 ${insight.color}`}>
+          {insight.icon}
+          <div>
+            <p className="text-sm font-medium">{insight.title}</p>
+            <p
+              className={`text-xs mt-0.5 ${insight.color.replace("800", "700")}`}
+            >
+              {insight.body}
+            </p>
+          </div>
+        </div>
+
+        {fundedPct !== null && balanceNum > 0 && (
+          <div className="mt-3 space-y-1">
+            <div className="flex justify-between text-xs text-slate-500">
+              <span>Progress toward {targetMonths}-month goal</span>
+              <span className="font-medium">{Math.round(fundedPct)}%</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-white/60 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  fundedPct >= 100
+                    ? "bg-green-500"
+                    : fundedPct >= 50
+                      ? "bg-indigo-500"
+                      : "bg-amber-400"
+                }`}
+                style={{ width: `${Math.min(100, fundedPct)}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Storage location tip */}
+      {storageLocation === "physical_cash" && (
         <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
           <p className="text-sm text-amber-800 font-medium">
-            No emergency fund yet? That is okay.
+            Physical cash has risk.
           </p>
           <p className="text-xs text-amber-700 mt-1">
-            Building one is usually the first step. We will help you get there.
+            Consider moving it to a high-yield savings account - it stays liquid
+            but earns interest and is safer.
           </p>
         </div>
-      ) : (
-        <div className="rounded-xl bg-green-50 border border-green-100 px-4 py-3">
-          <p className="text-sm text-green-800 font-medium">
-            Good start - you already have a buffer.
+      )}
+      {storageLocation === "checking_account" && (
+        <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
+          <p className="text-sm text-blue-800 font-medium">
+            Checking accounts are accessible but low-yield.
           </p>
-          <p className="text-xs text-green-700 mt-1">
-            {formatCurrencyAmount(balanceNum, preferredCurrency)} saved so far.
+          <p className="text-xs text-blue-700 mt-1">
+            A dedicated savings or money market account keeps your emergency
+            fund separate and earns a bit more.
           </p>
         </div>
       )}

@@ -61,6 +61,7 @@ export interface LiabilityData {
 export interface EmergencyFundData {
   cash_balance: number;
   target_months: number;
+  storage_location?: string;
 }
 
 export interface RetirementData {

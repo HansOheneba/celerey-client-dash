@@ -99,6 +99,7 @@ export type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
 export const emergencyFundSchema = z.object({
   cash_balance: num(0),
+  storage_location: z.string().optional(),
 });
 
 export const retirementSchema = z.object({
