@@ -172,7 +172,15 @@ export function usePageData(key: PageDataKey) {
                   renewed_at: user.renewed_at ?? null,
                   is_enterprise: user.is_enterprise ?? false,
                   entitlements: user.entitlements,
-                  record_limits: user.record_limits,
+                  record_limits: user.record_limits
+                    ? {
+                        goals: user.record_limits.goals ?? undefined,
+                        assets: user.record_limits.assets ?? undefined,
+                        properties: user.record_limits.properties ?? undefined,
+                        liabilities: user.record_limits.liabilities ?? undefined,
+                        insurance_policies: user.record_limits.insurance_policies ?? undefined,
+                      }
+                    : undefined,
                 });
               }
             }
