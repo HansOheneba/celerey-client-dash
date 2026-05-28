@@ -730,6 +730,7 @@ export interface UserProfile {
   email: string;
   phone_number: string;
   resident_country: string;
+  resident_state?: string;
   resident_city: string;
   date_of_birth: string | null;
   gender: string | null;
@@ -873,6 +874,7 @@ export type User = {
   email: string;
   phone_number?: string;
   resident_country: string;
+  resident_state?: string;
   city?: string;
   citizenships?: string[];
   /** Nullable — only collected for solo accounts */

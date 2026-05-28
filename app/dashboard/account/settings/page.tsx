@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { getUserFullName, type User } from "@/lib/client-data";
@@ -29,6 +29,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import {
   Card,
@@ -61,20 +74,30 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import {
-  countries as allCountries,
   currencies as allCurrencies,
   getSymbolFromCurrency,
 } from "country-data-list";
+import csc from "countries-states-cities";
 import RiskAttitudeQuiz from "@/components/dashboard/risk/quiz";
 import { RiskResultScreen } from "@/components/dashboard/risk/quizCard";
 import { type RiskAssessmentResult } from "@/lib/dashboard-api";
+import { cn } from "@/lib/utils";
 
-const countryOptions = allCountries.all
-  .filter((c) => c.status === "assigned" && c.name)
-  .sort((a, b) => a.name.localeCompare(b.name));
+// ─── CSC country list ────────────────────────────────────────────────────────
+const CSC_COUNTRIES = (
+  csc.getAllCountries() as Array<{
+    id: number;
+    name: string;
+    iso2: string;
+    emoji: string;
+    phone_code: string;
+  }>
+).sort((a, b) => a.name.localeCompare(b.name));
 
 const currencyOptions = allCurrencies.all
   .filter((c) => c.code && c.name)
@@ -154,6 +177,9 @@ export default function AccountSettingsPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [stateOpen, setStateOpen] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
 
   useEffect(() => {
     if (quizOpen) {
@@ -182,6 +208,7 @@ export default function AccountSettingsPage() {
   const [form, setForm] = useState<User & { citizenships: string[] }>({
     ...baseUser,
     citizenships: baseUser.citizenships ?? [],
+    resident_state: baseUser.resident_state ?? "",
     city: baseUser.city ?? "",
     preferred_contact: baseUser.preferred_contact ?? "email",
   });
@@ -190,8 +217,67 @@ export default function AccountSettingsPage() {
   const isSolo = mode === "solo";
   const isEnterprise = form.user_type === "enterprise";
 
+  // ─── CSC-derived state and city lists ───────────────────────────────────────
+  const selectedCscCountry = useMemo(
+    () => CSC_COUNTRIES.find((c) => c.name === form.resident_country) ?? null,
+    [form.resident_country],
+  );
+
+  const stateList = useMemo(
+    () =>
+      selectedCscCountry
+        ? (
+            csc.getStatesOfCountry(selectedCscCountry.id) as Array<{
+              id: number;
+              name: string;
+              country_id: number;
+              country_code: string;
+              state_code: string;
+            }>
+          ).sort((a, b) => a.name.localeCompare(b.name))
+        : [],
+    [selectedCscCountry],
+  );
+
+  const selectedCscState = useMemo(
+    () => stateList.find((s) => s.name === form.resident_state) ?? null,
+    [stateList, form.resident_state],
+  );
+
+  const cityList = useMemo(
+    () =>
+      selectedCscState
+        ? (
+            csc.getCitiesOfState(selectedCscState.id) as Array<{
+              id: number;
+              name: string;
+              state_id: number;
+              state_code: string;
+              country_id: number;
+              country_code: string;
+            }>
+          ).sort((a, b) => a.name.localeCompare(b.name))
+        : [],
+    [selectedCscState],
+  );
+
+  const statesAvailable = stateList.length > 0;
+  const citiesAvailable = cityList.length > 0;
+
   function handleChange(field: keyof User | "citizenships", value: unknown) {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      // Clear dependent location fields when country changes
+      if (field === "resident_country") {
+        next.resident_state = "";
+        next.city = "";
+      }
+      // Clear city when state changes
+      if (field === "resident_state") {
+        next.city = "";
+      }
+      return next;
+    });
   }
 
   function handleCitizenshipAdd(country: string) {
@@ -219,6 +305,7 @@ export default function AccountSettingsPage() {
         display_name: form.display_name,
         phone_number: form.phone_number,
         resident_country: form.resident_country,
+        resident_state: form.resident_state,
         city: form.city,
         citizenships: form.citizenships.join(", "),
         date_of_birth: form.date_of_birth,
@@ -618,31 +705,180 @@ export default function AccountSettingsPage() {
           ) : (
             <>
               <div className="grid gap-4 md:grid-cols-2">
+                {/* Country */}
                 <div className="space-y-2">
                   <Label>Country of Residence</Label>
-                  <Select
-                    value={form.resident_country}
-                    onValueChange={(v) => handleChange("resident_country", v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countryOptions.map((c) => (
-                        <SelectItem key={c.alpha2} value={c.name}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={countryOpen}
+                        className={cn(
+                          "w-full justify-between font-normal h-10",
+                          !form.resident_country && "text-muted-foreground",
+                        )}
+                      >
+                        {form.resident_country
+                          ? (() => {
+                              const m = CSC_COUNTRIES.find(
+                                (c) => c.name === form.resident_country,
+                              );
+                              return m
+                                ? `${m.emoji} ${m.name}`
+                                : form.resident_country;
+                            })()
+                          : "Select country"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search country..." />
+                        <CommandList>
+                          <CommandEmpty>No country found.</CommandEmpty>
+                          <CommandGroup>
+                            {CSC_COUNTRIES.map((c) => (
+                              <CommandItem
+                                key={c.iso2}
+                                value={c.name}
+                                onSelect={(val) => {
+                                  handleChange("resident_country", val);
+                                  setCountryOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    form.resident_country === c.name
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                {c.emoji} {c.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
-                <div className="space-y-2">
-                  <Label>City</Label>
+
+                {/* State / Region */}
+                {statesAvailable && (
+                  <div className="space-y-2">
+                    <Label>State / Region</Label>
+                    <Popover open={stateOpen} onOpenChange={setStateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={stateOpen}
+                          className={cn(
+                            "w-full justify-between font-normal h-10",
+                            !form.resident_state && "text-muted-foreground",
+                          )}
+                        >
+                          {form.resident_state || "Select state / region"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search state..." />
+                          <CommandList>
+                            <CommandEmpty>No state found.</CommandEmpty>
+                            <CommandGroup>
+                              {stateList.map((s) => (
+                                <CommandItem
+                                  key={s.id}
+                                  value={s.name}
+                                  onSelect={(val) => {
+                                    handleChange("resident_state", val);
+                                    setStateOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      form.resident_state === s.name
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  {s.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+              </div>
+
+              {/* City */}
+              <div className="space-y-2">
+                <Label>City</Label>
+                {citiesAvailable ? (
+                  <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={cityOpen}
+                        className={cn(
+                          "w-full justify-between font-normal h-10",
+                          !form.city && "text-muted-foreground",
+                        )}
+                      >
+                        {form.city || "Select city"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search city..." />
+                        <CommandList>
+                          <CommandEmpty>No city found.</CommandEmpty>
+                          <CommandGroup>
+                            {cityList.map((city) => (
+                              <CommandItem
+                                key={city.id}
+                                value={city.name}
+                                onSelect={(val) => {
+                                  handleChange("city", val);
+                                  setCityOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    form.city === city.name
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                {city.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
                   <Input
-                    value={form.city}
+                    value={form.city ?? ""}
                     onChange={(e) => handleChange("city", e.target.value)}
+                    placeholder="Enter city name"
                   />
-                </div>
+                )}
               </div>
 
               {/* Citizenship - solo only (partner/family share a household) */}
@@ -654,9 +890,9 @@ export default function AccountSettingsPage() {
                       <SelectValue placeholder="Add citizenship" />
                     </SelectTrigger>
                     <SelectContent>
-                      {countryOptions.map((c) => (
-                        <SelectItem key={c.alpha2} value={c.name}>
-                          {c.name}
+                      {CSC_COUNTRIES.map((c) => (
+                        <SelectItem key={c.iso2} value={c.name}>
+                          {c.emoji} {c.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -882,8 +1118,6 @@ export default function AccountSettingsPage() {
           </CardContent>
         </Card>
       )}
-
-      
 
       {/* Danger Zone */}
       <div className="rounded-xl border border-red-200 bg-white">

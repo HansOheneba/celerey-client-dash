@@ -177,6 +177,7 @@ interface ApiUser {
   email: string;
   phone_number?: string;
   resident_country: string;
+  resident_state?: string;
   city?: string;
   date_of_birth?: string | null;
   user_type?: string;

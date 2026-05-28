@@ -103,15 +103,17 @@ export function Step2Goals({
   );
 
   function addGoal(data: GoalFormValues) {
-    setGoals((prev) => [
-      ...prev,
-      {
-        title: data.title,
-        target_amount: data.target_amount as number,
-        target_date: data.target_date,
-        status: "active",
-      },
-    ]);
+    const newGoal: GoalData = {
+      title: data.title,
+      target_amount: data.target_amount as number,
+      target_date: data.target_date,
+      status: "active",
+    };
+    setGoals((prev) => {
+      const next = [...prev, newGoal];
+      store.setGoals(next);
+      return next;
+    });
     reset({ title: "", target_amount: 0, target_date: "" });
     // Hide the form after saving — user can re-open with "+ Add another goal"
     setShowForm(false);
@@ -120,6 +122,7 @@ export function Step2Goals({
   function removeGoal(i: number) {
     setGoals((prev) => {
       const next = prev.filter((_, idx) => idx !== i);
+      store.setGoals(next);
       // If all goals removed, reopen the form automatically
       if (next.length === 0) setShowForm(true);
       return next;

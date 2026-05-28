@@ -692,6 +692,7 @@ export const useFinancialStore = create<FinancialState>()(
               display_name: identity.display_name,
               phone_number: identity.phone_number,
               city: identity.resident_city,
+              resident_state: identity.resident_state,
               date_of_birth: identity.date_of_birth,
               gender: identity.gender,
               prefix: identity.prefix,

@@ -162,6 +162,9 @@ export default function ProfilePage() {
   // ── Location ───────────────────────────────────────────────────────────────
   const locationFields: ProfileField[] = [
     { label: "Country of Residence", value: user?.resident_country ?? "" },
+    ...(user?.resident_state
+      ? [{ label: "State / Region", value: user.resident_state }]
+      : []),
     { label: "City", value: user?.city ?? "" },
     {
       label: "Citizenship(s)",
@@ -344,8 +347,6 @@ export default function ProfilePage() {
           loading={loading}
         />
       )}
-
-     
     </motion.div>
   );
 }

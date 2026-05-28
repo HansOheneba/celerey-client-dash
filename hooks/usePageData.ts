@@ -146,6 +146,7 @@ export function usePageData(key: PageDataKey) {
                 display_name: user.display_name,
                 phone_number: user.phone_number,
                 resident_country: user.resident_country ?? "",
+                resident_state: user.resident_state ?? undefined,
                 city: user.city,
                 citizenships: user.citizenships ?? [],
                 date_of_birth: user.date_of_birth ?? undefined,

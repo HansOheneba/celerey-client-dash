@@ -24,6 +24,7 @@ export const identitySchema = z
     date_of_birth: z.string().optional(),
     phone_number: z.string().min(1, "Phone number is required").max(255),
     resident_country: z.string().min(1, "Country is required"),
+    resident_state: z.string().optional(),
     resident_city: z.string().min(1, "City is required"),
     currency: z.string().min(1, "Currency is required").max(3),
     account_mode: z.enum(["solo", "partner", "family"]),

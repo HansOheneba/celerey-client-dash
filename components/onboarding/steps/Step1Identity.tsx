@@ -3,8 +3,7 @@
 import React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { countries, getEmojiFlag } from "countries-list";
-import type { TCountryCode } from "countries-list";
+import csc from "countries-states-cities";
 
 import { Button } from "@/components/ui/button";
 import { DatePickerField } from "@/components/ui/date-picker-field";
@@ -49,17 +48,29 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ─── Build sorted country list from countries-list ───────────────────────────
-const COUNTRY_LIST = Object.entries(countries)
-  .map(([code, data]) => ({
-    code: code as TCountryCode,
-    name: data.name,
-    flag: getEmojiFlag(code as TCountryCode),
-    dialCode: data.phone[0] ? `+${data.phone[0]}` : "",
-  }))
-  .sort((a, b) => a.name.localeCompare(b.name));
+// ─── CSC country list (sorted) ────────────────────────────────────────────────
+const CSC_COUNTRIES = (
+  csc.getAllCountries() as Array<{
+    id: number;
+    name: string;
+    iso2: string;
+    emoji: string;
+    phone_code: string;
+  }>
+).sort((a, b) => a.name.localeCompare(b.name));
 
-const DIAL_CODE_LIST = COUNTRY_LIST.filter((country) => country.dialCode);
+// ─── Dial codes from CSC countries ────────────────────────────────────────────
+const DIAL_CODE_LIST = CSC_COUNTRIES.filter((c) => c.phone_code)
+  .map((c) => ({
+    code: c.iso2,
+    name: c.name,
+    flag: c.emoji,
+    dialCode: `+${c.phone_code}`,
+  }))
+  .filter(
+    (c, idx, arr) => arr.findIndex((x) => x.dialCode === c.dialCode) === idx,
+  )
+  .sort((a, b) => a.name.localeCompare(b.name));
 
 function extractDialCode(phoneNumber?: string) {
   if (!phoneNumber?.trim()) return null;
@@ -123,6 +134,8 @@ export function Step1Identity({
     () => extractDialCode(defaultValues?.phone_number) ?? "+233",
   );
   const [countryOpen, setCountryOpen] = React.useState(false);
+  const [stateOpen, setStateOpen] = React.useState(false);
+  const [cityOpen, setCityOpen] = React.useState(false);
   const [dialCodeOpen, setDialCodeOpen] = React.useState(false);
   const [currencyOpen, setCurrencyOpen] = React.useState(false);
   const [showOptional, setShowOptional] = React.useState(() =>
@@ -144,6 +157,7 @@ export function Step1Identity({
     date_of_birth: defaultValues?.date_of_birth ?? "",
     phone_number: defaultValues?.phone_number ?? "",
     resident_country: defaultValues?.resident_country ?? "",
+    resident_state: defaultValues?.resident_state ?? "",
     resident_city: defaultValues?.resident_city ?? "",
     currency: defaultValues?.currency ?? "",
     account_mode: accountMode,
@@ -168,6 +182,7 @@ export function Step1Identity({
   });
 
   const selectedCountry = watch("resident_country");
+  const selectedState = watch("resident_state");
   const watchedPhoneNumber = watch("phone_number");
   const watchedResidentCity = watch("resident_city");
   const watchedCurrency = watch("currency");
@@ -175,6 +190,71 @@ export function Step1Identity({
   const watchedFirstName = watch("first_name");
   const watchedLastName = watch("last_name");
   const watchedDateOfBirth = watch("date_of_birth");
+
+  // Derive state + city lists from CSC based on selections
+  const selectedCscCountry = React.useMemo(
+    () => CSC_COUNTRIES.find((c) => c.name === selectedCountry) ?? null,
+    [selectedCountry],
+  );
+
+  const stateList = React.useMemo(
+    () =>
+      selectedCscCountry
+        ? (
+            csc.getStatesOfCountry(selectedCscCountry.id) as Array<{
+              id: number;
+              name: string;
+              country_id: number;
+              country_code: string;
+              state_code: string;
+            }>
+          ).sort((a, b) => a.name.localeCompare(b.name))
+        : [],
+    [selectedCscCountry],
+  );
+
+  const selectedCscState = React.useMemo(
+    () => stateList.find((s) => s.name === selectedState) ?? null,
+    [stateList, selectedState],
+  );
+
+  const cityList = React.useMemo(
+    () =>
+      selectedCscState
+        ? (
+            csc.getCitiesOfState(selectedCscState.id) as Array<{
+              id: number;
+              name: string;
+              state_id: number;
+              state_code: string;
+              country_id: number;
+              country_code: string;
+            }>
+          ).sort((a, b) => a.name.localeCompare(b.name))
+        : [],
+    [selectedCscState],
+  );
+
+  const statesAvailable = stateList.length > 0;
+  const citiesAvailable = cityList.length > 0;
+
+  // Clear state + city only when the user actively changes the country
+  // (not on mount - compare against the initial value to avoid StrictMode double-fire)
+  const prevCountryRef = React.useRef(initialValues.resident_country);
+  React.useEffect(() => {
+    if (prevCountryRef.current === selectedCountry) return;
+    prevCountryRef.current = selectedCountry;
+    setValue("resident_state", "");
+    setValue("resident_city", "");
+  }, [selectedCountry]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear city only when the user actively changes the state
+  const prevStateRef = React.useRef(initialValues.resident_state ?? "");
+  React.useEffect(() => {
+    if (prevStateRef.current === selectedState) return;
+    prevStateRef.current = selectedState ?? "";
+    setValue("resident_city", "");
+  }, [selectedState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasPhoneDigits =
     stripDialCode(watchedPhoneNumber, dialCode).replace(/\s/g, "").length > 0;
@@ -186,6 +266,7 @@ export function Step1Identity({
         watchedDateOfBirth &&
         hasPhoneDigits &&
         selectedCountry &&
+        (!statesAvailable || selectedState) &&
         watchedResidentCity?.trim() &&
         watchedCurrency,
       )
@@ -193,6 +274,7 @@ export function Step1Identity({
         watchedDisplayName?.trim() &&
         hasPhoneDigits &&
         selectedCountry &&
+        (!statesAvailable || selectedState) &&
         watchedResidentCity?.trim() &&
         watchedCurrency,
       );
@@ -208,13 +290,13 @@ export function Step1Identity({
       .then((res) => res.json())
       .then((data) => {
         if (data?.country_code) {
-          const match = COUNTRY_LIST.find((c) => c.code === data.country_code);
+          const match = CSC_COUNTRIES.find((c) => c.iso2 === data.country_code);
           if (match) {
             if (!defaultValues?.resident_country) {
               setValue("resident_country", match.name);
             }
-            if (!defaultValues?.phone_number && match.dialCode) {
-              setDialCode(match.dialCode);
+            if (!defaultValues?.phone_number && match.phone_code) {
+              setDialCode(`+${match.phone_code}`);
             }
           }
         }
@@ -235,6 +317,7 @@ export function Step1Identity({
     onComplete({
       ...data,
       display_name,
+      resident_state: data.resident_state || undefined,
       // Clear fields that don't apply to the account mode
       first_name: isSolo ? data.first_name : undefined,
       last_name: isSolo ? data.last_name : undefined,
@@ -555,11 +638,11 @@ export function Step1Identity({
                   >
                     {selectedCountry
                       ? (() => {
-                          const match = COUNTRY_LIST.find(
+                          const match = CSC_COUNTRIES.find(
                             (c) => c.name === selectedCountry,
                           );
                           return match
-                            ? `${match.flag} ${match.name}`
+                            ? `${match.emoji} ${match.name}`
                             : selectedCountry;
                         })()
                       : "Select country"}
@@ -572,9 +655,9 @@ export function Step1Identity({
                     <CommandList>
                       <CommandEmpty>No country found.</CommandEmpty>
                       <CommandGroup>
-                        {COUNTRY_LIST.map((c) => (
+                        {CSC_COUNTRIES.map((c) => (
                           <CommandItem
-                            key={c.code}
+                            key={c.iso2}
                             value={c.name}
                             onSelect={(val) => {
                               setValue("resident_country", val, {
@@ -593,7 +676,7 @@ export function Step1Identity({
                                   : "opacity-0",
                               )}
                             />
-                            {c.flag} {c.name}
+                            {c.emoji} {c.name}
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -608,87 +691,214 @@ export function Step1Identity({
               )}
             </div>
 
-            {/* City */}
+            {/* State / Region — shown when the selected country has states in CSC */}
+            {statesAvailable && (
+              <div className="space-y-1.5">
+                <Label>State / Region</Label>
+                <Popover open={stateOpen} onOpenChange={setStateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={stateOpen}
+                      className={cn(
+                        "w-full justify-between font-normal h-10",
+                        !selectedState && "text-slate-400",
+                      )}
+                    >
+                      {selectedState || "Select state / region"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-70 p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search state..." />
+                      <CommandList>
+                        <CommandEmpty>No state found.</CommandEmpty>
+                        <CommandGroup>
+                          {stateList.map((s) => (
+                            <CommandItem
+                              key={s.id}
+                              value={s.name}
+                              onSelect={(val) => {
+                                setValue("resident_state", val, {
+                                  shouldValidate: true,
+                                  shouldDirty: true,
+                                  shouldTouch: true,
+                                });
+                                setStateOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedState === s.name
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              {s.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* City — dropdown from CSC if cities available, else text input */}
             <div className="space-y-1.5">
               <Label>City</Label>
-              <Input {...register("resident_city")} placeholder="eg. Cairo" />
+              {citiesAvailable ? (
+                <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={cityOpen}
+                      className={cn(
+                        "w-full justify-between font-normal h-10",
+                        !watchedResidentCity && "text-slate-400",
+                      )}
+                    >
+                      {watchedResidentCity || "Select city"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-70 p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search city..." />
+                      <CommandList>
+                        <CommandEmpty>No city found.</CommandEmpty>
+                        <CommandGroup>
+                          {cityList.map((city) => (
+                            <CommandItem
+                              key={city.id}
+                              value={city.name}
+                              onSelect={(val) => {
+                                setValue("resident_city", val, {
+                                  shouldValidate: true,
+                                  shouldDirty: true,
+                                  shouldTouch: true,
+                                });
+                                setCityOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  watchedResidentCity === city.name
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              {city.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <Controller
+                  control={control}
+                  name="resident_city"
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      placeholder={
+                        statesAvailable ? "Enter city name" : "eg. Cairo"
+                      }
+                    />
+                  )}
+                />
+              )}
               {errors.resident_city && (
                 <p className="text-xs text-red-500">
                   {errors.resident_city.message}
                 </p>
               )}
             </div>
-          </div>
 
-          {/* Currency - searchable combobox */}
-          <div className="space-y-1.5">
-            <Label>Preferred currency</Label>
-            <Controller
-              control={control}
-              name="currency"
-              render={({ field }) => {
-                const selected = CURRENCY_LIST.find(
-                  (c) => c.code === field.value,
-                );
-                return (
-                  <Popover open={currencyOpen} onOpenChange={setCurrencyOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={currencyOpen}
-                        className={cn(
-                          "w-full justify-between font-normal h-10",
-                          !field.value && "text-slate-400",
-                        )}
-                      >
-                        {selected
-                          ? `${selected.code} - ${selected.name}`
-                          : "Select currency"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-72 p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Search currency or code..." />
-                        <CommandList>
-                          <CommandEmpty>No currency found.</CommandEmpty>
-                          <CommandGroup>
-                            {CURRENCY_LIST.map((c) => (
-                              <CommandItem
-                                key={c.code}
-                                value={`${c.code} ${c.name}`}
-                                onSelect={() => {
-                                  field.onChange(c.code);
-                                  setCurrencyOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    field.value === c.code
-                                      ? "opacity-100"
-                                      : "opacity-0",
-                                  )}
-                                />
-                                <span className="font-medium">{c.code}</span>
-                                <span className="ml-2 text-slate-500 truncate">
-                                  {c.name}
-                                </span>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                );
-              }}
-            />
-            {errors.currency && (
-              <p className="text-xs text-red-500">{errors.currency.message}</p>
-            )}
+            {/* Currency - searchable combobox */}
+            <div className="space-y-1.5">
+              <Label>Preferred currency</Label>
+              <Controller
+                control={control}
+                name="currency"
+                render={({ field }) => {
+                  const selected = CURRENCY_LIST.find(
+                    (c) => c.code === field.value,
+                  );
+                  return (
+                    <Popover open={currencyOpen} onOpenChange={setCurrencyOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={currencyOpen}
+                          className={cn(
+                            "w-full justify-between font-normal h-10",
+                            !field.value && "text-slate-400",
+                          )}
+                        >
+                          {selected
+                            ? `${selected.code} - ${selected.name}`
+                            : "Select currency"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search currency or code..." />
+                          <CommandList>
+                            <CommandEmpty>No currency found.</CommandEmpty>
+                            <CommandGroup>
+                              {CURRENCY_LIST.map((c) => (
+                                <CommandItem
+                                  key={c.code}
+                                  value={`${c.code} ${c.name}`}
+                                  onSelect={() => {
+                                    field.onChange(c.code);
+                                    setCurrencyOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === c.code
+                                        ? "opacity-100"
+                                        : "opacity-0",
+                                    )}
+                                  />
+                                  <span className="font-medium">{c.code}</span>
+                                  <span className="ml-2 text-slate-500 truncate">
+                                    {c.name}
+                                  </span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  );
+                }}
+              />
+              {errors.currency && (
+                <p className="text-xs text-red-500">
+                  {errors.currency.message}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>

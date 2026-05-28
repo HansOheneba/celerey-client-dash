@@ -17,6 +17,7 @@ export interface IdentityData {
   email?: string;
   phone_number: string;
   resident_country: string;
+  resident_state?: string;
   resident_city: string;
   currency: string;
   account_mode: "solo" | "partner" | "family";
