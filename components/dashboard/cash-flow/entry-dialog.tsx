@@ -7,7 +7,7 @@ import {
   CalendarClock,
   Info,
   Repeat2,
-TimerReset,
+  TimerReset,
 } from "lucide-react";
 import {
   Dialog,
@@ -28,23 +28,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { DateInput } from "@/components/ui/date-input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { useFinancialStore } from "@/store/financialStore";
 import { type CashFlowEntryDraft, type RecurringType } from "@/lib/client-data";
 import { type EditMode } from "@/components/dashboard/cash-flow/delete-confirm-dialog";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
-
-function getCurrencySymbol(currency: string): string {
-  return (
-    new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    })
-      .formatToParts(0)
-      .find((p) => p.type === "currency")?.value ?? currency
-  );
-}
 
 // Adds N months to an ISO date string (YYYY-MM-DD). Returns YYYY-MM-DD.
 function addMonthsISO(startISO: string, months: number): string {
@@ -110,8 +99,6 @@ export function CreateEntryDialog({
 }: CreateEntryDialogProps) {
   const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
   const userCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
-  const currencySymbol = getCurrencySymbol(userCurrency);
-
   // Local UI state for the ongoing/fixed-duration toggle. Source of truth
   // is still draft.endDate (empty = ongoing).
   const [durationMode, setDurationMode] = React.useState<"ongoing" | "fixed">(
@@ -158,6 +145,25 @@ export function CreateEntryDialog({
 
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
+            <Label>Category</Label>
+            <Select
+              value={draft.category}
+              onValueChange={(v) => setDraft((d) => ({ ...d, category: v }))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select…" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => (
+                  <SelectItem key={c} value={c.toLowerCase()}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
             <Label htmlFor="entry-name">Description</Label>
             <Input
               id="entry-name"
@@ -171,47 +177,17 @@ export function CreateEntryDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="entry-amount">Amount</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  {currencySymbol}
-                </span>
-                <Input
-                  id="entry-amount"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  className="pl-7"
-                  value={draft.amount.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  onChange={(e) =>
-                    setDraft((d) => ({
-                      ...d,
-                      amount: e.target.value.replace(/[^\d]/g, ""),
-                    }))
-                  }
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Category</Label>
-              <Select
-                value={draft.category}
-                onValueChange={(v) => setDraft((d) => ({ ...d, category: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c} value={c.toLowerCase()}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="entry-amount">Amount</Label>
+            <CurrencyInput
+              id="entry-amount"
+              currency={userCurrency}
+              value={draft.amount.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+              onChange={(v) =>
+                setDraft((d) => ({ ...d, amount: v.replace(/[^\d]/g, "") }))
+              }
+              placeholder="0"
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -370,7 +346,6 @@ export function EditEntryDialog({
   onSubmit,
 }: EditEntryDialogProps) {
   const userCurrency = useFinancialStore((s) => s.user?.currency ?? "USD");
-  const currencySymbol = getCurrencySymbol(userCurrency);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -390,23 +365,13 @@ export function EditEntryDialog({
           <p className="text-sm font-medium">{name}</p>
           <div className="space-y-1.5">
             <Label htmlFor="edit-amount">Amount</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                {currencySymbol}
-              </span>
-              <Input
-                id="edit-amount"
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                className="pl-7"
-                value={amount.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                onChange={(e) =>
-                  setAmount(e.target.value.replace(/[^\d]/g, ""))
-                }
-                autoFocus
-              />
-            </div>
+            <CurrencyInput
+              id="edit-amount"
+              currency={userCurrency}
+              value={amount.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+              onChange={(v) => setAmount(v.replace(/[^\d]/g, ""))}
+              placeholder="0"
+            />
           </div>
         </div>
 
