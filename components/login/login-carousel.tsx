@@ -27,24 +27,24 @@ const slides: Slide[] = [
     id: "s1",
     imageSrc: "/login/img1.jpg",
     headline:
-      "Wealth planning is helping you make confident decisions; turning goals into a clear, trackable plan.",
+      "Good financial decisions start with a clear picture, not a gut feeling.",
     subline:
-      "Track progress, reduce uncertainty, and stay aligned with what matters most.",
+      "When your goals are visible and tracked, confidence follows naturally.",
   },
   {
     id: "s2",
     imageSrc: "/login/img2.jpg",
     headline:
-      "Your money is becoming easier to understand; cashflow, goals, and priorities are staying in one place.",
+      "Most people don't have a cashflow problem, they have a clarity problem.",
     subline:
-      "Spot gaps early and stay on track without constantly re-doing spreadsheets.",
+      "Knowing where your money goes each month is the first step to taking control of it.",
   },
   {
     id: "s3",
     imageSrc: "/login/img3.jpg",
-    headline:
-      "Planning is becoming proactive; so you're not reacting late, you're adjusting early.",
-    subline: "Build a plan you can review monthly and refine as life changes.",
+    headline: "The best time to adjust your plan is before you need to.",
+    subline:
+      "Reviewing regularly means you're never starting over, just course-correcting.",
   },
 ];
 
