@@ -114,10 +114,7 @@ export const retirementSchema = z.object({
    * For partner/family: entered directly.
    */
   retirement_target_year: optNum(new Date().getFullYear()),
-  current_invested: num(0),
   monthly_savings: num(0),
-  existing_pension_balance: num(0),
-  employer_contribution: optNum(0),
   desired_monthly_income: num(0),
 });
 

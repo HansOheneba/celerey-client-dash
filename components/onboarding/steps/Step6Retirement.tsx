@@ -59,28 +59,30 @@ export function Step6Retirement({
   } = useForm<RetirementFormValues>({
     resolver: zodResolver(retirementSchema) as never,
     defaultValues: {
-      retirement_age: defaultValues?.retirement_age,
+      retirement_age: undefined,
       retirement_target_year: defaultValues?.retirement_target_year,
-      current_invested: defaultValues?.current_invested ?? 0,
       monthly_savings: defaultValues?.monthly_savings ?? 0,
-      existing_pension_balance: defaultValues?.existing_pension_balance ?? 0,
-      employer_contribution: defaultValues?.employer_contribution ?? 0,
       desired_monthly_income: defaultValues?.desired_monthly_income ?? 0,
     },
   });
 
   // Reactively compute years until retirement for the hint label
   const watchedRetirementAge = watch("retirement_age");
-  const yearsUntilRetirement = React.useMemo(() => {
-    if (!isSolo || !watchedRetirementAge || currentAge === null) return null;
+  const { yearsUntilRetirement, retirementTargetYear } = React.useMemo(() => {
+    if (!isSolo || !watchedRetirementAge || currentAge === null)
+      return { yearsUntilRetirement: null, retirementTargetYear: null };
     const years = (watchedRetirementAge as number) - currentAge;
-    return years > 0 ? years : null;
-  }, [isSolo, watchedRetirementAge, currentAge]);
+    if (years <= 0)
+      return { yearsUntilRetirement: null, retirementTargetYear: null };
+    const dob = store.identity?.date_of_birth;
+    const targetYear = dob
+      ? new Date(dob).getFullYear() + (watchedRetirementAge as number)
+      : new Date().getFullYear() + years;
+    return { yearsUntilRetirement: years, retirementTargetYear: targetYear };
+  }, [isSolo, watchedRetirementAge, currentAge, store.identity?.date_of_birth]);
 
   function onSubmit(data: RetirementFormValues) {
-    let retirement_target_year = data.retirement_target_year as
-      | number
-      | undefined;
+    let retirement_target_year = data.retirement_target_year as number;
 
     if (isSolo && data.retirement_age) {
       const dob = store.identity?.date_of_birth;
@@ -91,13 +93,8 @@ export function Step6Retirement({
     }
 
     onComplete({
-      retirement_age: isSolo ? (data.retirement_age as number) : undefined,
       retirement_target_year,
-      current_invested: data.current_invested as number,
       monthly_savings: data.monthly_savings as number,
-      existing_pension_balance: data.existing_pension_balance as number,
-      employer_contribution:
-        (data.employer_contribution as number | undefined) ?? undefined,
       desired_monthly_income: data.desired_monthly_income as number,
     });
   }
@@ -152,6 +149,9 @@ export function Step6Retirement({
                       {yearsUntilRetirement} year
                       {yearsUntilRetirement !== 1 ? "s" : ""}
                     </span>
+                    {retirementTargetYear !== null && (
+                      <> ({retirementTargetYear})</>
+                    )}
                   </p>
                 )}
               </>

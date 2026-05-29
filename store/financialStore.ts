@@ -748,23 +748,20 @@ export const useFinancialStore = create<FinancialState>()(
             : 0;
 
           const retirementAge =
-            retirement.retirement_age ??
-            (retirement.retirement_target_year !== undefined
+            retirement.retirement_target_year !== undefined
               ? retirement.retirement_target_year -
                 new Date().getFullYear() +
                 currentAge
-              : 0);
+              : 0;
 
           retirementConfig = {
             ...DEFAULT_RETIREMENT,
             currentAge,
             retirementAge: Math.max(0, retirementAge),
             monthlySavings: Number(retirement.monthly_savings) || 0,
-            currentInvested: Number(retirement.current_invested) || 0,
-            existingPensionBalance:
-              Number(retirement.existing_pension_balance) || 0,
-            monthlyPensionContribution:
-              Number(retirement.employer_contribution) || 0,
+            currentInvested: 0,
+            existingPensionBalance: 0,
+            monthlyPensionContribution: 0,
             desiredMonthlyIncome:
               Number(retirement.desired_monthly_income) || 0,
           };

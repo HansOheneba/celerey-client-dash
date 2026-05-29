@@ -66,20 +66,12 @@ export interface EmergencyFundData {
 
 export interface RetirementData {
   /**
-   * Collected for solo accounts.
-   * retirement_target_year is derived from DOB + retirement_age for solo.
-   */
-  retirement_age?: number;
-  /**
-   * Single source of truth for retirement timeline across all account types.
-   * For solo: derived as birth_year + retirement_age.
+   * Sent for all account types.
+   * For solo: derived as birth_year + retirement_age on submit.
    * For partner/family: entered directly.
    */
-  retirement_target_year?: number;
-  current_invested: number;
+  retirement_target_year: number;
   monthly_savings: number;
-  existing_pension_balance: number;
-  employer_contribution?: number;
   desired_monthly_income: number;
 }
 
