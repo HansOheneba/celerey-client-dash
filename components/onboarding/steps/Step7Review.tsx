@@ -342,9 +342,7 @@ export function Step7Review({
             retirement
               ? retirement.retirement_target_year
                 ? `Target year ${retirement.retirement_target_year} · ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)} per month`
-                : retirement.retirement_age
-                  ? `Target age ${retirement.retirement_age} · ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)} per month`
-                  : `Desired ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)} per month`
+                : `Desired ${formatCurrencyAmount(retirement.desired_monthly_income, preferredCurrency)} per month`
               : "Not completed"
           }
           step={7}

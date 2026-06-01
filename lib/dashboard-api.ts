@@ -1113,6 +1113,7 @@ export interface DashboardBootstrapData {
   expenseCategories: ExpenseCategory[];
   emergencyFund: ApiEmergencyFund | null;
   cashFlowHistory: CashFlowPoint[];
+  cashFlowSummary?: ApiCashFlowSummary | null;
   holdings: AssetHolding[];
   insurancePolicies: InsurancePolicy[];
   propertyAssets: Property[];

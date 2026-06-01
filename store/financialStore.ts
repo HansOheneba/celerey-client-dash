@@ -803,6 +803,7 @@ export const useFinancialStore = create<FinancialState>()(
         expenseCategories,
         emergencyFund,
         cashFlowHistory,
+        cashFlowSummary,
         holdings,
         insurancePolicies,
         propertyAssets,
@@ -831,13 +832,27 @@ export const useFinancialStore = create<FinancialState>()(
             };
           }
 
+          // Derive goalsMeta from the goals returned by the API.
+          const activeGoals = goals.filter((g) => !g.completed);
+          const computedGoalsMeta: GoalsMeta = {
+            totalMonthlyNeeded: activeGoals.reduce(
+              (sum, g) => sum + (g.monthlyContributionNeeded || 0),
+              0,
+            ),
+            totalGoals: goals.length,
+            completedGoals: goals.filter((g) => g.completed).length,
+            activeGoals: activeGoals.length,
+          };
+
           const next = {
             ...s,
             goals,
+            goalsMeta: computedGoalsMeta,
             incomeRows,
             expenseCategories,
             emergencyFund: emergencyFundConfig,
             cashFlowHistory,
+            cashFlowSummary: cashFlowSummary !== undefined ? cashFlowSummary : s.cashFlowSummary,
             holdings,
             insurancePolicies,
             propertyAssets,
