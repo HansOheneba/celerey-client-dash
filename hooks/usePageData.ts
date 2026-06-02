@@ -105,11 +105,24 @@ export function usePageData(key: PageDataKey) {
             if (expenses.status === "fulfilled")
               store.setExpenses(expenses.value);
             if (emergencyFund.status === "fulfilled" && emergencyFund.value) {
+              const ef = emergencyFund.value;
+              const existing = store.emergencyFund;
               store.setEmergencyFund({
-                currentCashBalance: emergencyFund.value.cash_balance,
-                targetMonths: emergencyFund.value.target_months ?? 6,
+                currentCashBalance: Number(ef.cash_balance) || 0,
+                targetMonths: ef.target_months ?? 6,
+                storageLocation:
+                  ef.storage_location ?? existing.storageLocation,
                 includeAccountIds: [],
                 updatedAt: new Date().toISOString(),
+                computed: ef.computed
+                  ? {
+                      monthlyBaseline: ef.computed.monthly_baseline,
+                      targetAmount: ef.computed.target_amount,
+                      runwayMonths: ef.computed.runway_months,
+                      fundedPct: ef.computed.funded_pct,
+                      shortfall: ef.computed.shortfall,
+                    }
+                  : existing.computed,
               });
             }
             if (history.status === "fulfilled")

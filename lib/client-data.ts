@@ -93,8 +93,17 @@ export interface TaxProfile {
 export interface EmergencyFundConfig {
   targetMonths: number;
   currentCashBalance: number;
+  storageLocation?: string;
   includeAccountIds?: string[];
   updatedAt: ISODateTimeString;
+  /** Server-computed values - preferred over client-side math when present */
+  computed?: {
+    monthlyBaseline: number;
+    targetAmount: number;
+    runwayMonths: number;
+    fundedPct: number;
+    shortfall: number;
+  };
 }
 
 // ============================================================================

@@ -150,6 +150,15 @@ interface ApiExpense {
 interface ApiEmergencyFund {
   cash_balance: number;
   target_months: number;
+  storage_location?: string | null;
+  computed?: {
+    monthly_baseline: number;
+    target_amount: number;
+    runway_months: number;
+    funded_pct: number;
+    shortfall: number;
+    dashboard_currency: string;
+  };
 }
 
 interface ApiRetirement {

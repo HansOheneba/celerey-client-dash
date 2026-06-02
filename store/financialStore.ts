@@ -771,6 +771,7 @@ export const useFinancialStore = create<FinancialState>()(
           ? {
               currentCashBalance: Number(emergencyFund.cash_balance) || 0,
               targetMonths: emergencyFund.target_months,
+              storageLocation: emergencyFund.storage_location,
               includeAccountIds: [],
               updatedAt: timestamp,
             }
@@ -816,8 +817,20 @@ export const useFinancialStore = create<FinancialState>()(
             ? {
                 currentCashBalance: Number(emergencyFund.cash_balance) || 0,
                 targetMonths: emergencyFund.target_months ?? 6,
+                storageLocation:
+                  emergencyFund.storage_location ??
+                  s.emergencyFund.storageLocation,
                 includeAccountIds: [],
                 updatedAt: timestamp,
+                computed: emergencyFund.computed
+                  ? {
+                      monthlyBaseline: emergencyFund.computed.monthly_baseline,
+                      targetAmount: emergencyFund.computed.target_amount,
+                      runwayMonths: emergencyFund.computed.runway_months,
+                      fundedPct: emergencyFund.computed.funded_pct,
+                      shortfall: emergencyFund.computed.shortfall,
+                    }
+                  : s.emergencyFund.computed,
               }
             : s.emergencyFund;
 
@@ -852,7 +865,10 @@ export const useFinancialStore = create<FinancialState>()(
             expenseCategories,
             emergencyFund: emergencyFundConfig,
             cashFlowHistory,
-            cashFlowSummary: cashFlowSummary !== undefined ? cashFlowSummary : s.cashFlowSummary,
+            cashFlowSummary:
+              cashFlowSummary !== undefined
+                ? cashFlowSummary
+                : s.cashFlowSummary,
             holdings,
             insurancePolicies,
             propertyAssets,

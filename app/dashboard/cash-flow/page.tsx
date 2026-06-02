@@ -41,6 +41,7 @@ import {
 } from "@/components/dashboard/cash-flow/delete-confirm-dialog";
 import { CashFlowChart } from "@/components/dashboard/cash-flow/cash-flow-chart";
 import { BurnRateCard } from "@/components/dashboard/cash-flow/burn-rate-card";
+import { EmergencyFundCard } from "@/components/dashboard/emergency-fund-card";
 import {
   CategoryBreakdown,
   TrendPill,
@@ -259,6 +260,32 @@ export default function CashFlowPage() {
     [financialData],
   );
 
+  // Prefer server-computed values when available - they use the server's
+  // monthly_baseline (smoothed over time) which is more accurate than
+  // the sum of the user's current expense rows.
+  const ef = React.useMemo(() => {
+    const c = storeEmergencyFund.computed;
+    return {
+      currentBalance: efMetrics.currentBalance,
+      targetBalance: c?.targetAmount ?? efMetrics.targetBalance,
+      runwayMonths: c?.runwayMonths ?? efMetrics.runwayMonths,
+      targetMonths: efMetrics.targetMonths,
+      monthlyBaseline: c?.monthlyBaseline ?? totalExpenses,
+      funded: c ? c.fundedPct >= 100 : efMetrics.funded,
+      shortfallOrSurplus: c
+        ? c.shortfall === 0
+          ? efMetrics.currentBalance -
+            (c.targetAmount ?? efMetrics.targetBalance)
+          : -c.shortfall
+        : efMetrics.shortfallOrSurplus,
+      fundedPct:
+        c?.fundedPct ??
+        (efMetrics.targetBalance > 0
+          ? (efMetrics.currentBalance / efMetrics.targetBalance) * 100
+          : 0),
+    };
+  }, [storeEmergencyFund.computed, efMetrics, totalExpenses]);
+
   const cashFlowKpis: KpiItem[] = [
     {
       label: "Monthly Income",
@@ -297,25 +324,25 @@ export default function CashFlowPage() {
           subline: "Add a cash balance to track runway",
           tone: "neutral" as const,
         }
-      : totalExpenses === 0
+      : ef.monthlyBaseline === 0
         ? {
             label: "Emergency Fund",
-            value: formatCurrency(efMetrics.currentBalance),
+            value: formatCurrency(ef.currentBalance),
             subline: "Add expenses to calculate runway",
             tone: "neutral" as const,
           }
         : {
             label: "Emergency Fund",
             value:
-              efMetrics.runwayMonths > 9
+              ef.runwayMonths > 9
                 ? "9+ mo runway"
-                : `${Math.round(efMetrics.runwayMonths * 10) / 10}mo runway`,
-            subline: efMetrics.funded
-              ? `${formatCurrency(efMetrics.currentBalance)} - target ${efMetrics.targetMonths}mo`
-              : `${formatCurrency(Math.abs(efMetrics.shortfallOrSurplus))} below ${efMetrics.targetMonths}mo target`,
-            tone: efMetrics.funded
+                : `${Math.round(ef.runwayMonths * 10) / 10}mo runway`,
+            subline: ef.funded
+              ? `${formatCurrency(ef.currentBalance)} - target ${ef.targetMonths}mo`
+              : `${formatCurrency(Math.abs(ef.shortfallOrSurplus))} below ${ef.targetMonths}mo target`,
+            tone: ef.funded
               ? "good"
-              : efMetrics.runwayMonths >= 3
+              : ef.runwayMonths >= 3
                 ? "warning"
                 : "danger",
           },
@@ -561,11 +588,22 @@ export default function CashFlowPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
             Analytics
           </p>
-          <div className="grid grid-cols-1 gap-4 @sm/dash:grid-cols-2 @4xl/dash:grid-cols-4">
+          <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
             <BurnRateCard
               burn={burn}
               income={totalIncome}
               expenses={totalExpenses}
+            />
+
+            <EmergencyFundCard
+              currentBalance={ef.currentBalance}
+              targetBalance={ef.targetBalance}
+              runwayMonths={ef.runwayMonths}
+              targetMonths={ef.targetMonths}
+              monthlyExpenses={ef.monthlyBaseline}
+              funded={ef.funded}
+              shortfallOrSurplus={ef.shortfallOrSurplus}
+              storageLocation={storeEmergencyFund.storageLocation}
             />
 
             <Card>

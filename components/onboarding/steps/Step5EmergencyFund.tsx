@@ -313,30 +313,6 @@ export function Step5EmergencyFund({
         )}
       </div>
 
-      {/* Storage location tip */}
-      {storageLocation === "physical_cash" && (
-        <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
-          <p className="text-sm text-amber-800 font-medium">
-            Physical cash has risk.
-          </p>
-          <p className="text-xs text-amber-700 mt-1">
-            Consider moving it to a high-yield savings account - it stays liquid
-            but earns interest and is safer.
-          </p>
-        </div>
-      )}
-      {storageLocation === "checking_account" && (
-        <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
-          <p className="text-sm text-blue-800 font-medium">
-            Checking accounts are accessible but low-yield.
-          </p>
-          <p className="text-xs text-blue-700 mt-1">
-            A dedicated savings or money market account keeps your emergency
-            fund separate and earns a bit more.
-          </p>
-        </div>
-      )}
-
       {/* CTA */}
       <div className="flex gap-3">
         {onBack && (
