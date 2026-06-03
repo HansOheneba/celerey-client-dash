@@ -53,6 +53,7 @@ import {
   momChange,
 } from "@/components/dashboard/cash-flow/insight-card";
 import { SurplusHistoryChart } from "@/components/dashboard/cash-flow/surplus-history-chart";
+import { GoalsCostWidget } from "@/components/dashboard/cash-flow/goals-cost-widget";
 import {
   CreateEntryDialog,
   EditEntryDialog,
@@ -111,6 +112,7 @@ export default function CashFlowPage() {
   const storeHoldings = useFinancialStore((s) => s.holdings);
   const storePropertyAssets = useFinancialStore((s) => s.propertyAssets);
   const storeAccounts = useFinancialStore((s) => s.accounts);
+  const storeGoals = useFinancialStore((s) => s.goals);
   const storeEmergencyFund = useFinancialStore((s) => s.emergencyFund);
   const storeCashFlowHistory = useFinancialStore((s) => s.cashFlowHistory);
   const cashFlowSummary = useFinancialStore((s) => s.cashFlowSummary);
@@ -604,6 +606,12 @@ export default function CashFlowPage() {
               funded={ef.funded}
               shortfallOrSurplus={ef.shortfallOrSurplus}
               storageLocation={storeEmergencyFund.storageLocation}
+            />
+
+            <GoalsCostWidget
+              goals={storeGoals}
+              totalExpenses={totalExpenses}
+              surplus={surplus}
             />
 
             <Card>
