@@ -17,6 +17,7 @@ import { ProfileWelcomeDialog } from "@/components/dashboard/ProfileWelcomeDialo
 import { RiskQuizDialog } from "@/components/dashboard/risk/quizCard";
 import { useProfilePanel } from "@/components/dashboard/ProfilePanelContext";
 import { dashboardTheme } from "@/lib/dashboard-theme";
+import { AskCelereyAIButton } from "@/components/dashboard/ask-celerey-ai-button";
 
 /** Triggers zustand-persist rehydration from localStorage after mount. */
 function StoreHydrator() {
@@ -140,6 +141,7 @@ export default function RootLayout({
                 <ProfileSetupPanel />
               </div>
             </SidebarProvider>
+            <AskCelereyAIButton />
           </ProfilePanelProvider>
         </DashboardGuard>
       </div>

@@ -1242,7 +1242,9 @@ export default function DashboardPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {store.liabilities.length === 0 ? (
+                    {store.liabilities.length === 0 &&
+                    activeProperties.filter((p) => !!p.mortgage).length ===
+                      0 ? (
                       <EmptyNudge
                         message="No liabilities added yet. Track your debts to get a complete picture of your net worth."
                         buttonLabel="Add a liability"
@@ -1454,7 +1456,10 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    {store.insurancePolicies.length === 0 ? (
+                    {store.insurancePolicies.length === 0 &&
+                    activeProperties.filter(
+                      (p) => (p.insurance?.length ?? 0) > 0,
+                    ).length === 0 ? (
                       <EmptyNudge
                         message="No insurance policies added yet. Add your policies to track coverage and renewals."
                         buttonLabel="Add a policy"

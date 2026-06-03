@@ -11,63 +11,28 @@ import { toast } from "sonner";
 import {
   deleteGoal as apiDeleteGoal,
   reorderGoalPriorities,
-  fetchGoalScenarios,
 } from "@/lib/dashboard-api";
 import { GoalHeader } from "@/components/dashboard/goals/goal-header";
 import { GoalFilterTabs } from "@/components/dashboard/goals/goal-filter-tabs";
 import { GoalCard } from "@/components/dashboard/goals/goal-card";
 import { KpiStrip, type KpiItem } from "@/components/dashboard/kpi-strip";
 import { formatCurrency } from "@/components/dashboard/goals/utils";
-import { Wallet, Target, Activity, CheckCircle2 } from "lucide-react";
-import { ScenarioCard } from "@/components/dashboard/goals/scenario-card";
+import { GoalPlanSummary } from "@/components/dashboard/goals/scenario-card";
 import { DeleteGoalDialog } from "@/components/dashboard/goals/delete-goal-dialog";
 import { PriorityDialog } from "@/components/dashboard/goals/priority-dialog";
 import { enrichGoalsWithCalculations } from "@/components/dashboard/goals/utils";
 import { dashboardTheme } from "@/lib/dashboard-theme";
 import type {
   Goal,
-  Scenario,
-  ScenarioId,
   EnrichedGoal,
   FilterType,
 } from "@/components/dashboard/goals/types";
-
-const FALLBACK_SCENARIOS: Scenario[] = [];
 
 export default function GoalsDashboard() {
   const router = useRouter();
   const { loading } = usePageData("goals");
   const storeGoals = useFinancialStore((s) => s.goals);
   const goalsMeta = useFinancialStore((s) => s.goalsMeta);
-
-  const [scenarios, setScenarios] =
-    React.useState<Scenario[]>(FALLBACK_SCENARIOS);
-
-  // Fetch scenarios from API on mount, fall back to static data
-  React.useEffect(() => {
-    fetchGoalScenarios()
-      .then((list) => {
-        console.log("[GoalsDashboard] fetched scenarios:", list);
-        if (list.length > 0) {
-          setScenarios(
-            list.map((s) => ({
-              id: s.id as ScenarioId,
-              label: s.label ?? s.name ?? s.id,
-              description: s.description ?? "",
-              monthlyReturnRate: s.monthly_return_rate ?? 0.005,
-              inflationRate: s.inflation_rate ?? 0.02,
-              monthlyMultiplier: s.monthly_multiplier,
-            })),
-          );
-        }
-      })
-      .catch((err) =>
-        console.warn(
-          "[GoalsDashboard] fetchGoalScenarios failed, using fallback:",
-          err,
-        ),
-      );
-  }, []);
 
   const [goals, setGoals] = React.useState<Goal[]>(() =>
     [...storeGoals].sort((a, b) => a.priority - b.priority),
@@ -90,15 +55,6 @@ export default function GoalsDashboard() {
     if (filter === "active") return enrichedGoals.filter((g) => !g.completed);
     return enrichedGoals.filter((g) => g.completed);
   }, [enrichedGoals, filter]);
-
-  const [activeScenario, setActiveScenario] = React.useState<ScenarioId | null>(
-    null,
-  );
-
-  const scenario = React.useMemo<Scenario | null>(() => {
-    if (!activeScenario) return null;
-    return scenarios.find((s) => s.id === activeScenario) ?? null;
-  }, [activeScenario, scenarios]);
 
   // delete confirm dialog state
   const [deleteOpen, setDeleteOpen] = React.useState(false);
@@ -216,19 +172,14 @@ export default function GoalsDashboard() {
                 <GoalCard
                   key={g.id}
                   goal={g}
-                  scenario={scenario}
                   onEdit={goToEditGoal}
                   onRequestDelete={requestDelete}
                 />
               ))}
         </div>
 
-        {/* Scenario modeling */}
-        <ScenarioCard
-          scenarios={scenarios}
-          activeScenario={activeScenario}
-          setActiveScenario={setActiveScenario}
-        />
+        {/* Goal Health Summary */}
+        <GoalPlanSummary goals={enrichedGoals} />
       </div>
 
       {/* Priority Dialog */}

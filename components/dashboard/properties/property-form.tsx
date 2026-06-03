@@ -36,6 +36,7 @@ import {
   createProperty,
   updateProperty as apiUpdateProperty,
 } from "@/lib/dashboard-api";
+import { clearPageCache } from "@/hooks/usePageData";
 import { InsuranceSection } from "./insurance-section";
 import { MortgageSection } from "./mortgage-section";
 import { DateInput } from "@/components/ui/date-input";
@@ -274,6 +275,11 @@ export function PropertyForm({
         }
         useFinancialStore.getState().addProperty(property);
       }
+
+      // Invalidate TTL caches for pages that derive data from properties
+      // (insurance and liabilities show property-linked entries). This forces
+      // a fresh API fetch the next time those pages are visited.
+      clearPageCache("properties", "insurance");
 
       router.push("/dashboard/properties");
     } finally {

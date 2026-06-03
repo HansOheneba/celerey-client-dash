@@ -28,7 +28,7 @@ import {
   currentValue,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -261,6 +261,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 
 export default function AIInsightsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { ready, auth } = useClientGate();
   const store = useFinancialStore();
 
@@ -541,6 +542,25 @@ export default function AIInsightsPage() {
     ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Pre-fill input from URL ?prompt= param ──────────────────────────────────
+  const promptPrefilled = React.useRef(false);
+  React.useEffect(() => {
+    if (promptPrefilled.current) return;
+    const urlPrompt = searchParams.get("prompt");
+    if (!urlPrompt) return;
+    promptPrefilled.current = true;
+    setInput(urlPrompt);
+    // Focus the textarea and adjust height to fit the pre-filled text
+    window.setTimeout(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.style.height = "auto";
+        el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+        el.focus();
+      }
+    }, 100);
+  }, [searchParams]);
 
   React.useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });

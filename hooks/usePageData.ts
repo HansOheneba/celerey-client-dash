@@ -51,6 +51,15 @@ export function markPageKeysFetched(...keys: PageDataKey[]) {
 }
 
 /**
+ * Clears the TTL cache for the given keys so the next usePageData call
+ * will force a fresh API fetch regardless of when the last fetch occurred.
+ * Call this after any mutation that affects data from these page slices.
+ */
+export function clearPageCache(...keys: PageDataKey[]) {
+  for (const key of keys) _lastFetched.delete(key);
+}
+
+/**
  * Call this hook at the top of each dashboard page.
  * It refetches the relevant data slice on mount, but skips the fetch if the
  * same key was already fetched within the last 30 seconds.
@@ -137,8 +146,14 @@ export function usePageData(key: PageDataKey) {
             break;
           }
           case "insurance": {
-            const policies = await fetchInsurancePolicies();
-            store.setInsurancePolicies(policies);
+            const [policies, props] = await Promise.allSettled([
+              fetchInsurancePolicies(),
+              fetchProperties(),
+            ]);
+            if (policies.status === "fulfilled")
+              store.setInsurancePolicies(policies.value);
+            if (props.status === "fulfilled")
+              store.setPropertyAssets(props.value);
             break;
           }
           case "properties": {

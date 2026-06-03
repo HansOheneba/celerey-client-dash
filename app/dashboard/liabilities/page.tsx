@@ -49,6 +49,7 @@ import {
 import { useFinancialStore } from "@/store/financialStore";
 import {
   fetchLiabilities,
+  fetchProperties,
   createLiability,
   updateLiability as apiUpdateLiability,
   deleteLiability,
@@ -625,16 +626,32 @@ export default function LiabilitiesPage() {
     name: string;
   } | null>(null);
 
-  // ── Fetch liabilities from API on mount ──────────────────────────────────
+  // ── Fetch liabilities and properties from API on mount ───────────────────
   React.useEffect(() => {
     setIsLoading(true);
-    fetchLiabilities()
-      .then((list) => {
-        console.log("[LiabilitiesPage] fetched liabilities:", list);
-        // Full replace - avoids stale-closure duplicates on every page visit
-        storeSetLiabilities(list);
+    Promise.allSettled([fetchLiabilities(), fetchProperties()])
+      .then(([liabResult, propsResult]) => {
+        if (liabResult.status === "fulfilled") {
+          console.log(
+            "[LiabilitiesPage] fetched liabilities:",
+            liabResult.value,
+          );
+          storeSetLiabilities(liabResult.value);
+        } else {
+          console.warn(
+            "[LiabilitiesPage] fetch liabilities failed:",
+            liabResult.reason,
+          );
+        }
+        if (propsResult.status === "fulfilled") {
+          useFinancialStore.getState().setPropertyAssets(propsResult.value);
+        } else {
+          console.warn(
+            "[LiabilitiesPage] fetch properties failed:",
+            propsResult.reason,
+          );
+        }
       })
-      .catch((err) => console.warn("[LiabilitiesPage] fetch failed:", err))
       .finally(() => {
         _liabFetchedAt = Date.now();
         setIsLoading(false);
