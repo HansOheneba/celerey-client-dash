@@ -31,6 +31,7 @@ import {
   faHeadset,
   faScaleUnbalanced,
   faScroll,
+  faUserTie,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useFinancialStore } from "@/store/financialStore";
@@ -81,6 +82,7 @@ const nav = [
     icon: faScaleUnbalanced,
   },
   { label: "Retirement", href: "/dashboard/retirement", icon: faUmbrellaBeach },
+  { label: "Advisory", href: "/dashboard/advisor", icon: faUserTie },
   // { label: "Legacy", href: "/dashboard/legacy", icon: faScroll },
   { label: "Celerey Insights", href: "/dashboard/ai", icon: faBrain },
   { label: "Concierge", href: "/dashboard/concierge", icon: faBellConcierge },
