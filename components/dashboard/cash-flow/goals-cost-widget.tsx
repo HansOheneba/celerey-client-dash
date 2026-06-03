@@ -2,7 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Target, ArrowRight, TrendingUp, AlertTriangle, XCircle } from "lucide-react";
+import {
+  Target,
+  ArrowRight,
+  TrendingUp,
+  AlertTriangle,
+  XCircle,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -26,10 +32,12 @@ function Intelligence({
   preSurplus: number;
   goalCount: number;
 }) {
-  const pctOfPreSurplus = preSurplus > 0 ? (totalGoalCost / preSurplus) * 100 : 0;
-  const pctOfIncome = preSurplus + totalGoalCost > 0
-    ? (totalGoalCost / (preSurplus + totalGoalCost)) * 100
-    : 0;
+  const pctOfPreSurplus =
+    preSurplus > 0 ? (totalGoalCost / preSurplus) * 100 : 0;
+  const pctOfIncome =
+    preSurplus + totalGoalCost > 0
+      ? (totalGoalCost / (preSurplus + totalGoalCost)) * 100
+      : 0;
 
   if (goalCount === 0) return null;
 
@@ -142,7 +150,10 @@ export function GoalsCostWidget({
         <div className="space-y-3">
           {activeGoals.map((g) => {
             const meta = GOAL_CATEGORY_META[g.category];
-            const share = pct(g.monthlyContributionNeeded, totalExpensesWithGoals);
+            const share = pct(
+              g.monthlyContributionNeeded,
+              totalExpensesWithGoals,
+            );
             return (
               <div key={g.id} className="space-y-1.5">
                 <div className="flex items-center justify-between gap-3">
@@ -171,7 +182,9 @@ export function GoalsCostWidget({
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Pre-goal surplus</span>
-            <span className={`font-medium tabular-nums ${preSurplus >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+            <span
+              className={`font-medium tabular-nums ${preSurplus >= 0 ? "text-emerald-600" : "text-red-500"}`}
+            >
               {formatCurrency(preSurplus)}
             </span>
           </div>
@@ -183,8 +196,12 @@ export function GoalsCostWidget({
           </div>
           <Separator />
           <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground font-medium">Remaining surplus</span>
-            <span className={`font-semibold tabular-nums ${postSurplus >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+            <span className="text-muted-foreground font-medium">
+              Remaining surplus
+            </span>
+            <span
+              className={`font-semibold tabular-nums ${postSurplus >= 0 ? "text-emerald-600" : "text-red-500"}`}
+            >
               {formatCurrency(postSurplus)}
             </span>
           </div>
