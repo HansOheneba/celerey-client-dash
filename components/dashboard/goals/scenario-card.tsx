@@ -1,5 +1,5 @@
 import { useRouter } from "next/navigation";
-import { TrendingUp, AlertTriangle, XCircle, ArrowRight } from "lucide-react";
+import { TrendingUp, AlertTriangle, XCircle } from "lucide-react";
 import {
   DashCard,
   CardContent,
@@ -10,10 +10,18 @@ import { cn } from "@/lib/utils";
 import { EnrichedGoal } from "./types";
 import { formatCurrency, goalHealth } from "./utils";
 
+const brand = {
+  primary: "rgb(27 24 86)",
+  accent: "rgb(140 128 248)",
+  soft: "rgba(140, 128, 248, 0.12)",
+  softBorder: "rgba(140, 128, 248, 0.25)",
+};
+
 export function GoalPlanSummary({ goals }: { goals: EnrichedGoal[] }) {
   const router = useRouter();
 
   const active = goals.filter((g) => !g.completed);
+
   const onTrack = active.filter(
     (g) => goalHealth(g.probability) === "on-track",
   );
@@ -27,7 +35,6 @@ export function GoalPlanSummary({ goals }: { goals: EnrichedGoal[] }) {
     0,
   );
 
-  // The goal that needs the most attention (off-track first, then highest monthly needed)
   const needsAttention =
     offTrack.sort(
       (a, b) => b.monthlyContributionNeeded - a.monthlyContributionNeeded,
@@ -37,16 +44,15 @@ export function GoalPlanSummary({ goals }: { goals: EnrichedGoal[] }) {
     )[0] ??
     null;
 
-  const aiPrompt = needsAttention
-    ? `I need help with my "${needsAttention.title}" goal. I need to save ${formatCurrency(Math.round(needsAttention.monthlyContributionNeeded))}/month to reach ${formatCurrency(needsAttention.target)} by ${needsAttention.targetDate ?? "my target date"}. What should I do?`
-    : `Give me a complete analysis of my financial goals and tell me how to reach them faster.`;
-
   if (active.length === 0) return null;
 
   return (
     <DashCard className="mt-6">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Goal Health Summary</CardTitle>
+        <CardTitle className="text-base" style={{ color: brand.primary }}>
+          Goal Health Summary
+        </CardTitle>
+
         <p className="text-sm text-muted-foreground">
           How your active goals are tracking right now.
         </p>
@@ -59,39 +65,45 @@ export function GoalPlanSummary({ goals }: { goals: EnrichedGoal[] }) {
             count={onTrack.length}
             label="On Track"
             Icon={TrendingUp}
-            colorClass="text-emerald-600"
-            bgClass="bg-emerald-50"
-            ringClass="ring-emerald-200"
           />
           <StatusTile
             count={atRisk.length}
             label="At Risk"
             Icon={AlertTriangle}
-            colorClass="text-amber-600"
-            bgClass="bg-amber-50"
-            ringClass="ring-amber-200"
           />
           <StatusTile
             count={offTrack.length}
             label="Off Track"
             Icon={XCircle}
-            colorClass="text-rose-600"
-            bgClass="bg-rose-50"
-            ringClass="ring-rose-200"
           />
         </div>
 
         {/* Monthly commitment */}
-        <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 flex items-center justify-between">
+        <div
+          className="rounded-xl px-4 py-3 flex items-center justify-between"
+          style={{
+            backgroundColor: brand.soft,
+            border: `1px solid ${brand.softBorder}`,
+          }}
+        >
           <div>
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
+            <p
+              className="text-[11px] uppercase tracking-wide font-medium"
+              style={{ color: brand.primary }}
+            >
               Total monthly commitment
             </p>
+
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              across {active.length} active goal{active.length !== 1 ? "s" : ""}
+              across {active.length} active goal
+              {active.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <p className="text-[22px] font-bold tabular-nums text-foreground">
+
+          <p
+            className="text-[22px] font-bold tabular-nums"
+            style={{ color: brand.primary }}
+          >
             {formatCurrency(Math.round(totalMonthlyNeeded))}
             <span className="text-[13px] font-normal text-muted-foreground">
               /mo
@@ -99,36 +111,51 @@ export function GoalPlanSummary({ goals }: { goals: EnrichedGoal[] }) {
           </p>
         </div>
 
-        {/* Needs attention callout */}
+        {/* Needs attention */}
         {needsAttention && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3">
-            <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide mb-1">
+          <div
+            className="rounded-xl px-4 py-3"
+            style={{
+              backgroundColor: brand.soft,
+              border: `1px solid ${brand.softBorder}`,
+            }}
+          >
+            <p
+              className="text-[11px] font-semibold uppercase tracking-wide mb-1"
+              style={{ color: brand.primary }}
+            >
               Needs attention
             </p>
-            <p className="text-sm font-medium text-foreground">
+
+            <p className="text-sm font-medium" style={{ color: brand.primary }}>
               {needsAttention.title}
             </p>
+
             <p className="text-[12px] text-muted-foreground mt-0.5">
               Requires{" "}
-              <span className="font-semibold text-foreground">
+              <span style={{ color: brand.primary, fontWeight: 600 }}>
                 {formatCurrency(
                   Math.round(needsAttention.monthlyContributionNeeded),
                 )}
                 /mo
               </span>{" "}
               to reach{" "}
-              <span className="font-semibold text-foreground">
+              <span style={{ color: brand.primary, fontWeight: 600 }}>
                 {formatCurrency(needsAttention.target)}
               </span>
               {needsAttention.targetDate
-                ? ` by ${new Date(needsAttention.targetDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}`
+                ? ` by ${new Date(needsAttention.targetDate).toLocaleDateString(
+                    "en-GB",
+                    {
+                      month: "short",
+                      year: "numeric",
+                    },
+                  )}`
                 : ""}
               .
             </p>
           </div>
         )}
-
-      
       </CardContent>
     </DashCard>
   );
@@ -138,36 +165,33 @@ function StatusTile({
   count,
   label,
   Icon,
-  colorClass,
-  bgClass,
-  ringClass,
 }: {
   count: number;
   label: string;
   Icon: React.ComponentType<{ className?: string }>;
-  colorClass: string;
-  bgClass: string;
-  ringClass: string;
 }) {
   return (
     <div
-      className={cn(
-        "rounded-xl px-3 py-3 ring-1 text-center",
-        bgClass,
-        ringClass,
-      )}
+      className="rounded-xl px-3 py-3 ring-1 text-center"
+      style={{
+        backgroundColor: "rgba(140, 128, 248, 0.08)",
+        borderColor: "rgba(140, 128, 248, 0.25)",
+      }}
     >
-      <div className={cn("flex items-center justify-center mb-1", colorClass)}>
+      <div
+        className="flex items-center justify-center mb-1"
+        style={{ color: brand.accent }}
+      >
         <Icon className="h-4 w-4" />
       </div>
+
       <p
-        className={cn(
-          "text-[22px] font-bold tabular-nums leading-tight",
-          colorClass,
-        )}
+        className="text-[22px] font-bold tabular-nums leading-tight"
+        style={{ color: brand.primary }}
       >
         {count}
       </p>
+
       <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
     </div>
   );
