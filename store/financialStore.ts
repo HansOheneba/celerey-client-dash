@@ -806,6 +806,7 @@ export const useFinancialStore = create<FinancialState>()(
         cashFlowHistory,
         cashFlowSummary,
         holdings,
+        portfolioPerformance,
         insurancePolicies,
         propertyAssets,
         liabilities,
@@ -874,6 +875,9 @@ export const useFinancialStore = create<FinancialState>()(
             propertyAssets,
             liabilities,
             retirement: retirementConfig,
+            ...(portfolioPerformance != null && portfolioPerformance.length > 0
+              ? { portfolioPerformance }
+              : {}),
           };
           return {
             ...next,

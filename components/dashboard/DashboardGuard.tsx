@@ -11,6 +11,7 @@ import {
 } from "@/lib/client-data";
 import { fetchSubscription } from "@/lib/dashboard-api";
 import { CelereyLoader } from "@/components/login/celerey-loader";
+import { IS_DEMO, bootDemoMode } from "@/lib/demo-user";
 
 type GuardState = "checking" | "allowed" | "redirecting";
 
@@ -19,6 +20,13 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GuardState>("checking");
 
   useEffect(() => {
+    // In demo mode, plant all required localStorage flags and skip every check.
+    if (IS_DEMO) {
+      bootDemoMode();
+      setState("allowed");
+      return;
+    }
+
     const auth = getAuth();
     if (!auth.loggedIn) {
       router.replace("/");

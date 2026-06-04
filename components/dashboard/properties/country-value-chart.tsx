@@ -1,6 +1,6 @@
 "use client";
 
-import { LabelList, Pie, PieChart } from "recharts";
+import { Pie, PieChart } from "recharts";
 
 import {
   Card,
@@ -99,7 +99,7 @@ export function CountryDonutChart() {
       <CardContent className="flex-1 pb-0">
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[280px] [&_.recharts-text]:fill-background"
+          className="mx-auto aspect-square max-h-60"
         >
           <PieChart>
             <ChartTooltip
@@ -114,17 +114,15 @@ export function CountryDonutChart() {
                 />
               }
             />
-            <Pie data={chartData} dataKey="marketValue" nameKey="name">
-              <LabelList
-                dataKey="configKey"
-                className="fill-background"
-                stroke="none"
-                fontSize={11}
-                formatter={(value: string) =>
-                  chartConfig[value]?.label ?? value
-                }
-              />
-            </Pie>
+            <Pie
+              data={chartData}
+              dataKey="marketValue"
+              nameKey="name"
+              innerRadius="55%"
+              outerRadius="80%"
+              strokeWidth={2}
+              stroke="hsl(var(--background))"
+            />
           </PieChart>
         </ChartContainer>
       </CardContent>
@@ -143,7 +141,7 @@ export function CountryDonutChart() {
                   className="inline-block h-2 w-2 rounded-full shrink-0"
                   style={{ backgroundColor: s.fill }}
                 />
-                <span className="text-muted-foreground truncate max-w-[160px]">
+                <span className="text-muted-foreground truncate max-w-40">
                   {s.name}
                 </span>
               </div>

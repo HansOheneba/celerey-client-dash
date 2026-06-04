@@ -4,6 +4,9 @@
 // (dashboard.summary) on mount and populates the financial store. Safe to
 // call multiple times — deduped by a module-level flag so it only ever fires
 // once per browser session regardless of remounts.
+//
+// DEMO MODE: when NEXT_PUBLIC_DEMO_USER=true the API is bypassed entirely and
+// the store is seeded with Bill Richardson's demo data.
 
 "use client";
 
@@ -21,6 +24,7 @@ import {
   mockStartTrialIfMissing,
 } from "@/lib/client-data";
 import { markPageKeysFetched } from "@/hooks/usePageData";
+import { IS_DEMO, DEMO_DASHBOARD, DEMO_LEGACY, bootDemoMode } from "@/lib/demo-user";
 
 // Module-level — survives component remounts (e.g. React StrictMode double-fire,
 // layout re-renders). Resets only on a hard page reload.
@@ -29,17 +33,27 @@ let _bootstrapped = false;
 export function useDashboardData() {
   const hydrateFromApi = useFinancialStore((s) => s.hydrateFromApi);
   const setUser = useFinancialStore((s) => s.setUser);
+  const setWill = useFinancialStore((s) => s.setWill);
+  const addBeneficiary = useFinancialStore((s) => s.addBeneficiary);
+  const addDependent = useFinancialStore((s) => s.addDependent);
+  const addDigitalAsset = useFinancialStore((s) => s.addDigitalAsset);
+  const setLetterOfWishes = useFinancialStore((s) => s.setLetterOfWishes);
 
   useEffect(() => {
     if (_bootstrapped) return;
-    // Skip all API calls if there's no valid session — DashboardGuard will redirect.
-    if (!getAuth().loggedIn) return;
+    // In demo mode, plant localStorage flags and skip the real auth check.
+    if (IS_DEMO) {
+      bootDemoMode();
+    } else if (!getAuth().loggedIn) {
+      // Skip all API calls if there's no valid session - DashboardGuard will redirect.
+      return;
+    }
     _bootstrapped = true;
 
-    // Reuse the in-flight prefetch from OTP verify if present; otherwise start
-    // a fresh fetch. Either way, one round-trip to dashboard.summary.
-    const summaryPromise: Promise<DashboardSummaryData> =
-      consumeDashboardSummaryPrefetch() ?? fetchDashboardSummary();
+    // In demo mode, bypass the API entirely and use the Bill Richardson dataset.
+    const summaryPromise: Promise<DashboardSummaryData> = IS_DEMO
+      ? Promise.resolve(DEMO_DASHBOARD as unknown as DashboardSummaryData)
+      : (consumeDashboardSummaryPrefetch() ?? fetchDashboardSummary());
 
     summaryPromise
       .then((summary) => {
@@ -99,7 +113,16 @@ export function useDashboardData() {
         // 3. Financial data → Zustand store.
         hydrateFromApi(summary);
 
-        // 4. Tell usePageData every overview-covered key is fresh so tab
+        // 4. Seed legacy tab with demo data when in demo mode.
+        if (IS_DEMO) {
+          setWill(DEMO_LEGACY.will);
+          DEMO_LEGACY.beneficiaries.forEach(addBeneficiary);
+          DEMO_LEGACY.dependents.forEach(addDependent);
+          DEMO_LEGACY.digitalAssets.forEach(addDigitalAsset);
+          setLetterOfWishes(DEMO_LEGACY.letterOfWishes);
+        }
+
+        // 5. Tell usePageData every overview-covered key is fresh so tab
         // navigation within the TTL window doesn't refetch the same data.
         markPageKeysFetched(
           "overview",
@@ -117,5 +140,5 @@ export function useDashboardData() {
         // their persisted seeded data.
         console.warn("[useDashboardData] dashboard.summary failed:", err);
       });
-  }, [hydrateFromApi, setUser]);
+  }, [hydrateFromApi, setUser, setWill, addBeneficiary, addDependent, addDigitalAsset, setLetterOfWishes]);
 }

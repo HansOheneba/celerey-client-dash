@@ -17,6 +17,7 @@ import type {
   LiabilityType,
   SubscriptionEntitlements,
   SubscriptionRecordLimits,
+  PerformancePoint,
 } from "@/lib/client-data";
 import { calculateAge } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
@@ -1124,6 +1125,7 @@ export interface DashboardBootstrapData {
   cashFlowHistory: CashFlowPoint[];
   cashFlowSummary?: ApiCashFlowSummary | null;
   holdings: AssetHolding[];
+  portfolioPerformance?: PerformancePoint[];
   insurancePolicies: InsurancePolicy[];
   propertyAssets: Property[];
   liabilities: Liability[];

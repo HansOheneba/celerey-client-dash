@@ -4,13 +4,14 @@
 // data slice and hydrate the store. Falls back gracefully on error.
 //
 // Uses a module-level TTL cache so navigating quickly between pages doesn't
-// spam the API — each key can only re-fetch after CACHE_TTL_MS.
+// spam the API - each key can only re-fetch after CACHE_TTL_MS.
 
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { useFinancialStore } from "@/store/financialStore";
 import { setSubscriptionData } from "@/lib/client-data";
+import { IS_DEMO } from "@/lib/demo-user";
 import {
   fetchGoals,
   fetchIncome,
@@ -71,7 +72,8 @@ export function usePageData(key: PageDataKey) {
   // skeleton. If the key was fetched recently, loading starts as false and
   // no skeleton renders at all. First-ever visit still starts as true.
   const [loading, setLoading] = useState(
-    () => Date.now() - (_lastFetched.get(key) ?? 0) >= CACHE_TTL_MS,
+    () =>
+      !IS_DEMO && Date.now() - (_lastFetched.get(key) ?? 0) >= CACHE_TTL_MS,
   );
   const mounted = useRef(false);
 
@@ -79,6 +81,12 @@ export function usePageData(key: PageDataKey) {
     // Prevent double-fire in React StrictMode
     if (mounted.current) return;
     mounted.current = true;
+
+    // In demo mode, all data was seeded by useDashboardData - skip every API call.
+    if (IS_DEMO) {
+      setLoading(false);
+      return;
+    }
 
     // Skip if this key was already fetched recently
     const lastFetch = _lastFetched.get(key) ?? 0;

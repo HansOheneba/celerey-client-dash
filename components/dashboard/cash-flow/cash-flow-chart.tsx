@@ -338,12 +338,10 @@ export function CashFlowChart({
     const actualByMonth = new Map(data.map((d) => [d.month, d]));
     const points: EnrichedPoint[] = [];
 
-    // ── Historical: synthetic from configured rows, cashFlowHistory as fallback ──
-    // Synthetic (row-based) always wins when it exists - cashFlowHistory
-    // snapshots are stale by definition (they predate any row edits the user
-    // makes, especially for the current month which may not be over yet).
-    // Only fall back to cashFlowHistory actuals for months that have zero
-    // synthetic coverage (i.e. no rows start on or before that month).
+    // ── Historical: actual cash flow history wins; synthetic from rows
+    // fills in months where no actual snapshot exists.
+    // Recorded actuals represent what really happened that month, so they
+    // take precedence over the steady-state row projection.
     let m = earliestHistoricalMonth;
     while (m <= currentMonth) {
       const actual = actualByMonth.get(m);
@@ -353,21 +351,16 @@ export function CashFlowChart({
         m,
       );
 
-      // Prefer synthetic; fall back to actual only when rows give us nothing
-      const finalIncome = synthIncome > 0 ? synthIncome : (actual?.income ?? 0);
-      const finalExpenses =
-        synthExpenses > 0 ? synthExpenses : (actual?.expenses ?? 0);
+      // Prefer actual snapshot; fall back to synthetic when no actual exists
+      const finalIncome = actual != null ? actual.income : synthIncome;
+      const finalExpenses = actual != null ? actual.expenses : synthExpenses;
 
       if (actual || finalIncome > 0 || finalExpenses > 0) {
         points.push({
           month: m,
           income: finalIncome,
           expenses: finalExpenses,
-          // Keep recorded surplus only when we're using actual data
-          surplus:
-            synthIncome === 0 && synthExpenses === 0
-              ? actual?.surplus
-              : undefined,
+          surplus: actual?.surplus,
           isProjected: false,
           label: toLabel(m),
         });

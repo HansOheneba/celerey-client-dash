@@ -47,6 +47,7 @@ import {
   type PropertyMortgage,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { IS_DEMO } from "@/lib/demo-user";
 import {
   fetchLiabilities,
   fetchProperties,
@@ -614,7 +615,7 @@ export default function LiabilitiesPage() {
 
   // Start loading=false if we fetched recently, so re-visits skip the skeleton.
   const [isLoading, setIsLoading] = React.useState(
-    () => Date.now() - _liabFetchedAt >= LIAB_TTL_MS,
+    () => !IS_DEMO && Date.now() - _liabFetchedAt >= LIAB_TTL_MS,
   );
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -628,6 +629,7 @@ export default function LiabilitiesPage() {
 
   // ── Fetch liabilities and properties from API on mount ───────────────────
   React.useEffect(() => {
+    if (IS_DEMO) { setIsLoading(false); return; }
     setIsLoading(true);
     Promise.allSettled([fetchLiabilities(), fetchProperties()])
       .then(([liabResult, propsResult]) => {

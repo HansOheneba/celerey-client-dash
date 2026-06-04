@@ -178,7 +178,7 @@ export function RetirementSection({
                 labelFormatter={(l: unknown) => `Age ${l}`}
               />
               <Area
-                type="monotone"
+                type="linear"
                 dataKey="balance"
                 stroke="#6366f1"
                 strokeWidth={2}

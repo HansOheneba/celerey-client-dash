@@ -1954,7 +1954,7 @@ export default function AssetsPage() {
                           />
                           <Tooltip content={<ChartTooltipContent />} />
                           <Area
-                            type="monotone"
+                            type="linear"
                             dataKey="value"
                             name="Portfolio value"
                             stroke="#151339"
