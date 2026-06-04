@@ -32,7 +32,7 @@ import type {
   LetterOfWishes,
 } from "@/store/financialStore";
 
-export const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_USER === "true";
+export const IS_DEMO = true;
 
 const NOW = new Date().toISOString();
 
