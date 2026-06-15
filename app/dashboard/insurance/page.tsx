@@ -79,6 +79,8 @@ import {
   type PropertyInsurance,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { useTourDemoData } from "@/hooks/useTourDemo";
+import { TOUR_DEMO_INSURANCE_POLICIES } from "@/lib/tour-demo-data";
 import {
   createInsurancePolicy,
   updateInsurancePolicy,
@@ -918,10 +920,9 @@ export default function InsurancePage() {
   const storeProperties = useFinancialStore((s) => s.propertyAssets);
   const storeInsurancePolicies = useFinancialStore((s) => s.insurancePolicies);
 
-  // Derive directly from the store so this is always in sync - no stale local copy.
-  const policies = React.useMemo(
-    () => storeInsurancePolicies.filter((p) => p.is_active),
-    [storeInsurancePolicies],
+  const { data: policies } = useTourDemoData(
+    storeInsurancePolicies.filter((p) => p.is_active),
+    TOUR_DEMO_INSURANCE_POLICIES,
   );
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -1303,6 +1304,7 @@ export default function InsurancePage() {
               size="sm"
               className="gap-1.5 self-start sm:self-auto"
               style={{ backgroundColor: PRIMARY, color: "white" }}
+              data-tour="primary-action"
               onClick={() => {
                 setEditPolicy(null);
                 setDialogOpen(true);
@@ -1389,6 +1391,7 @@ export default function InsurancePage() {
               size="sm"
               className="gap-1.5"
               style={{ backgroundColor: PRIMARY, color: "white" }}
+              data-tour="primary-action"
               onClick={() => {
                 setEditPolicy(null);
                 setDialogOpen(true);

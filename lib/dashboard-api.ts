@@ -21,6 +21,7 @@ import type {
 import { calculateAge } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 import { type GoalsMeta, EMPTY_GOALS_META } from "@/lib/goals-meta";
+import { notifySessionExpired } from "@/lib/session-expired";
 
 // ── Session-expiry error ───────────────────────────────────────────────────
 
@@ -29,6 +30,11 @@ export class SessionExpiredError extends Error {
     super("Your session has expired. Please sign in again.");
     this.name = "SessionExpiredError";
   }
+}
+
+function warnUnavailable(endpoint: string, err: unknown): void {
+  const message = err instanceof Error ? err.message : "Unknown error";
+  console.warn(`[API] ${endpoint} unavailable (${message})`);
 }
 
 // ── Low-level proxy caller ─────────────────────────────────────────────────
@@ -67,6 +73,7 @@ async function proxyCall<T = unknown>(
   }
 
   if (res.status === 401) {
+    notifySessionExpired();
     throw new SessionExpiredError();
   }
 
@@ -1128,6 +1135,7 @@ export interface DashboardBootstrapData {
   propertyAssets: Property[];
   liabilities: Liability[];
   retirement: RetirementConfig | null;
+  riskAssessment?: RiskAssessmentResult | null;
 }
 
 export async function fetchDashboardBootstrap(): Promise<DashboardBootstrapData> {
@@ -1256,36 +1264,39 @@ function mapSummaryToDashboardData(
   };
 }
 
-export async function fetchDashboardSummary(): Promise<DashboardSummaryData> {
-  console.log("[fetchDashboardSummary] ▶ calling dashboard.summary");
-  const res = await proxyCall<{
-    success?: boolean;
-    data?: ApiDashboardSummary;
-  }>("dashboard.summary");
-  const data =
-    (res as { data?: ApiDashboardSummary }).data ??
-    (res as unknown as ApiDashboardSummary);
-  console.log("[fetchDashboardSummary] ◀ mapped");
-  return mapSummaryToDashboardData(data);
+export async function fetchDashboardSummary(): Promise<DashboardSummaryData | null> {
+  try {
+    const res = await proxyCall<{
+      success?: boolean;
+      data?: ApiDashboardSummary;
+    }>("dashboard.summary");
+    const data =
+      (res as { data?: ApiDashboardSummary }).data ??
+      (res as unknown as ApiDashboardSummary);
+    return mapSummaryToDashboardData(data);
+  } catch (err) {
+    if (err instanceof SessionExpiredError) throw err;
+    warnUnavailable("dashboard.summary", err);
+    return null;
+  }
 }
 
 // Module-level prefetch slot. After OTP verification we kick off the summary
 // fetch but the dashboard layout isn't mounted yet — useDashboardData will
 // reuse this in-flight promise on mount instead of starting a new request.
-let _summaryPrefetch: Promise<DashboardSummaryData> | null = null;
+let _summaryPrefetch: Promise<DashboardSummaryData | null> | null = null;
 
-export function prefetchDashboardSummary(): Promise<DashboardSummaryData> {
+export function prefetchDashboardSummary(): Promise<DashboardSummaryData | null> {
   if (!_summaryPrefetch) {
-    _summaryPrefetch = fetchDashboardSummary().catch((err) => {
-      // Reset on failure so a fresh attempt is made next time
-      _summaryPrefetch = null;
-      throw err;
+    _summaryPrefetch = fetchDashboardSummary().then((result) => {
+      if (!result) _summaryPrefetch = null;
+      return result;
     });
   }
   return _summaryPrefetch;
 }
 
-export function consumeDashboardSummaryPrefetch(): Promise<DashboardSummaryData> | null {
+export function consumeDashboardSummaryPrefetch(): Promise<DashboardSummaryData | null> | null {
   const p = _summaryPrefetch;
   _summaryPrefetch = null;
   return p;
@@ -1383,21 +1394,15 @@ export async function submitRiskAssessment(payload: {
 }
 
 export async function fetchLatestRiskAssessment(): Promise<RiskAssessmentResult | null> {
-  console.log("[fetchLatestRiskAssessment] ▶ calling risk.latest");
   try {
     const res = await proxyCall<{
       success?: boolean;
       data?: RiskAssessmentResult;
     }>("risk.latest");
-    console.log(
-      "[fetchLatestRiskAssessment] ◀ raw response:",
-      JSON.stringify(res, null, 2),
-    );
-    const result = (res as any)?.data ?? null;
-    console.log("[fetchLatestRiskAssessment] ◀ result:", result);
-    return result;
+    return (res as { data?: RiskAssessmentResult }).data ?? null;
   } catch (err) {
-    console.error("[fetchLatestRiskAssessment] ✗ error:", err);
+    if (err instanceof SessionExpiredError) throw err;
+    warnUnavailable("risk.latest", err);
     return null;
   }
 }

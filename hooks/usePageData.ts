@@ -10,7 +10,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFinancialStore } from "@/store/financialStore";
-import { setSubscriptionData } from "@/lib/client-data";
 import {
   fetchGoals,
   fetchIncome,
@@ -24,7 +23,14 @@ import {
   fetchUser,
   fetchRetirement,
   fetchDashboardSummary,
+  fetchLatestRiskAssessment,
+  fetchLiabilities,
+  SessionExpiredError,
 } from "@/lib/dashboard-api";
+import {
+  applySubscriptionFromApiUser,
+  mergeUserWithRiskAssessment,
+} from "@/lib/map-api-user";
 
 export type PageDataKey =
   | "goals"
@@ -32,6 +38,7 @@ export type PageDataKey =
   | "assets"
   | "insurance"
   | "properties"
+  | "liabilities"
   | "profile"
   | "retirement"
   | "overview"; // fetches goals + cashflow summary
@@ -94,9 +101,7 @@ export function usePageData(key: PageDataKey) {
       try {
         switch (key) {
           case "goals": {
-            console.log("[usePageData] fetching goals...");
             const { goals, meta } = await fetchGoals();
-            console.log("[usePageData] goals result:", goals, meta);
             store.setGoals(goals);
             store.setGoalsMeta(meta);
             break;
@@ -161,74 +166,54 @@ export function usePageData(key: PageDataKey) {
             store.setPropertyAssets(props);
             break;
           }
+          case "liabilities": {
+            const [liabilities, props] = await Promise.allSettled([
+              fetchLiabilities(),
+              fetchProperties(),
+            ]);
+            if (liabilities.status === "fulfilled") {
+              store.setLiabilities(liabilities.value);
+            }
+            if (props.status === "fulfilled") {
+              store.setPropertyAssets(props.value);
+            }
+            break;
+          }
           case "profile": {
-            console.log("[usePageData] fetching user profile...");
-            const user = await fetchUser();
-            console.log("[usePageData] user.get ◄", user);
+            const [user, riskAssessment] = await Promise.all([
+              fetchUser(),
+              fetchLatestRiskAssessment(),
+            ]);
             if (user) {
-              store.setUser({
-                user_id: user.user_id,
-                email: user.email ?? "",
-                first_name: user.first_name ?? undefined,
-                last_name: user.last_name ?? undefined,
-                display_name: user.display_name,
-                phone_number: user.phone_number,
-                resident_country: user.resident_country ?? "",
-                resident_state: user.resident_state ?? undefined,
-                city: user.city,
-                citizenships: user.citizenships ?? [],
-                date_of_birth: user.date_of_birth ?? undefined,
-                currency: user.currency ?? "USD",
-                preferred_contact: user.preferred_contact ?? undefined,
-                occupation: user.occupation ?? undefined,
-                marital_status: user.marital_status as any,
-                account_mode: user.account_mode as any,
-                risk_profile: user.risk_profile as any,
-                dependents: user.dependents ?? undefined,
-                bio: user.bio ?? undefined,
-                is_active: user.is_active ?? true,
-                user_type: user.user_type as any,
-                created_at: user.created_at ?? "",
-                updated_at: user.updated_at ?? "",
-              });
-              if (user.subscription_status) {
-                setSubscriptionData({
-                  subscription_status: user.subscription_status,
-                  subscription_plan: user.subscription_plan ?? null,
-                  trial_started_at: user.trial_started_at ?? null,
-                  trial_ends_at: user.trial_ends_at ?? null,
-                  renewed_at: user.renewed_at ?? null,
-                  is_enterprise: user.is_enterprise ?? false,
-                  entitlements: user.entitlements,
-                  record_limits: user.record_limits
-                    ? {
-                        goals: user.record_limits.goals ?? undefined,
-                        assets: user.record_limits.assets ?? undefined,
-                        properties: user.record_limits.properties ?? undefined,
-                        liabilities:
-                          user.record_limits.liabilities ?? undefined,
-                        insurance_policies:
-                          user.record_limits.insurance_policies ?? undefined,
-                      }
-                    : undefined,
-                });
-              }
+              store.setUser(mergeUserWithRiskAssessment(user, riskAssessment));
+              applySubscriptionFromApiUser(user);
+            }
+            if (riskAssessment) {
+              store.setRiskAssessment(riskAssessment);
             }
             break;
           }
           case "retirement": {
-            console.log("[usePageData] fetching retirement...");
             const retirement = await fetchRetirement();
-            console.log("[usePageData] retirement result:", retirement);
             if (retirement) store.setRetirement(retirement);
             break;
           }
           case "overview": {
-            // Single consolidated endpoint that returns goals, cashflow,
-            // assets, properties, insurance, retirement, etc. in one call.
-            // Avoids hitting the per-resource rate limit.
             const summary = await fetchDashboardSummary();
-            store.hydrateFromApi(summary);
+            if (!summary) break;
+            let riskAssessment = summary.riskAssessment;
+            if (!riskAssessment) {
+              riskAssessment = await fetchLatestRiskAssessment();
+            }
+            if (summary.user) {
+              store.setUser(
+                mergeUserWithRiskAssessment(summary.user, riskAssessment),
+              );
+            }
+            if (riskAssessment) {
+              store.setRiskAssessment(riskAssessment);
+            }
+            store.hydrateFromApi({ ...summary, riskAssessment });
             // Mark every key the summary already covers as fresh so a quick
             // tab switch doesn't trigger a duplicate per-resource fetch.
             markPageKeysFetched(
@@ -237,6 +222,7 @@ export function usePageData(key: PageDataKey) {
               "assets",
               "insurance",
               "properties",
+              "liabilities",
               "retirement",
               "profile",
             );
@@ -244,7 +230,8 @@ export function usePageData(key: PageDataKey) {
           }
         }
       } catch (err) {
-        console.error(`[usePageData] error fetching "${key}":`, err);
+        if (err instanceof SessionExpiredError) return;
+        console.warn(`[usePageData] error fetching "${key}":`, err);
       } finally {
         _lastFetched.set(key, Date.now());
         setLoading(false);

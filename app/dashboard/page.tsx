@@ -798,6 +798,7 @@ export default function DashboardPage() {
         animate={reduceMotion ? undefined : "show"}
         variants={mc}
         className="w-full"
+        data-tour="dashboard-overview"
       >
         <div className="mx-auto px-6 py-8 space-y-8">
           {/* ── Header ── */}

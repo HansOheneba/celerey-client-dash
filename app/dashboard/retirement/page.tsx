@@ -1128,6 +1128,7 @@ export default function RetirementPage() {
                 size="sm"
                 variant="outline"
                 className="gap-1.5 text-xs"
+                data-tour="primary-action"
                 onClick={() => setEditOpen(true)}
               >
                 <FontAwesomeIcon icon={faPencil} className="h-3 w-3" />

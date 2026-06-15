@@ -24,11 +24,15 @@ import { cn } from "@/lib/utils";
 import { useClientGate } from "@/lib/useClientGate";
 import {
   formatCurrency,
-  calculateNetWorth,
-  currentValue,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import {
+  buildFinancialSnapshot,
+  buildGreeting,
+  buildSuggestedPrompts,
+  generateLocalAiResponse,
+} from "@/lib/celerey-ai-local";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -99,17 +103,7 @@ const PRIORITY_BADGE: Record<Priority, string> = {
   low: "bg-slate-100 text-slate-500 border border-slate-200",
 };
 
-const SUGGESTED: {
-  icon: React.ComponentType<{ className?: string }>;
-  text: string;
-}[] = [
-  { icon: Target, text: "How can I retire 2 years earlier?" },
-  { icon: TrendingUp, text: "What if I increase savings by $2,000/month?" },
-  { icon: BarChart2, text: "How should I rebalance my portfolio?" },
-  { icon: Shield, text: "Am I adequately insured?" },
-  { icon: PiggyBank, text: "What's the fastest way to eliminate my debt?" },
-  { icon: Lightbulb, text: "How do I optimise my tax position?" },
-];
+const SUGGESTED_ICONS = [Target, TrendingUp, BarChart2, Shield, PiggyBank, Lightbulb];
 
 // ── Insight card ──────────────────────────────────────────────────────────────
 
@@ -156,9 +150,7 @@ function InsightCard({
           </p>
           {insight.cta && (
             <button
-              onClick={() =>
-                onClick(insight.title + " - " + insight.description)
-              }
+              onClick={() => onClick(`${insight.title}. ${insight.description}`)}
               className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[#1e3a5f] hover:underline"
             >
               Ask Celerey AI
@@ -260,7 +252,6 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AIInsightsPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { ready, auth } = useClientGate();
   const store = useFinancialStore();
@@ -275,59 +266,42 @@ export default function AIInsightsPage() {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = React.useRef<number | null>(null);
 
-  // ── Computed financial snapshot from store ──────────────────────────────────
-  const demo = React.useMemo(() => {
-    const income = store.incomeRows.reduce((s, i) => s + i.amount, 0);
-    const expenses = store.expenseCategories.reduce((s, e) => s + e.amount, 0);
-    const surplus = income - expenses;
-    const netWorth = calculateNetWorth(
-      store.holdings,
-      [],
-      store.propertyAssets.filter((p) => p.is_active),
+  const snapshot = React.useMemo(
+    () =>
+      buildFinancialSnapshot({
+        user: store.user,
+        incomeRows: store.incomeRows,
+        expenseCategories: store.expenseCategories,
+        goals: store.goals,
+        retirement: store.retirement,
+        liabilities: store.liabilities,
+        emergencyFund: store.emergencyFund,
+        holdings: store.holdings,
+        insurancePolicies: store.insurancePolicies,
+        propertyAssets: store.propertyAssets,
+        taxProfile: store.taxProfile,
+        profileCompletionScore: store.profileCompletionScore,
+      }),
+    [
+      store.user,
       store.incomeRows,
       store.expenseCategories,
-    ).netWorth;
-    const portfolioValue = store.holdings
-      .filter((h) => h.is_active)
-      .reduce((s, h) => s + currentValue(h, []), 0);
-    const totalDebt = store.liabilities.reduce((s, l) => s + l.balance, 0);
-    const highIntLiab =
-      [...store.liabilities]
-        .filter((l) => l.type === "credit_card")
-        .sort((a, b) => b.interestRatePct - a.interestRatePct)[0] ?? null;
-    const creditCardBalance = highIntLiab?.balance ?? 0;
-    const creditCardRate = highIntLiab?.interestRatePct ?? 0;
-    const activeInsurance = store.insurancePolicies.filter((p) => p.is_active);
-    const insurancePolicies = activeInsurance.length;
-    const monthlyInsurancePremium = activeInsurance.reduce(
-      (s, p) => s + p.premium_monthly,
-      0,
-    );
-    const firstName =
-      store.user?.first_name ??
-      store.user?.display_name?.split(" ")[0] ??
-      "there";
-    return {
-      firstName,
-      netWorth,
-      monthlyIncome: income,
-      monthlyExpenses: expenses,
-      surplus,
-      retirementAge: store.retirement.retirementAge || 60,
-      currentAge: store.retirement.currentAge || 0,
-      currentInvested: store.retirement.currentInvested || 0,
-      monthlySavings: store.retirement.monthlySavings || surplus,
-      desiredMonthlyIncome: store.retirement.desiredMonthlyIncome || 0,
-      totalDebt,
-      creditCardBalance,
-      creditCardRate,
-      highIntLiab,
-      portfolioValue,
-      insurancePolicies,
-      monthlyInsurancePremium,
-      effectiveTaxRate: store.taxProfile.effectiveTaxRatePct,
-    };
-  }, [store]);
+      store.goals,
+      store.retirement,
+      store.liabilities,
+      store.emergencyFund,
+      store.holdings,
+      store.insurancePolicies,
+      store.propertyAssets,
+      store.taxProfile,
+      store.profileCompletionScore,
+    ],
+  );
+
+  const suggestedPrompts = React.useMemo(
+    () => buildSuggestedPrompts(snapshot),
+    [snapshot],
+  );
 
   // ── Dynamic insights from store ─────────────────────────────────────────────
   const insights = React.useMemo((): Insight[] => {
@@ -339,42 +313,39 @@ export default function AIInsightsPage() {
       kind: "opportunity",
       title: "Optimise Your Tax Position",
       description:
-        demo.effectiveTaxRate > 0
-          ? `Restructuring through a family trust or maximising pension/ISA contributions could save ~${formatCurrency(Math.round(demo.monthlyIncome * 12 * demo.effectiveTaxRate * 0.01 * 0.1))}/year at your ${demo.effectiveTaxRate}% effective rate.`
-          : "Maximising tax-advantaged accounts and reviewing your tax structure can significantly reduce your annual tax liability.",
+        snapshot.effectiveTaxRate > 0
+          ? `At ${snapshot.effectiveTaxRate}% effective rate, tax-advantaged contributions and loss harvesting could save meaningful tax each year.`
+          : "Maximising tax-advantaged accounts and reviewing your structure can reduce annual tax liability.",
       priority: "high",
       cta: "Discuss with Advisor",
     });
 
     // High-interest debt action
-    if (demo.creditCardBalance > 0 && demo.highIntLiab) {
-      const months = Math.ceil(demo.creditCardBalance / (1500 * 0.7));
+    if (snapshot.creditCardBalance > 0) {
       const interestSaved = Math.round(
-        (demo.creditCardBalance * demo.creditCardRate) / 100 / 2,
+        (snapshot.creditCardBalance * snapshot.creditCardRate) / 100 / 2,
       );
       list.push({
         id: "credit-card",
         kind: "action",
         title: "Eliminate High-Interest Debt",
-        description: `${demo.highIntLiab.name} - ${formatCurrency(demo.creditCardBalance)} at ${demo.creditCardRate}% APR. An extra $1,500/month clears it in ~${months} months, saving ~${formatCurrency(interestSaved)} in interest.`,
+        description: `${formatCurrency(snapshot.creditCardBalance)} at ${snapshot.creditCardRate}% APR. Aggressive payoff saves ~${formatCurrency(interestSaved)} in interest.`,
         priority: "high",
         cta: "Plan Payoff",
       });
-    } else if (demo.totalDebt > 0) {
+    } else if (snapshot.totalDebt > 0) {
       list.push({
         id: "debt",
         kind: "action",
         title: "Review Your Debt Position",
-        description: `You have ${formatCurrency(demo.totalDebt)} in outstanding liabilities. Prioritise paying off high-interest balances first to reduce total interest cost.`,
+        description: `You have ${formatCurrency(snapshot.totalDebt)} in outstanding liabilities. Prioritise high-interest balances first.`,
         priority: "medium",
         cta: "Plan Payoff",
       });
     }
 
     // Uninsured properties
-    const uninsured = store.propertyAssets.filter(
-      (p) => p.is_active && p.insurance.length === 0,
-    );
+    const uninsured = snapshot.uninsuredProperties;
     if (uninsured.length > 0) {
       const first = uninsured[0];
       list.push({
@@ -391,12 +362,12 @@ export default function AIInsightsPage() {
     }
 
     // Portfolio / concentration risk
-    if (demo.portfolioValue > 0) {
+    if (snapshot.portfolioValue > 0) {
       list.push({
         id: "portfolio",
         kind: "risk",
         title: "Review Portfolio Allocation",
-        description: `Your ${formatCurrency(demo.portfolioValue)} portfolio should be reviewed for sector concentration. Diversifying across asset classes reduces volatility and improves risk-adjusted returns.`,
+        description: `Your ${formatCurrency(snapshot.portfolioValue)} portfolio should stay diversified. ${snapshot.largestHolding ? `Largest holding: ${snapshot.largestHolding.name}.` : ""} Rebalance when any position drifts 5%+ from target.`,
         priority: "medium",
         cta: "Review Portfolio",
       });
@@ -404,24 +375,15 @@ export default function AIInsightsPage() {
 
     // Retirement trajectory
     if (
-      demo.currentInvested > 0 &&
-      demo.retirementAge > 0 &&
-      demo.currentAge > 0
+      snapshot.currentInvested > 0 &&
+      snapshot.retirementAge > 0 &&
+      snapshot.currentAge > 0
     ) {
-      const yrs = demo.retirementAge - demo.currentAge;
-      const projected = Math.round(
-        demo.currentInvested * Math.pow(1.07, yrs) +
-          demo.monthlySavings * 12 * ((Math.pow(1.07, yrs) - 1) / 0.07),
-      );
-      const onTrack =
-        demo.desiredMonthlyIncome > 0
-          ? (projected * 0.04) / 12 >= demo.desiredMonthlyIncome
-          : true;
       list.push({
         id: "retirement",
         kind: "opportunity",
-        title: `Retirement Trajectory: ${onTrack ? "On Track" : "Needs Attention"}`,
-        description: `${formatCurrency(demo.currentInvested)} invested + ${formatCurrency(demo.monthlySavings)}/month → projected ~${formatCurrency(projected)} by age ${demo.retirementAge}. ${onTrack ? "Adding $2,000/month could unlock earlier retirement." : "Consider increasing contributions to meet your desired income target."}`,
+        title: `Retirement Trajectory: ${snapshot.retirementOnTrack ? "On Track" : "Needs Attention"}`,
+        description: `${formatCurrency(snapshot.currentInvested)} invested + ${formatCurrency(snapshot.monthlySavings)}/month projects ~${formatCurrency(Math.round(snapshot.projectedRetirement))} by age ${snapshot.retirementAge}. ${snapshot.retirementOnTrack ? "Consider extra contributions to retire earlier." : "Increase savings to hit your income target."}`,
         priority: "medium",
         cta: "Explore Scenarios",
       });
@@ -438,9 +400,7 @@ export default function AIInsightsPage() {
     }
 
     // Top in-progress goal
-    const topGoal = [...store.goals]
-      .filter((g) => !g.completed && g.target > 0)
-      .sort((a, b) => a.priority - b.priority)[0];
+    const topGoal = snapshot.topGoal;
     if (topGoal) {
       const pct = Math.round(((topGoal.current ?? 0) / topGoal.target) * 100);
       list.push({
@@ -454,81 +414,16 @@ export default function AIInsightsPage() {
     }
 
     return list;
-  }, [demo, store.propertyAssets, store.goals]);
+  }, [snapshot]);
 
-  // ── AI response generator (uses real demo data) ─────────────────────────────
-  const aiResponse = React.useCallback(
-    (q: string): string => {
-      const lq = q.toLowerCase();
-
-      if (
-        lq.includes("retire earlier") ||
-        lq.includes("retire 2 years") ||
-        lq.includes("retirement")
-      ) {
-        if (demo.currentInvested === 0) {
-          return `To give you a personalised retirement projection, please complete your retirement profile with your current invested amount, monthly savings, and target retirement age.\n\nOnce set up, I can model the impact of extra contributions and suggest the fastest path to your retirement goals.`;
-        }
-        return `Based on your current portfolio of ${formatCurrency(demo.currentInvested)} and monthly contributions of ${formatCurrency(demo.monthlySavings)}, retiring at ${demo.retirementAge} is well within reach.\n\nTo retire 2 years earlier at **age ${demo.retirementAge - 2}**, you would need to increase your monthly contributions by approximately **$2,800/month** - bringing your total to ${formatCurrency(demo.monthlySavings + 2800)}/month. At a 7% annual return, that additional effort compounds to roughly **$1.13M in extra retirement capital**.\n\nAlternatively, redirecting even half of your current ${formatCurrency(demo.surplus)}/month surplus toward investments would put you in that range with minimal lifestyle adjustment.`;
-      }
-
-      if (lq.includes("increase savings") || lq.includes("$2,000")) {
-        const extra = 2000;
-        const yrs = demo.retirementAge - demo.currentAge;
-        const futureExtra = extra * 12 * ((Math.pow(1.07, yrs) - 1) / 0.07);
-        const newTotal =
-          demo.currentInvested * Math.pow(1.07, yrs) + futureExtra;
-        return `If you increase your monthly savings by **${formatCurrency(extra)}** starting today:\n\n• **Additional capital at retirement**: ~${formatCurrency(Math.round(futureExtra))}\n• **New projected total at ${demo.retirementAge}**: ~${formatCurrency(Math.round(newTotal))}\n• **Sustainable monthly income**: ~${formatCurrency(Math.round((newTotal * 0.04) / 12))} (4% withdrawal rate)\n\n${demo.desiredMonthlyIncome > 0 ? `Your desired monthly income in retirement is ${formatCurrency(demo.desiredMonthlyIncome)}, so this boost gives you a **${formatCurrency(Math.round((newTotal * 0.04) / 12 - demo.desiredMonthlyIncome))} monthly buffer** to reinvest or use however you like.\n\n` : ""}With a current surplus of ${formatCurrency(demo.surplus)}/month, this is fully achievable today.`;
-      }
-
-      if (lq.includes("rebalance") || lq.includes("portfolio")) {
-        if (demo.portfolioValue === 0) {
-          return `Add your investment holdings to unlock personalised portfolio analysis and rebalancing recommendations.`;
-        }
-        return `Your ${formatCurrency(demo.portfolioValue)} portfolio is broadly healthy, but a few rebalancing moves could improve it:\n\n**1. Review sector concentration** - Ensure no single sector exceeds 25-30% of your equity allocation. Rotating into diversified ETFs reduces sector-specific risk.\n\n**2. Shorten bond duration** - With rates stabilising, shifting from long-duration government bonds to short-duration corporate bonds could improve yield by 0.4-0.6% with minimal credit risk increase.\n\n**3. Refresh alternative asset valuations** - Request updated valuations for any private equity or illiquid positions before making allocation decisions.`;
-      }
-
-      if (lq.includes("insured") || lq.includes("insurance")) {
-        const uninsuredProps = store.propertyAssets.filter(
-          (p) => p.is_active && p.insurance.length === 0,
-        );
-        return `You hold **${demo.insurancePolicies} active ${demo.insurancePolicies === 1 ? "policy" : "policies"}**${demo.monthlyInsurancePremium > 0 ? ` at a combined ${formatCurrency(demo.monthlyInsurancePremium)}/month` : ""}.\n\n${uninsuredProps.length > 0 ? `**Coverage gap**: ${uninsuredProps.map((p) => p.name).join(", ")} ${uninsuredProps.length === 1 ? "has" : "have"} no insurance. A standard landlord policy runs $80-120/month per property.\n\n` : ""}${demo.monthlyIncome > 0 ? `**Disability check** - ensure your long-term disability policy covers at least 60% of your ${formatCurrency(demo.monthlyIncome)}/month income. Any uncovered gap is worth reviewing with supplemental coverage.\n\n` : ""}${demo.netWorth > 1_000_000 ? `**Umbrella policy** - with a net worth of ${formatCurrency(demo.netWorth)}, an umbrella liability policy of at least $1-2M is strongly recommended if you don't already have one.` : "Review your coverage levels regularly as your net worth grows."}`;
-      }
-
-      if (lq.includes("debt") || lq.includes("eliminate")) {
-        if (demo.totalDebt === 0) {
-          return `You have no recorded liabilities - great position to be in! If you have debts not yet added to your profile, add them so I can give you a payoff strategy.`;
-        }
-        const nonMortgageDebt = store.liabilities
-          .filter((l) => l.type !== "mortgage")
-          .sort((a, b) => b.interestRatePct - a.interestRatePct);
-        const debtLines = nonMortgageDebt
-          .slice(0, 3)
-          .map(
-            (l, i) =>
-              `**Priority ${i + 1} - ${l.name}**: ${formatCurrency(l.balance)} at ${l.interestRatePct}% APR`,
-          )
-          .join("\n");
-        return `Your total debt is **${formatCurrency(demo.totalDebt)}**. Using the **avalanche method** (highest interest first):\n\n${debtLines || `**${store.liabilities[0]?.name ?? "Outstanding balance"}**: ${formatCurrency(demo.totalDebt)}`}\n\n**Mortgages**: Productive leverage on appreciating assets. No acceleration needed unless rates are high.\n\n${demo.surplus > 0 ? `With your ${formatCurrency(demo.surplus)}/month surplus, you can service all debts and accelerate high-interest payoff simultaneously.` : ""}`;
-      }
-
-      if (lq.includes("tax") || lq.includes("optimis")) {
-        const rate = demo.effectiveTaxRate || 28;
-        const saving = Math.round(demo.monthlyIncome * 12 * (rate / 100) * 0.1);
-        return `At ${rate}% effective rate on ${formatCurrency(demo.monthlyIncome)}/month income, three levers stand out:\n\n**1. Max out tax-advantaged accounts** - Pension, ISA, or 401(k)/Roth IRA contributions reduce your taxable income, saving ~**${formatCurrency(saving)}/year**.\n\n**2. Tax-loss harvesting** - Selectively realising losses in your brokerage to offset capital gains could save thousands depending on your portfolio size.\n\n**3. Trust or holding structure** - ${demo.netWorth > 500_000 ? `With ${formatCurrency(demo.netWorth)} in net worth, a trust structure could significantly reduce estate tax exposure. Worth a dedicated session with your advisor.` : "As your wealth grows, structuring assets efficiently becomes increasingly valuable."}`;
-      }
-
-      const hasData = demo.netWorth > 0 || demo.monthlyIncome > 0;
-      if (!hasData) {
-        return `Complete your financial profile - add your income, expenses, assets, and liabilities - and I'll give you a comprehensive, numbers-based financial analysis tailored to your situation.`;
-      }
-      return `Your financial profile ${demo.netWorth > 0 ? `shows a net worth of ${formatCurrency(demo.netWorth)}` : "is being built"}.\n\n${demo.monthlyIncome > 0 ? `• **Monthly income**: ${formatCurrency(demo.monthlyIncome)}\n` : ""}${demo.surplus > 0 ? `• **Monthly surplus**: ${formatCurrency(demo.surplus)}\n` : ""}${demo.currentInvested > 0 ? `• **Invested**: ${formatCurrency(demo.currentInvested)}\n` : ""}${demo.totalDebt > 0 ? `• **Total debt**: ${formatCurrency(demo.totalDebt)}\n` : ""}\nThe highest-impact actions based on your data are surfaced in the insights panel. What would you like to explore in more detail?`;
-    },
-    [demo, store.propertyAssets, store.liabilities],
+  const respond = React.useCallback(
+    (q: string) => generateLocalAiResponse(q, snapshot),
+    [snapshot],
   );
 
-  // ── Greeting - fires once when real data is available ───────────────────────
   const greetingSet = React.useRef(false);
+  const promptAutoSent = React.useRef(false);
+
   React.useEffect(() => {
     if (greetingSet.current) return;
     greetingSet.current = true;
@@ -536,31 +431,21 @@ export default function AIInsightsPage() {
       {
         id: "greeting",
         role: "ai",
-        text: `Hello, ${demo.firstName}. I've analysed your complete financial picture and I'm ready to help.\n\nAsk me anything about your finances, or pick one of the suggestions below to get started.`,
+        text: buildGreeting(snapshot),
         timestamp: new Date(),
       },
     ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [snapshot]);
 
-  // ── Pre-fill input from URL ?prompt= param ──────────────────────────────────
-  const promptPrefilled = React.useRef(false);
   React.useEffect(() => {
-    if (promptPrefilled.current) return;
-    const urlPrompt = searchParams.get("prompt");
+    if (!ready || !auth.loggedIn || promptAutoSent.current) return;
+    const urlPrompt = searchParams.get("prompt")?.trim();
     if (!urlPrompt) return;
-    promptPrefilled.current = true;
-    setInput(urlPrompt);
-    // Focus the textarea and adjust height to fit the pre-filled text
-    window.setTimeout(() => {
-      const el = textareaRef.current;
-      if (el) {
-        el.style.height = "auto";
-        el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
-        el.focus();
-      }
-    }, 100);
-  }, [searchParams]);
+    promptAutoSent.current = true;
+    const timer = window.setTimeout(() => send(urlPrompt), 450);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, auth.loggedIn, searchParams]);
 
   React.useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -585,7 +470,7 @@ export default function AIInsightsPage() {
           {
             id: `a-${Date.now()}`,
             role: "ai",
-            text: aiResponse(t),
+            text: respond(t),
             timestamp: new Date(),
           },
         ]);
@@ -619,7 +504,7 @@ export default function AIInsightsPage() {
         {
           id: "greeting",
           role: "ai",
-          text: `Hello, ${demo.firstName}. I've analysed your complete financial picture and I'm ready to help.\n\nAsk me anything about your finances, or pick one of the suggestions below to get started.`,
+          text: buildGreeting(snapshot),
           timestamp: new Date(),
         },
       ]);
@@ -638,33 +523,29 @@ export default function AIInsightsPage() {
       ? insights
       : insights.filter((i) => i.kind === activeKind);
 
-  if (!ready) return null;
-  if (!auth.loggedIn) {
-    router.replace("/");
-    return null;
-  }
+  if (!ready || !auth.loggedIn) return null;
 
   const isEmptyState = messages.length <= 1 && messages[0]?.id === "greeting";
 
   const quickStats = [
     {
       label: "Net Worth",
-      value: formatCurrency(demo.netWorth),
+      value: formatCurrency(snapshot.netWorth),
       color: "text-emerald-600",
     },
     {
       label: "Surplus / mo",
-      value: formatCurrency(demo.surplus),
+      value: formatCurrency(snapshot.surplus),
       color: "text-sky-600",
     },
     {
       label: "Invested",
-      value: formatCurrency(demo.currentInvested),
+      value: formatCurrency(snapshot.currentInvested),
       color: "text-indigo-600",
     },
     {
       label: "Total Debt",
-      value: formatCurrency(demo.totalDebt),
+      value: formatCurrency(snapshot.totalDebt),
       color: "text-rose-600",
     },
   ];
@@ -743,19 +624,19 @@ export default function AIInsightsPage() {
                   Try asking
                 </p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {SUGGESTED.map((s) => {
-                    const Icon = s.icon;
+                  {suggestedPrompts.map((text, idx) => {
+                    const Icon = SUGGESTED_ICONS[idx] ?? Lightbulb;
                     return (
                       <button
-                        key={s.text}
-                        onClick={() => send(s.text)}
+                        key={text}
+                        onClick={() => send(text)}
                         disabled={typing}
                         className="group flex items-center gap-3 rounded-xl border border-border/60 bg-background px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:border-[#1e3a5f]/40 hover:bg-muted/30 disabled:opacity-40"
                       >
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/40 text-muted-foreground transition-colors group-hover:bg-[#1e3a5f] group-hover:text-white">
                           <Icon className="h-3.5 w-3.5" />
                         </span>
-                        <span className="flex-1 truncate">{s.text}</span>
+                        <span className="flex-1 truncate">{text}</span>
                         <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                       </button>
                     );
@@ -862,7 +743,7 @@ export default function AIInsightsPage() {
       {/* Composer */}
       <div className="shrink-0 border-t border-border/60 bg-background">
         <div className="mx-auto w-full max-w-3xl px-4 py-3 sm:px-6">
-          <div className="flex items-end gap-2 rounded-2xl border border-border/60 bg-background px-3 py-2 shadow-sm transition-colors focus-within:border-[#1e3a5f]/60">
+          <div className="flex items-end gap-2 rounded-2xl border border-border/60 bg-background px-3 py-2 shadow-sm transition-colors focus-within:border-[#1e3a5f]/60" data-tour="primary-action">
             <textarea
               ref={textareaRef}
               rows={1}

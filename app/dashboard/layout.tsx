@@ -11,12 +11,16 @@ import { CelereyLoader } from "@/components/login/celerey-loader";
 import { useFinancialStore } from "@/store/financialStore";
 import { setDefaultCurrency } from "@/lib/client-data";
 import { SessionExpiredError } from "@/lib/dashboard-api";
+import { SESSION_EXPIRED_EVENT } from "@/lib/session-expired";
+import { resetSession } from "@/lib/session-reset";
 import { ProfilePanelProvider } from "@/components/dashboard/ProfilePanelContext";
 import { ProfileSetupPanel } from "@/components/dashboard/profile-setup-panel";
 import { ProfileWelcomeDialog } from "@/components/dashboard/ProfileWelcomeDialog";
+import { DashboardTour } from "@/components/dashboard/DashboardTour";
 import { RiskQuizDialog } from "@/components/dashboard/risk/quizCard";
 import { useProfilePanel } from "@/components/dashboard/ProfilePanelContext";
 import { dashboardTheme } from "@/lib/dashboard-theme";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import { AskCelereyAIButton } from "@/components/dashboard/ask-celerey-ai-button";
 
 /** Triggers zustand-persist rehydration from localStorage after mount. */
@@ -37,35 +41,51 @@ function CurrencySync() {
 }
 
 /**
- * Listens for unhandled SessionExpiredError events and shows a banner that
- * redirects the user to the login page after a short countdown.
+ * Shows a modal when the session expires (401 after refresh fails) and
+ * redirects the user to sign in again.
  */
 function SessionExpiredBanner() {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(8);
+
+  const goToSignIn = React.useCallback(async () => {
+    try {
+      await fetch("/api/auth/sign-out", { method: "POST" });
+    } catch {
+      /* noop */
+    }
+    resetSession();
+    router.replace("/");
+  }, [router]);
 
   useEffect(() => {
+    function show() {
+      setVisible(true);
+    }
     function handleRejection(event: PromiseRejectionEvent) {
       if (event.reason instanceof SessionExpiredError) {
         event.preventDefault();
-        setVisible(true);
+        show();
       }
     }
+    window.addEventListener(SESSION_EXPIRED_EVENT, show);
     window.addEventListener("unhandledrejection", handleRejection);
-    return () =>
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, show);
       window.removeEventListener("unhandledrejection", handleRejection);
+    };
   }, []);
 
   useEffect(() => {
     if (!visible) return;
     if (countdown <= 0) {
-      router.replace("/");
+      void goToSignIn();
       return;
     }
     const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(t);
-  }, [visible, countdown, router]);
+  }, [visible, countdown, goToSignIn]);
 
   if (!visible) return null;
 
@@ -75,19 +95,27 @@ function SessionExpiredBanner() {
         <div className="text-4xl">🔒</div>
         <h2 className="text-lg font-semibold text-gray-900">Session expired</h2>
         <p className="text-sm text-gray-500">
-          Your session has expired. You will be redirected to the sign-in page
-          in <span className="font-semibold text-gray-800">{countdown}</span>{" "}
+          For your security, you have been signed out. Please sign in again to
+          continue. Redirecting in{" "}
+          <span className="font-semibold text-gray-800">{countdown}</span>{" "}
           second{countdown !== 1 ? "s" : ""}.
         </p>
         <button
-          onClick={() => router.replace("/")}
+          type="button"
+          onClick={() => void goToSignIn()}
           className="w-full rounded-lg bg-[#151339] py-2.5 text-sm font-medium text-white hover:bg-[#1e1c4e] transition-colors"
         >
-          Sign in now
+          Sign in again
         </button>
       </div>
     </div>
   );
+}
+
+/** Loads dashboard.summary once so user + data are ready for the tour and shell. */
+function DashboardBootstrap() {
+  useDashboardData();
+  return null;
 }
 
 /** Renders the global risk quiz dialog, available on every dashboard page. */
@@ -122,11 +150,13 @@ export default function RootLayout({
         <CurrencySync />
         <DashboardGuard>
           <ProfilePanelProvider>
+            <DashboardBootstrap />
             <GlobalRiskQuizDialog />
             <ProfileWelcomeDialog />
             <SidebarProvider defaultOpen>
               <div className="flex min-h-svh w-full overflow-x-hidden">
                 <AdminSidebar />
+                <DashboardTour layoutReady={loadingDone} />
 
                 <SidebarInset className="min-w-0 flex flex-col h-svh overflow-hidden">
                   <DashboardTopbar />

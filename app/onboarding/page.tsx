@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { useClientGate } from "../../lib/useClientGate";
 import { setOnboarded, isOnboarded } from "../../lib/client-data";
+import { scheduleTourForNewUser } from "@/lib/dashboard-tour";
 import { CelereyLoader } from "@/components/login/celerey-loader";
 import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
 import { Step0AccountMode } from "@/components/onboarding/steps/Step0AccountMode";
@@ -160,6 +161,7 @@ export default function OnboardingPage() {
       }
     }
     setOnboarded();
+    scheduleTourForNewUser();
     // Clear all persisted form data now that submission has succeeded.
     // This ensures the next onboarding run (e.g. a test reset) starts fresh.
     resetOnboarding();

@@ -1,8 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-
-const DISMISSED_KEY = "profile_panel_dismissed_v1";
+import { isTourCompleted, WELCOME_SESSION_KEY } from "@/lib/dashboard-tour";
+import { useFinancialStore } from "@/store/financialStore";
+import { getAuth } from "@/lib/client-data";
 
 interface ProfilePanelContextValue {
   /** Side-sheet checklist panel */
@@ -39,20 +40,26 @@ export function ProfilePanelProvider({
   const [isOpen, setIsOpen] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [riskQuizOpen, setRiskQuizOpen] = useState(false);
+  const userId =
+    useFinancialStore((s) => s.user?.user_id) ?? getAuth().email ?? null;
 
   useEffect(() => {
-    const dismissed =
+    if (!userId) return;
+
+    const dismissedSession =
       typeof window !== "undefined" &&
-      localStorage.getItem(DISMISSED_KEY) === "true";
-    if (!dismissed) {
+      sessionStorage.getItem(WELCOME_SESSION_KEY) === "true";
+    if (dismissedSession) return;
+
+    if (isTourCompleted(userId)) {
       setWelcomeOpen(true);
     }
-  }, []);
+  }, [userId]);
 
   function dismissWelcome() {
     setWelcomeOpen(false);
     try {
-      localStorage.setItem(DISMISSED_KEY, "true");
+      sessionStorage.setItem(WELCOME_SESSION_KEY, "true");
     } catch {
       // noop
     }

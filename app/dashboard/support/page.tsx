@@ -13,6 +13,7 @@ import {
   faChevronUp,
   faCheckCircle,
   faStar as faStarSolid,
+  faRoute,
 } from "@fortawesome/free-solid-svg-icons";
 import { faStar as faStarRegular } from "@fortawesome/free-regular-svg-icons";
 
@@ -38,6 +39,9 @@ import {
 
 import { useClientGate } from "@/lib/useClientGate";
 import { useFinancialStore } from "@/store/financialStore";
+import { getAuth } from "@/lib/client-data";
+import { resetGuidedTour, TOUR_RESTART_EVENT } from "@/lib/dashboard-tour";
+import { useRouter } from "next/navigation";
 
 // ─── Brand colour ─────────────────────────────────────────────────────────────
 const PRIMARY = "#151339";
@@ -117,6 +121,55 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
       {children}
     </p>
+  );
+}
+
+// ─── Guided tour restart ───────────────────────────────────────────────────────
+
+function GuidedTourSection() {
+  const router = useRouter();
+  const user = useFinancialStore((s) => s.user);
+
+  function handleRestartTour() {
+    const userId = user?.user_id ?? getAuth().email;
+    if (!userId) return;
+    resetGuidedTour(userId);
+    window.dispatchEvent(new CustomEvent(TOUR_RESTART_EVENT));
+    router.push("/dashboard");
+  }
+
+  return (
+    <motion.div variants={item}>
+      <Card className="border-[rgba(140,128,248,0.28)]">
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <FontAwesomeIcon
+              icon={faRoute}
+              className="h-4 w-4"
+              style={{ color: PRIMARY }}
+            />
+            <CardTitle className="text-base font-semibold">
+              Guided dashboard tour
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-xl">
+            Walk through every section of Celerey step by step. Empty tabs show
+            example data during the tour so you can see what a filled-in
+            dashboard looks like.
+          </p>
+          <Button
+            size="sm"
+            onClick={handleRestartTour}
+            style={{ backgroundColor: PRIMARY }}
+            className="text-white hover:opacity-90 shrink-0"
+          >
+            Restart guided tour
+          </Button>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
 
@@ -779,6 +832,8 @@ export default function SupportPage() {
           animate="show"
           className="space-y-6"
         >
+          <GuidedTourSection />
+
           <SectionLabel>Frequently asked questions</SectionLabel>
           <FaqSection />
 

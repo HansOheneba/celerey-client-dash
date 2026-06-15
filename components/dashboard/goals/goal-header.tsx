@@ -28,7 +28,7 @@ export function GoalHeader({
             Edit priority
           </Button>
         )}
-        <Button onClick={onAddGoal} className="gap-2">
+        <Button onClick={onAddGoal} className="gap-2" data-tour="primary-action">
           <Plus className="h-4 w-4" />
           Add goal
         </Button>

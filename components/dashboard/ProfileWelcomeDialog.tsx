@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
-import { UserCog } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 
 import {
   Dialog,
@@ -16,25 +18,68 @@ import { Progress } from "@/components/ui/progress";
 
 import { useFinancialStore } from "@/store/financialStore";
 import { useProfilePanel } from "./ProfilePanelContext";
+import {
+  pickRandomIncompleteItem,
+} from "@/lib/profile-checklist";
+import { toProfileStoreSnapshot } from "@/hooks/useProfileChecklistUI";
+import { isTourCompleted } from "@/lib/dashboard-tour";
+import { getAuth } from "@/lib/client-data";
+
+const PRIMARY = "rgb(27, 24, 86)";
+const ACCENT = "rgb(140, 128, 248)";
 
 /**
- * Welcome dialog shown the first time a user lands on the dashboard after
- * login. Nudges them to finish profile setup but is dismissable. "Start" opens
- * the existing profile setup side panel.
+ * Returning users: welcome back + one random incomplete profile step.
+ * New users see the driver.js tour instead (until tour is completed).
  */
 export function ProfileWelcomeDialog() {
-  const { welcomeOpen, dismissWelcome, open: openPanel } = useProfilePanel();
-  const score = useFinancialStore((s) => s.profileCompletionScore);
-  const displayName = useFinancialStore((s) => s.user?.display_name);
+  const router = useRouter();
+  const { welcomeOpen, dismissWelcome, openRiskQuiz } = useProfilePanel();
+  const store = useFinancialStore();
+  const score = store.profileCompletionScore;
+  const displayName = store.user?.display_name;
+  const tourUserId = store.user?.user_id ?? getAuth().email ?? null;
 
-  // Already complete - nothing to nudge about.
+  const snapshot = React.useMemo(
+    () => toProfileStoreSnapshot(store),
+    [
+      store.user,
+      store.incomeRows,
+      store.expenseCategories,
+      store.goals,
+      store.retirement,
+      store.liabilities,
+      store.propertyAssets,
+      store.emergencyFund,
+      store.holdings,
+      store.accounts,
+      store.insurancePolicies,
+    ],
+  );
+
+  const nudge = React.useMemo(
+    () => pickRandomIncompleteItem(snapshot),
+    [snapshot, welcomeOpen],
+  );
+
   if (score >= 100) return null;
+  if (!tourUserId || !isTourCompleted(tourUserId)) return null;
 
   const firstName = displayName?.split(" ")[0] ?? "there";
 
-  function handleStart() {
+  function handleGoToItem() {
+    if (!nudge) {
+      dismissWelcome();
+      return;
+    }
     dismissWelcome();
-    openPanel();
+    if (nudge.id === "risk-assessment") {
+      openRiskQuiz();
+      return;
+    }
+    if (nudge.href) {
+      router.push(nudge.href);
+    }
   }
 
   return (
@@ -44,18 +89,46 @@ export function ProfileWelcomeDialog() {
         if (!open) dismissWelcome();
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md border-[rgba(140,128,248,0.35)]">
         <DialogHeader>
-        
-          <DialogTitle className=" py-3">Welcome, {firstName}</DialogTitle>
-          <DialogDescription>
-            Your profile is {score}% complete. Finish a few more steps to unlock
-            sharper insights, tailored recommendations, and a more accurate
-            financial picture.
+          <div
+            className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full"
+            style={{ backgroundColor: "rgba(140, 128, 248, 0.14)" }}
+          >
+            <Sparkles className="h-4 w-4" style={{ color: ACCENT }} />
+          </div>
+          <DialogTitle className="text-lg" style={{ color: PRIMARY }}>
+            Welcome back, {firstName}
+          </DialogTitle>
+          <DialogDescription className="text-sm leading-relaxed">
+            Your profile is {score}% complete.{" "}
+            {nudge
+              ? `You have not finished "${nudge.label.toLowerCase()}" yet.`
+              : "A few more steps will sharpen your insights."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2 py-2">
+        {nudge && (
+          <div
+            className="rounded-xl border px-4 py-3 space-y-1.5"
+            style={{
+              borderColor: "rgba(140, 128, 248, 0.28)",
+              backgroundColor: "rgba(140, 128, 248, 0.08)",
+            }}
+          >
+            <p className="text-sm font-medium" style={{ color: PRIMARY }}>
+              {nudge.label}
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {nudge.description}
+            </p>
+            <p className="text-xs leading-relaxed pt-0.5" style={{ color: PRIMARY }}>
+              {nudge.benefit}
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-2 py-1">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Profile completion</span>
             <span className="tabular-nums">{score}%</span>
@@ -63,17 +136,33 @@ export function ProfileWelcomeDialog() {
           <Progress value={score} className="h-2" />
         </div>
 
-        <DialogFooter className="sm:justify-between gap-2">
+        <DialogFooter className="sm:justify-between gap-2 pt-1">
           <Button
             variant="ghost"
             onClick={dismissWelcome}
-            className="sm:order-1"
+            className="sm:order-1 text-muted-foreground"
           >
             Maybe later
           </Button>
-          <Button onClick={handleStart} className="sm:order-2">
-            Complete profile
-          </Button>
+          {nudge?.href || nudge?.id === "risk-assessment" ? (
+            <Button
+              onClick={handleGoToItem}
+              className="sm:order-2 text-white"
+              style={{ backgroundColor: PRIMARY }}
+            >
+              {nudge.actionLabel}
+            </Button>
+          ) : (
+            <Button
+              asChild
+              className="sm:order-2 text-white"
+              style={{ backgroundColor: PRIMARY }}
+            >
+              <Link href="/dashboard/profile/setup" onClick={dismissWelcome}>
+                View checklist
+              </Link>
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

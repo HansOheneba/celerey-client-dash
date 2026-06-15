@@ -22,6 +22,8 @@ import { DeleteGoalDialog } from "@/components/dashboard/goals/delete-goal-dialo
 import { PriorityDialog } from "@/components/dashboard/goals/priority-dialog";
 import { enrichGoalsWithCalculations } from "@/components/dashboard/goals/utils";
 import { dashboardTheme } from "@/lib/dashboard-theme";
+import { useTourDemoData } from "@/hooks/useTourDemo";
+import { TOUR_DEMO_GOALS } from "@/lib/tour-demo-data";
 import type {
   Goal,
   EnrichedGoal,
@@ -42,12 +44,18 @@ export default function GoalsDashboard() {
   React.useEffect(() => {
     setGoals([...storeGoals].sort((a, b) => a.priority - b.priority));
   }, [storeGoals]);
+
+  const { data: displayGoals } = useTourDemoData(
+    goals,
+    TOUR_DEMO_GOALS,
+  );
+
   const [filter, setFilter] = React.useState<FilterType>("active");
 
   // Enrich goals with calculated values based on cash flow
   const enrichedGoals = React.useMemo<EnrichedGoal[]>(() => {
-    return enrichGoalsWithCalculations(goals);
-  }, [goals]);
+    return enrichGoalsWithCalculations(displayGoals);
+  }, [displayGoals]);
 
   // Filter goals based on selected filter
   const filteredGoals = React.useMemo(() => {

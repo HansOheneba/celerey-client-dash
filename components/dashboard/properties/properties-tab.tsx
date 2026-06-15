@@ -31,6 +31,8 @@ import {
   formatCurrency,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { useTourDemoData } from "@/hooks/useTourDemo";
+import { TOUR_DEMO_PROPERTIES } from "@/lib/tour-demo-data";
 
 function sum(nums: number[]): number {
   return nums.reduce((a, b) => a + b, 0);
@@ -269,7 +271,11 @@ function PropertyInsuranceSummary({ properties }: { properties: Property[] }) {
 
 export function PropertiesTab() {
   const storeProperties = useFinancialStore((s) => s.propertyAssets);
-  const properties = storeProperties.filter((p) => p.is_active);
+  const activeReal = storeProperties.filter((p) => p.is_active);
+  const { data: properties } = useTourDemoData(
+    activeReal,
+    TOUR_DEMO_PROPERTIES,
+  );
 
   const totalPropertyValue = React.useMemo(
     () => sum(properties.map((p) => p.market_value)),

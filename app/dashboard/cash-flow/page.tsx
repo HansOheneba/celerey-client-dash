@@ -764,6 +764,7 @@ export default function CashFlowPage() {
                     variant="outline"
                     size="sm"
                     className="w-full gap-1.5 text-xs"
+                    data-tour="primary-action"
                     onClick={() => openCreate("income")}
                   >
                     <Plus className="h-3.5 w-3.5" /> Add income source

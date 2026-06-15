@@ -65,9 +65,7 @@ import {
 import { useClientGate } from "@/lib/useClientGate";
 import { useEffect, useMemo, useState } from "react";
 import { useProfilePanel } from "./ProfilePanelContext";
-import { createCheckoutSession } from "@/lib/dashboard-api";
-import { mockUpgradeToPro } from "@/lib/client-data";
-import { toast } from "sonner";
+import { useMockUpgrade } from "@/hooks/useMockUpgrade";
 
 const nav = [
   { label: "Overview", href: "/dashboard", icon: faChartPie },
@@ -99,24 +97,10 @@ export default function DashboardSidebar() {
   const userEmail = user?.email ?? "";
   const [mounted, setMounted] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [upgrading, setUpgrading] = useState(false);
+  const { upgrading, upgrade: handleUpgrade } = useMockUpgrade();
   useEffect(() => setMounted(true), []);
 
   const { sub } = useClientGate();
-
-  async function handleUpgrade() {
-    if (upgrading) return;
-    setUpgrading(true);
-    try {
-      // MOCK: bypass Stripe while backend webhook is unreliable.
-      mockUpgradeToPro();
-      toast.success("You're on Pro \u2014 enjoy!");
-      setUpgrading(false);
-    } catch {
-      toast.error("Could not start checkout. Please try again.");
-      setUpgrading(false);
-    }
-  }
 
   // Trial end date, formatted for display
   const trialEndsLabel = useMemo(() => {
@@ -191,7 +175,7 @@ export default function DashboardSidebar() {
       />
 
       {/* ── Header: Logo ── */}
-      <SidebarHeader className="sticky top-0 z-10 h-16 flex-row items-center justify-center p-0 px-3 border-b border-white/10 bg-white/5 backdrop-blur-xl">
+      <SidebarHeader className="sticky top-0 z-10 h-14 flex-row items-center justify-center p-0 px-3 border-b border-white/10 bg-white/5 backdrop-blur-xl">
         <Link href="/dashboard" className="flex items-center">
           {/* Full logo and symbol overlap and crossfade simultaneously - no stutter */}
           <div className="relative">
@@ -203,10 +187,10 @@ export default function DashboardSidebar() {
               <Image
                 src="/logos/logoWhite.png"
                 alt="Celerey"
-                width={150}
-                height={40}
+                width={140}
+                height={36}
                 priority
-                className="h-10 w-auto object-contain"
+                className="h-8 w-auto object-contain"
               />
             </motion.div>
             <motion.div
@@ -220,7 +204,7 @@ export default function DashboardSidebar() {
                 width={28}
                 height={28}
                 priority
-                className="h-10 w-auto object-contain"
+                className="h-8 w-auto object-contain"
               />
             </motion.div>
           </div>
@@ -228,13 +212,18 @@ export default function DashboardSidebar() {
       </SidebarHeader>
 
       {/* ── Nav ── */}
-      <SidebarContent className="relative z-10 px-2">
-        <SidebarMenu className="flex flex-col gap-2 mt-3">
+      <SidebarContent className="relative z-10 px-2 overflow-hidden">
+        <SidebarMenu className="flex flex-col gap-1 mt-2">
           {nav.map((item) => {
             const active =
               item.href === "/dashboard"
                 ? pathname === "/dashboard"
                 : pathname.startsWith(item.href);
+
+            const tourNavId =
+              item.href === "/dashboard"
+                ? "overview"
+                : (item.href.split("/").pop() ?? "overview");
 
             return (
               <SidebarMenuItem key={item.href}>
@@ -243,12 +232,16 @@ export default function DashboardSidebar() {
                   isActive={active}
                   tooltip={item.label}
                   className={`
-                    relative rounded-md h-10 px-3
+                    relative rounded-md h-9 px-2.5
                     transition-colors
                     ${active ? "bg-white/15" : "hover:bg-white/8"}
                   `}
                 >
-                  <Link className="flex items-center gap-3" href={item.href}>
+                  <Link
+                    className="flex items-center gap-2.5"
+                    href={item.href}
+                    data-tour-nav={tourNavId}
+                  >
                     <span className="shrink-0">
                       <FontAwesomeIcon
                         icon={item.icon}
@@ -269,8 +262,8 @@ export default function DashboardSidebar() {
                           exit={{ opacity: 0, x: -4 }}
                           transition={{ duration: 0.14 }}
                           className={`
-                            text-sm whitespace-nowrap
-                            ${active ? "text-white font-bold" : "text-white"}
+                            text-sm leading-tight whitespace-nowrap
+                            ${active ? "text-white font-medium" : "text-white/90"}
                           `}
                         >
                           {item.label}
@@ -306,54 +299,43 @@ export default function DashboardSidebar() {
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarSeparator className="my-3 bg-white/10" />
+      <SidebarSeparator className="my-2 bg-white/10" />
 
-      {/* ── Profile Completion Widget ── */}
-      {/* Hidden while the panel is open - they alternate */}
-      {/* <AnimatePresence initial={false}>
-        {!collapsed && !isOpen && profileCompletionScore < 100 && (
+      {/* ── Profile Completion (above trial widget) ── */}
+      <AnimatePresence initial={false}>
+        {!collapsed && profileCompletionScore < 100 && (
           <motion.div
             key="profile-completion"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden px-3 pb-2"
+            className="overflow-hidden px-2 pb-1.5"
           >
             <button
               type="button"
               onClick={openProfilePanel}
-              className="w-full text-left rounded-lg border border-white/15 bg-white/8 hover:bg-white/15 transition-colors px-3 py-2.5 space-y-2"
+              className="w-full text-left rounded-md border border-white/12 bg-white/6 hover:bg-white/10 transition-colors px-2.5 py-2 space-y-1.5"
             >
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-white/80">
-                  Your profile is{" "}
-                  <span className="font-semibold text-white">
-                    {profileCompletionScore}%
-                  </span>{" "}
-                  complete
-                </p>
-                <span className="text-xs tabular-nums text-white/50">
-                  {profileCompletionScore}/100
-                </span>
-              </div>
-              <div className="h-1.5 rounded-full bg-white/15 overflow-hidden">
+              <p className="text-[11px] font-medium text-white/75 leading-none">
+                Your profile is{" "}
+                <span className="font-semibold text-white tabular-nums">
+                  {profileCompletionScore}%
+                </span>{" "}
+                complete
+              </p>
+              <div className="h-1 rounded-full bg-white/12 overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${profileCompletionScore}%` }}
                   transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="h-full rounded-full bg-white"
+                  className="h-full rounded-full bg-white/90"
                 />
               </div>
-              {profileCompletionScore < 100 && (
-                <p className="text-[11px] text-white/50 leading-snug">
-                  Complete your profile to get the most out of Celerey
-                </p>
-              )}
             </button>
           </motion.div>
         )}
-      </AnimatePresence> */}
+      </AnimatePresence>
 
       {/* ── Upgrade to Pro Widget ── */}
       <AnimatePresence initial={false}>
@@ -364,10 +346,10 @@ export default function DashboardSidebar() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden px-3 pb-2"
+            className="overflow-hidden px-2 pb-1.5"
           >
             <div
-              className="rounded-lg px-3 py-3 space-y-2 relative overflow-hidden"
+              className="rounded-md px-2.5 py-2 space-y-1.5 relative overflow-hidden"
               style={{
                 background:
                   "linear-gradient(135deg, #3b1fa8 0%, #18163f 40%, #7c3aed 65%, #18163f 100%)",
@@ -404,18 +386,18 @@ export default function DashboardSidebar() {
       </AnimatePresence>
 
       {/* ── Footer ── */}
-      <SidebarFooter className="px-2 pb-3 space-y-1">
+      <SidebarFooter className="px-2 pb-2.5 space-y-0.5">
         {/* Support */}
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
               tooltip="Support"
-              className="hover:bg-white/8"
+              className="h-9 hover:bg-white/8"
             >
               <Link
                 href="/dashboard/support"
-                className="flex items-center gap-3 px-3"
+                className="flex items-center gap-2.5 px-2.5"
               >
                 <FontAwesomeIcon
                   icon={faHeadset}

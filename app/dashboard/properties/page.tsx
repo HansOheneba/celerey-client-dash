@@ -19,7 +19,7 @@ export default function PropertiesPage() {
               Real estate holdings, equity breakdown, and property analysis.
             </p>
           </div>
-          <Button asChild size="sm" className="gap-1.5">
+          <Button asChild size="sm" className="gap-1.5" data-tour="primary-action">
             <Link href="/dashboard/properties/new">
               <Plus className="h-3.5 w-3.5" /> Add property
             </Link>

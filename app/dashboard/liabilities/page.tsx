@@ -47,9 +47,11 @@ import {
   type PropertyMortgage,
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { usePageData } from "@/hooks/usePageData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useTourDemoData } from "@/hooks/useTourDemo";
+import { TOUR_DEMO_LIABILITIES } from "@/lib/tour-demo-data";
 import {
-  fetchLiabilities,
-  fetchProperties,
   createLiability,
   updateLiability as apiUpdateLiability,
   deleteLiability,
@@ -57,7 +59,6 @@ import {
 import { toast } from "sonner";
 import { DateInput } from "@/components/ui/date-input";
 import { MoneyInput } from "@/components/ui/money-input";
-import { Skeleton } from "@/components/ui/skeleton";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -94,10 +95,6 @@ function getCurrencySymbol(): string {
     return "$";
   }
 }
-
-// Module-level fetch timestamp so re-visits (within 30s) skip the skeleton.
-let _liabFetchedAt = 0;
-const LIAB_TTL_MS = 30_000;
 
 // Mortgages are excluded - they are managed directly on properties.
 const LIABILITY_TYPE_OPTIONS: { value: LiabilityType; label: string }[] = [
@@ -603,7 +600,7 @@ function PropertyMortgageCard({
 
 export default function LiabilitiesPage() {
   const router = useRouter();
-  const storeSetLiabilities = useFinancialStore((s) => s.setLiabilities);
+  const { loading: isLoading } = usePageData("liabilities");
   const storeAddLiability = useFinancialStore((s) => s.addLiability);
   const storeUpdateLiability = useFinancialStore((s) => s.updateLiability);
   const storeRemoveLiability = useFinancialStore((s) => s.removeLiability);
@@ -612,10 +609,6 @@ export default function LiabilitiesPage() {
 
   const currencySymbol = React.useMemo(() => getCurrencySymbol(), []);
 
-  // Start loading=false if we fetched recently, so re-visits skip the skeleton.
-  const [isLoading, setIsLoading] = React.useState(
-    () => Date.now() - _liabFetchedAt >= LIAB_TTL_MS,
-  );
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<LiabilityDraft>(DEFAULT_DRAFT);
@@ -626,39 +619,6 @@ export default function LiabilitiesPage() {
     name: string;
   } | null>(null);
 
-  // ── Fetch liabilities and properties from API on mount ───────────────────
-  React.useEffect(() => {
-    setIsLoading(true);
-    Promise.allSettled([fetchLiabilities(), fetchProperties()])
-      .then(([liabResult, propsResult]) => {
-        if (liabResult.status === "fulfilled") {
-          console.log(
-            "[LiabilitiesPage] fetched liabilities:",
-            liabResult.value,
-          );
-          storeSetLiabilities(liabResult.value);
-        } else {
-          console.warn(
-            "[LiabilitiesPage] fetch liabilities failed:",
-            liabResult.reason,
-          );
-        }
-        if (propsResult.status === "fulfilled") {
-          useFinancialStore.getState().setPropertyAssets(propsResult.value);
-        } else {
-          console.warn(
-            "[LiabilitiesPage] fetch properties failed:",
-            propsResult.reason,
-          );
-        }
-      })
-      .finally(() => {
-        _liabFetchedAt = Date.now();
-        setIsLoading(false);
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // ── Property-linked mortgages derived from store ──────────────────────────
   const propertyMortgages = React.useMemo<PropertyLinkedMortgage[]>(
     () =>
@@ -668,45 +628,54 @@ export default function LiabilitiesPage() {
     [storeProperties],
   );
 
+  const { data: liabilitiesDisplay, isDemo: tourDemoLiab } = useTourDemoData(
+    storeLiabilities,
+    TOUR_DEMO_LIABILITIES,
+  );
+  const propertyMortgagesDisplay = tourDemoLiab ? [] : propertyMortgages;
+
   // ── Combined totals (standalone + property mortgages) ────────────────────
   const totalDebt = React.useMemo(
     () =>
-      storeLiabilities.reduce((s, l) => s + l.balance, 0) +
-      propertyMortgages.reduce((s, e) => s + e.mortgage.balance, 0),
-    [storeLiabilities, propertyMortgages],
+      liabilitiesDisplay.reduce((s, l) => s + l.balance, 0) +
+      propertyMortgagesDisplay.reduce((s, e) => s + e.mortgage.balance, 0),
+    [liabilitiesDisplay, propertyMortgagesDisplay],
   );
 
   const totalMinPayments = React.useMemo(
     () =>
-      storeLiabilities.reduce((s, l) => s + l.minPaymentMonthly, 0) +
-      propertyMortgages.reduce((s, e) => s + e.mortgage.min_payment_monthly, 0),
-    [storeLiabilities, propertyMortgages],
+      liabilitiesDisplay.reduce((s, l) => s + l.minPaymentMonthly, 0) +
+      propertyMortgagesDisplay.reduce(
+        (s, e) => s + e.mortgage.min_payment_monthly,
+        0,
+      ),
+    [liabilitiesDisplay, propertyMortgagesDisplay],
   );
 
   const avgRate = React.useMemo(() => {
     if (totalDebt === 0) return 0;
-    const standaloneWeighted = storeLiabilities.reduce(
+    const standaloneWeighted = liabilitiesDisplay.reduce(
       (s, l) => s + l.interestRatePct * l.balance,
       0,
     );
-    const propWeighted = propertyMortgages.reduce(
+    const propWeighted = propertyMortgagesDisplay.reduce(
       (s, e) => s + e.mortgage.interest_rate_pct * e.mortgage.balance,
       0,
     );
     return (standaloneWeighted + propWeighted) / totalDebt;
-  }, [storeLiabilities, propertyMortgages, totalDebt]);
+  }, [liabilitiesDisplay, propertyMortgagesDisplay, totalDebt]);
 
   const annualInterestCost = (totalDebt * avgRate) / 100;
 
   // ── Debt by lender breakdown - named lenders only ────────────────────────
   const debtByLender = React.useMemo(() => {
     const map = new Map<string, number>();
-    storeLiabilities.forEach((l) => {
+    liabilitiesDisplay.forEach((l) => {
       const key = l.lender?.trim();
       if (!key) return;
       map.set(key, (map.get(key) ?? 0) + l.balance);
     });
-    propertyMortgages.forEach((e) => {
+    propertyMortgagesDisplay.forEach((e) => {
       const key = e.mortgage.lender?.trim();
       if (!key) return;
       map.set(key, (map.get(key) ?? 0) + e.mortgage.balance);
@@ -714,9 +683,10 @@ export default function LiabilitiesPage() {
     return [...map.entries()]
       .map(([lender, balance]) => ({ lender, balance }))
       .sort((a, b) => b.balance - a.balance);
-  }, [storeLiabilities, propertyMortgages]);
+  }, [liabilitiesDisplay, propertyMortgagesDisplay]);
 
-  const totalEntries = storeLiabilities.length + propertyMortgages.length;
+  const totalEntries =
+    liabilitiesDisplay.length + propertyMortgagesDisplay.length;
 
   const kpiItems: KpiItem[] = [
     {
@@ -888,7 +858,7 @@ export default function LiabilitiesPage() {
               All your debts and obligations in one place.
             </p>
           </div>
-          <Button size="sm" className="gap-1.5" onClick={openCreate}>
+          <Button size="sm" className="gap-1.5" data-tour="primary-action" onClick={openCreate}>
             <Plus className="h-3.5 w-3.5" /> Add liability
           </Button>
         </div>
@@ -1015,14 +985,14 @@ export default function LiabilitiesPage() {
               </div>
 
               {/* Standalone liabilities */}
-              {storeLiabilities.length === 0 &&
-                propertyMortgages.length > 0 && (
+              {liabilitiesDisplay.length === 0 &&
+                propertyMortgagesDisplay.length > 0 && (
                   <p className="text-xs text-muted-foreground py-1">
                     No standalone liabilities added. Mortgages are managed via
                     your properties.
                   </p>
                 )}
-              {storeLiabilities.map((l) => (
+              {liabilitiesDisplay.map((l) => (
                 <LiabilityRow
                   key={l.id}
                   liability={l}
@@ -1033,7 +1003,7 @@ export default function LiabilitiesPage() {
               ))}
 
               {/* Property-linked mortgages (read-only) */}
-              {propertyMortgages.map((entry) => (
+              {propertyMortgagesDisplay.map((entry) => (
                 <PropertyMortgageCard
                   key={entry.property.property_id}
                   entry={entry}

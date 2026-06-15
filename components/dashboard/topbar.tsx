@@ -36,10 +36,8 @@ import { Settings, LogOut, UserIcon, Loader2, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useClientGate } from "@/lib/useClientGate";
-import { createCheckoutSession } from "@/lib/dashboard-api";
-import { mockUpgradeToPro } from "@/lib/client-data";
+import { useMockUpgrade } from "@/hooks/useMockUpgrade";
 import { resetSession } from "@/lib/session-reset";
-import { toast } from "sonner";
 
 export default function DashboardTopbar() {
   const profileCompletionScore = useFinancialStore(
@@ -55,7 +53,9 @@ export default function DashboardTopbar() {
   const [notifEverOpened, setNotifEverOpened] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dropdownEverOpened, setDropdownEverOpened] = useState(false);
-  const [upgrading, setUpgrading] = useState(false);
+  const { upgrading, upgrade: handleUpgradeFromNotif } = useMockUpgrade({
+    onSuccess: () => setNotifOpen(false),
+  });
   useEffect(() => setMounted(true), []);
 
   const { sub } = useClientGate();
@@ -71,22 +71,6 @@ export default function DashboardTopbar() {
         )
       : null;
   const hasNotifications = incomplete || isTrialing;
-
-  async function handleUpgradeFromNotif() {
-    if (upgrading) return;
-    setUpgrading(true);
-    try {
-      // MOCK: bypass Stripe checkout while backend webhook is unreliable.
-      // Flip local subscription state to pro and close the popover.
-      mockUpgradeToPro();
-      toast.success("You're on Pro \u2014 enjoy!");
-      setNotifOpen(false);
-      setUpgrading(false);
-    } catch {
-      toast.error("Could not start checkout. Please try again.");
-      setUpgrading(false);
-    }
-  }
 
   const displayName = user ? getUserFullName(user) : "";
   const userEmail = user?.email ?? "";

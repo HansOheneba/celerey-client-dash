@@ -22,6 +22,10 @@ import type {
   FinancialDomainData,
 } from "@/lib/client-data";
 import { calculateAge } from "@/lib/client-data";
+import {
+  computeProfileCompletionScore as computeChecklistCompletionScore,
+  type ProfileStoreSnapshot,
+} from "@/lib/profile-checklist";
 import type {
   IdentityData,
   GoalData,
@@ -32,6 +36,7 @@ import type {
 import type {
   DashboardBootstrapData,
   ApiCashFlowSummary,
+  RiskAssessmentResult,
 } from "@/lib/dashboard-api";
 import { type GoalsMeta, EMPTY_GOALS_META } from "@/lib/goals-meta";
 
@@ -107,35 +112,28 @@ interface ScoreInput {
   accounts: Account[];
   insurancePolicies: InsurancePolicy[];
   propertyAssets: Property[];
+  riskAssessment?: RiskAssessmentResult | null;
+}
+
+function toProfileStoreSnapshot(s: ScoreInput): ProfileStoreSnapshot {
+  return {
+    user: s.user,
+    incomeRows: s.incomeRows,
+    expenseCategories: s.expenseCategories,
+    goals: s.goals,
+    retirement: s.retirement,
+    liabilities: s.liabilities,
+    propertyAssets: s.propertyAssets,
+    emergencyFund: s.emergencyFund,
+    holdings: s.holdings,
+    accounts: s.accounts,
+    insurancePolicies: s.insurancePolicies,
+    riskAssessment: s.riskAssessment ?? null,
+  };
 }
 
 function computeProfileCompletionScore(s: ScoreInput): number {
-  return [
-    !!s.user?.display_name && !!s.user?.email && !!s.user?.resident_country
-      ? 7
-      : 0,
-    !!s.user?.gender && !!s.user?.prefix ? 3 : 0,
-    s.incomeRows.length > 0 ? 15 : 0,
-    s.expenseCategories.length > 0 ? 10 : 0,
-    s.goals.length > 0 ? 10 : 0,
-    s.retirement.desiredMonthlyIncome > 0 && s.retirement.retirementAge > 0
-      ? 10
-      : 0,
-    s.retirement.currentInvested > 0 || s.retirement.existingPensionBalance > 0
-      ? 10
-      : 0,
-    s.liabilities.length > 0 ||
-    s.propertyAssets.some((p) => p.is_active && !!p.mortgage)
-      ? 5
-      : 0,
-    s.emergencyFund.currentCashBalance > 0 ? 5 : 0,
-    s.holdings.length > 0 || s.accounts.length > 0 ? 10 : 0,
-    s.insurancePolicies.length > 0 ||
-    s.propertyAssets.some((p) => p.is_active && p.insurance.length > 0)
-      ? 5
-      : 0,
-    !!s.user?.risk_profile ? 10 : 0,
-  ].reduce((a, b) => a + b, 0);
+  return computeChecklistCompletionScore(toProfileStoreSnapshot(s));
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
@@ -198,8 +196,11 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
   /** Rich asset holdings — separate from the lightweight Account[] kept for selector compat. */
   holdings: AssetHolding[];
   legacy: LegacyState;
+  /** Latest risk assessment from the API — source of truth for quiz completion. */
+  riskAssessment: RiskAssessmentResult | null;
 
   setUser: (user: User | null) => void;
+  setRiskAssessment: (assessment: RiskAssessmentResult | null) => void;
   setGoals: (goals: Goal[]) => void;
   setGoalsMeta: (meta: GoalsMeta) => void;
   setIncome: (rows: CashFlowRow[]) => void;
@@ -251,6 +252,7 @@ interface FinancialState extends Omit<FinancialDomainData, "propertyAssets"> {
 type FinancialData = Omit<
   FinancialState,
   | "setUser"
+  | "setRiskAssessment"
   | "setGoals"
   | "setGoalsMeta"
   | "setIncome"
@@ -309,6 +311,7 @@ const INITIAL_STATE: FinancialData = {
   retirement: DEFAULT_RETIREMENT,
   cashFlowHistory: [],
   cashFlowSummary: null,
+  riskAssessment: null,
   legacy: DEFAULT_LEGACY,
   profileCompletionScore: 0,
 };
@@ -327,6 +330,21 @@ export const useFinancialStore = create<FinancialState>()(
         set((s) => {
           const n = { ...s, user };
           return {
+            user,
+            profileCompletionScore: computeProfileCompletionScore(n),
+          };
+        }),
+
+      setRiskAssessment: (riskAssessment) =>
+        set((s) => {
+          const band = riskAssessment?.result?.risk_band;
+          const user =
+            s.user && band
+              ? { ...s.user, risk_profile: band as User["risk_profile"] }
+              : s.user;
+          const n = { ...s, riskAssessment, user };
+          return {
+            riskAssessment,
             user,
             profileCompletionScore: computeProfileCompletionScore(n),
           };
@@ -810,6 +828,7 @@ export const useFinancialStore = create<FinancialState>()(
         propertyAssets,
         liabilities,
         retirement,
+        riskAssessment,
       }) => {
         const timestamp = new Date().toISOString();
         set((s) => {
@@ -857,8 +876,17 @@ export const useFinancialStore = create<FinancialState>()(
             activeGoals: activeGoals.length,
           };
 
+          const resolvedRiskAssessment =
+            riskAssessment !== undefined ? riskAssessment : s.riskAssessment;
+          const band = resolvedRiskAssessment?.result?.risk_band;
+          const user =
+            s.user && band
+              ? { ...s.user, risk_profile: band as User["risk_profile"] }
+              : s.user;
+
           const next = {
             ...s,
+            user,
             goals,
             goalsMeta: computedGoalsMeta,
             incomeRows,
@@ -874,6 +902,7 @@ export const useFinancialStore = create<FinancialState>()(
             propertyAssets,
             liabilities,
             retirement: retirementConfig,
+            riskAssessment: resolvedRiskAssessment,
           };
           return {
             ...next,
@@ -893,6 +922,11 @@ export const useFinancialStore = create<FinancialState>()(
        * real data loads immediately after mount.
        */
       skipHydration: true,
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.profileCompletionScore = computeProfileCompletionScore(state);
+        }
+      },
     },
   ),
 );

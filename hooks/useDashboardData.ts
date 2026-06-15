@@ -12,7 +12,9 @@ import { useFinancialStore } from "@/store/financialStore";
 import {
   fetchDashboardSummary,
   consumeDashboardSummaryPrefetch,
+  fetchLatestRiskAssessment,
   type DashboardSummaryData,
+  SessionExpiredError,
 } from "@/lib/dashboard-api";
 import {
   setSubscriptionData,
@@ -21,6 +23,7 @@ import {
   mockStartTrialIfMissing,
 } from "@/lib/client-data";
 import { markPageKeysFetched } from "@/hooks/usePageData";
+import { mergeUserWithRiskAssessment } from "@/lib/map-api-user";
 
 // Module-level — survives component remounts (e.g. React StrictMode double-fire,
 // layout re-renders). Resets only on a hard page reload.
@@ -29,6 +32,7 @@ let _bootstrapped = false;
 export function useDashboardData() {
   const hydrateFromApi = useFinancialStore((s) => s.hydrateFromApi);
   const setUser = useFinancialStore((s) => s.setUser);
+  const setRiskAssessment = useFinancialStore((s) => s.setRiskAssessment);
 
   useEffect(() => {
     if (_bootstrapped) return;
@@ -38,41 +42,28 @@ export function useDashboardData() {
 
     // Reuse the in-flight prefetch from OTP verify if present; otherwise start
     // a fresh fetch. Either way, one round-trip to dashboard.summary.
-    const summaryPromise: Promise<DashboardSummaryData> =
+    const summaryPromise: Promise<DashboardSummaryData | null> =
       consumeDashboardSummaryPrefetch() ?? fetchDashboardSummary();
 
     summaryPromise
-      .then((summary) => {
-        // 1. User profile → sidebar / topbar / etc.
-        if (summary.user) {
-          const user = summary.user;
-          setUser({
-            user_id: user.user_id,
-            email: user.email ?? "",
-            first_name: user.first_name ?? undefined,
-            last_name: user.last_name ?? undefined,
-            display_name: user.display_name,
-            phone_number: user.phone_number,
-            resident_country: user.resident_country ?? "",
-            city: user.city,
-            citizenships: user.citizenships ?? [],
-            date_of_birth: user.date_of_birth ?? undefined,
-            currency: user.currency ?? "USD",
-            preferred_contact: user.preferred_contact ?? undefined,
-            occupation: user.occupation ?? undefined,
-            marital_status: user.marital_status as any,
-            account_mode: user.account_mode as any,
-            risk_profile: user.risk_profile as any,
-            dependents: user.dependents ?? undefined,
-            bio: user.bio ?? undefined,
-            is_active: user.is_active ?? true,
-            user_type: user.user_type as any,
-            created_at: user.created_at ?? "",
-            updated_at: user.updated_at ?? "",
-          });
+      .then(async (summary) => {
+        if (!summary) return;
+
+        let riskAssessment = summary.riskAssessment;
+        if (!riskAssessment) {
+          riskAssessment = await fetchLatestRiskAssessment();
         }
 
-        // 2. Subscription → localStorage / useClientGate. Skip during Stripe
+        if (summary.user) {
+          setUser(mergeUserWithRiskAssessment(summary.user, riskAssessment));
+        }
+        if (riskAssessment) {
+          setRiskAssessment(riskAssessment);
+        }
+
+        hydrateFromApi({ ...summary, riskAssessment });
+
+        // Subscription → localStorage / useClientGate. Skip during Stripe
         // return — that flow owns subscription writes via its poll loop.
         // MOCK: while backend webhook is unreliable, we DO NOT trust the
         // backend `subscription_status` and instead default new users to a
@@ -96,10 +87,7 @@ export function useDashboardData() {
           }
         }
 
-        // 3. Financial data → Zustand store.
-        hydrateFromApi(summary);
-
-        // 4. Tell usePageData every overview-covered key is fresh so tab
+        // Tell usePageData every overview-covered key is fresh so tab
         // navigation within the TTL window doesn't refetch the same data.
         markPageKeysFetched(
           "overview",
@@ -108,14 +96,16 @@ export function useDashboardData() {
           "assets",
           "insurance",
           "properties",
+          "liabilities",
           "retirement",
           "profile",
         );
       })
       .catch((err) => {
+        if (err instanceof SessionExpiredError) return;
         // Non-fatal — keep whatever was in localStorage. The user still sees
         // their persisted seeded data.
         console.warn("[useDashboardData] dashboard.summary failed:", err);
       });
-  }, [hydrateFromApi, setUser]);
+  }, [hydrateFromApi, setUser, setRiskAssessment]);
 }

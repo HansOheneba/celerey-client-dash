@@ -114,12 +114,7 @@ export default function AdvisoryPage() {
     );
   }
 
-  if (!ready) return null;
-
-  if (!auth.loggedIn) {
-    router.replace("/");
-    return null;
-  }
+  if (!ready || !auth.loggedIn) return null;
 
   if (!canAccessFeature(sub, "advisorChat")) {
     return (

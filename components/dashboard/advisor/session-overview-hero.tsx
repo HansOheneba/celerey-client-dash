@@ -38,6 +38,7 @@ export function SessionOverviewHero({ allocation, isTrial, onBook }: Props) {
     <div
       className="rounded-2xl border overflow-hidden"
       style={{ borderColor: "rgba(27,24,86,0.12)" }}
+      data-tour="primary-action"
     >
       {/* Top strip */}
       <div

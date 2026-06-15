@@ -348,13 +348,8 @@ export default function AccountSettingsPage() {
       });
       if (submitted) {
         const riskProfile = submitted.result?.risk_band;
-        const storeUser = useFinancialStore.getState().user;
-        if (storeUser && riskProfile) {
-          const next = {
-            ...storeUser,
-            risk_profile: riskProfile as User["risk_profile"],
-          };
-          setUser(next);
+        if (riskProfile) {
+          useFinancialStore.getState().setRiskAssessment(submitted);
           setForm((f) => ({
             ...f,
             risk_profile: riskProfile as User["risk_profile"],

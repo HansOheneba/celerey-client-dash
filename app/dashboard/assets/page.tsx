@@ -100,6 +100,8 @@ import {
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { usePageData } from "@/hooks/usePageData";
+import { useTourDemoData } from "@/hooks/useTourDemo";
+import { TOUR_DEMO_ASSET_HOLDINGS } from "@/lib/tour-demo-data";
 import { toast } from "sonner";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -1448,6 +1450,11 @@ export default function AssetsPage() {
     setHoldings(storeHoldings.filter((h) => h.is_active));
   }, [storeHoldings]);
 
+  const { data: viewHoldings } = useTourDemoData(
+    holdings,
+    TOUR_DEMO_ASSET_HOLDINGS,
+  );
+
   const storePortfolioPerformance = useFinancialStore(
     (s) => s.portfolioPerformance,
   );
@@ -1468,23 +1475,23 @@ export default function AssetsPage() {
     lastUpdated,
     fromCache,
     refresh,
-  } = useLivePrices(holdings);
+  } = useLivePrices(viewHoldings);
 
   // ── Derived values ────────────────────────────────────────────────────────
 
   const totalPortfolioValue = React.useMemo(
     () =>
-      holdings.reduce((s, h) => s + getLiveValue(h, valuations, livePrices), 0),
-    [holdings, valuations, livePrices],
+      viewHoldings.reduce((s, h) => s + getLiveValue(h, valuations, livePrices), 0),
+    [viewHoldings, valuations, livePrices],
   );
 
   const totalCostBasis = React.useMemo(
     () =>
-      holdings.reduce(
+      viewHoldings.reduce(
         (s, h) => s + (Number.isFinite(h.cost_basis) ? h.cost_basis : 0),
         0,
       ),
-    [holdings],
+    [viewHoldings],
   );
 
   const totalGainLoss = totalPortfolioValue - totalCostBasis;
@@ -1505,7 +1512,7 @@ export default function AssetsPage() {
   // Allocation breakdown by asset type - derived from holdings + live prices
   const allocationByType = React.useMemo(() => {
     const map = new Map<string, number>();
-    holdings.forEach((h) => {
+    viewHoldings.forEach((h) => {
       const v = getLiveValue(h, valuations, livePrices);
       const label = assetTypeLabel(h.asset_type);
       map.set(label, (map.get(label) ?? 0) + v);
@@ -1518,7 +1525,7 @@ export default function AssetsPage() {
           totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0,
       }))
       .sort((a, b) => b.value - a.value);
-  }, [holdings, valuations, livePrices, totalPortfolioValue]);
+  }, [viewHoldings, valuations, livePrices, totalPortfolioValue]);
 
   // Performance chart - from store portfolioPerformance
   const perfChartData = React.useMemo(
@@ -1534,7 +1541,7 @@ export default function AssetsPage() {
 
   // Filtered + sorted holdings
   const filteredHoldings = React.useMemo(() => {
-    let list = holdings;
+    let list = viewHoldings;
     if (filterType !== "all")
       list = list.filter((h) => h.asset_type === filterType);
     return [...list].sort((a, b) =>
@@ -1544,12 +1551,12 @@ export default function AssetsPage() {
         : getLiveGainLoss(b, valuations, livePrices).pct -
           getLiveGainLoss(a, valuations, livePrices).pct,
     );
-  }, [holdings, valuations, livePrices, filterType, sortBy]);
+  }, [viewHoldings, valuations, livePrices, filterType, sortBy]);
 
   // Unique asset types present in holdings (for filter buttons)
   const presentTypes = React.useMemo(
-    () => [...new Set(holdings.map((h) => h.asset_type))],
-    [holdings],
+    () => [...new Set(viewHoldings.map((h) => h.asset_type))],
+    [viewHoldings],
   );
 
   // Account totals by type - derived from store accounts
@@ -1669,7 +1676,7 @@ export default function AssetsPage() {
     {
       label: "Portfolio Value",
       value: formatCurrency(totalPortfolioValue),
-      subline: `${holdings.length} holding${holdings.length !== 1 ? "s" : ""}`,
+      subline: `${viewHoldings.length} holding${viewHoldings.length !== 1 ? "s" : ""}`,
       tone: "neutral" as const,
     },
     {
@@ -1713,7 +1720,7 @@ export default function AssetsPage() {
   };
 
   // ── Empty state - no assets added yet ───────────────────────────────────
-  if (!loading && holdings.length === 0 && storeAccounts.length === 0) {
+  if (!loading && viewHoldings.length === 0 && storeAccounts.length === 0) {
     return (
       <TooltipProvider>
         <div className="mx-auto px-6 py-8 space-y-8">
@@ -1728,6 +1735,7 @@ export default function AssetsPage() {
             <Button
               size="sm"
               className="gap-1.5 self-start sm:self-auto"
+              data-tour="primary-action"
               onClick={() => {
                 setEditHolding(null);
                 setAddOpen(true);
@@ -1835,6 +1843,7 @@ export default function AssetsPage() {
               <Button
                 size="sm"
                 className="gap-1.5"
+                data-tour="primary-action"
                 onClick={() => {
                   setEditHolding(null);
                   setAddOpen(true);
@@ -1852,7 +1861,7 @@ export default function AssetsPage() {
           </motion.div>
 
           {/* ── Allocation + Performance (only when holdings exist) ── */}
-          {holdings.length > 0 && (
+          {viewHoldings.length > 0 && (
             <motion.div
               key="charts-section"
               initial="hidden"
@@ -2014,7 +2023,7 @@ export default function AssetsPage() {
                           : {}
                       }
                     >
-                      All ({holdings.length})
+                      All ({viewHoldings.length})
                     </button>
                     {presentTypes.map((t) => (
                       <button

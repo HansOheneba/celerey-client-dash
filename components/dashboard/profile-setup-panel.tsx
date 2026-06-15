@@ -3,41 +3,19 @@
 import React from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  X,
-  CheckCircle2,
-  Circle,
-  ChevronRight,
-  User,
-  Banknote,
-  CreditCard,
-  Target,
-  UmbrellaIcon,
-  TrendingDown,
-  PiggyBank,
-  Briefcase,
-  ShieldCheck,
-} from "lucide-react";
+import { X, CheckCircle2, Circle, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 
-import { useFinancialStore } from "@/store/financialStore";
 import { useProfilePanel } from "./ProfilePanelContext";
+import {
+  useProfileChecklistUI,
+  type ProfileChecklistUIItem,
+} from "@/hooks/useProfileChecklistUI";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface ChecklistItem {
-  id: string;
-  label: string;
-  description: string;
-  href?: string;
-  onAction?: () => void;
-  actionLabel: string;
-  icon: React.ReactNode;
-  completed: boolean;
-}
+type ChecklistItem = ProfileChecklistUIItem;
 
 // ─── Row ──────────────────────────────────────────────────────────────────────
 
@@ -149,142 +127,13 @@ function ChecklistSection({
 
 export function ProfileSetupPanel() {
   const { isOpen, dismiss, openRiskQuiz } = useProfilePanel();
-  const store = useFinancialStore();
-
-  const identityComplete =
-    !!store.user?.display_name &&
-    !!store.user?.email &&
-    !!store.user?.resident_country;
-  const hasIncome = store.incomeRows.length > 0;
-  const hasExpenses = store.expenseCategories.length > 0;
-  const hasGoals = store.goals.length > 0;
-  const retirementBasicsComplete =
-    store.retirement.desiredMonthlyIncome > 0 &&
-    store.retirement.retirementAge > 0;
-  const retirementDetailComplete =
-    store.retirement.currentInvested > 0 ||
-    store.retirement.existingPensionBalance > 0;
-  const hasRiskProfile = !!store.user?.risk_profile;
-  const hasLiabilities =
-    store.liabilities.length > 0 ||
-    store.propertyAssets.some((p) => p.is_active && !!p.mortgage);
-  const hasEmergencyFund = store.emergencyFund.currentCashBalance > 0;
-  const hasAssets = store.holdings.length > 0 || store.accounts.length > 0;
-  const hasInsurance =
-    store.insurancePolicies.length > 0 ||
-    store.propertyAssets.some((p) => p.is_active && p.insurance.length > 0);
-
-  const score = store.profileCompletionScore;
-
-  const basicsItems: ChecklistItem[] = [
-    {
-      id: "identity",
-      label: "Tell us about yourself",
-      description: "Your name, email, and country.",
-      href: "/dashboard/account/profile",
-      actionLabel: "Go to profile",
-      icon: <User className="h-3.5 w-3.5" />,
-      completed: identityComplete,
-    },
-    {
-      id: "income",
-      label: "Add your income",
-      description: "The foundation of your financial picture.",
-      href: "/dashboard/cash-flow",
-      actionLabel: "Add income",
-      icon: <Banknote className="h-3.5 w-3.5" />,
-      completed: hasIncome,
-    },
-    {
-      id: "expenses",
-      label: "Add your expenses",
-      description: "Understand your monthly cash flow.",
-      href: "/dashboard/cash-flow",
-      actionLabel: "Add expenses",
-      icon: <CreditCard className="h-3.5 w-3.5" />,
-      completed: hasExpenses,
-    },
-    {
-      id: "goals",
-      label: "Set your first goal",
-      description: "Give your money direction.",
-      href: "/dashboard/goals",
-      actionLabel: "Set a goal",
-      icon: <Target className="h-3.5 w-3.5" />,
-      completed: hasGoals,
-    },
-    {
-      id: "retirement-basics",
-      label: "Set your retirement target",
-      description: "Desired income and target retirement age.",
-      href: "/dashboard/retirement",
-      actionLabel: "Plan retirement",
-      icon: <UmbrellaIcon className="h-3.5 w-3.5" />,
-      completed: retirementBasicsComplete,
-    },
-  ];
-
-  const completePictureItems: ChecklistItem[] = [
-    {
-      id: "risk-assessment",
-      label: "Complete your risk assessment",
-      description: "Understand your risk tolerance and investment profile.",
-      onAction: openRiskQuiz,
-      actionLabel: "Take quiz",
-      icon: <ShieldCheck className="h-3.5 w-3.5" />,
-      completed: hasRiskProfile,
-    },
-    {
-      id: "retirement-detail",
-      label: "Complete retirement details",
-      description: "Current invested amount and pension balance.",
-      href: "/dashboard/retirement",
-      actionLabel: "Complete",
-      icon: <UmbrellaIcon className="h-3.5 w-3.5" />,
-      completed: retirementDetailComplete,
-    },
-    {
-      id: "liabilities",
-      label: "Add your liabilities",
-      description: "Mortgages, loans, and credit cards.",
-      href: "/dashboard/liabilities",
-      actionLabel: "Add liabilities",
-      icon: <TrendingDown className="h-3.5 w-3.5" />,
-      completed: hasLiabilities,
-    },
-    {
-      id: "emergency-fund",
-      label: "Set up emergency fund",
-      description: "3-6 months of expenses as a safety net.",
-      href: "/dashboard/cash-flow",
-      actionLabel: "Configure",
-      icon: <PiggyBank className="h-3.5 w-3.5" />,
-      completed: hasEmergencyFund,
-    },
-    {
-      id: "assets",
-      label: "Add your first asset",
-      description: "Stocks, ETFs, crypto, savings.",
-      href: "/dashboard/assets",
-      actionLabel: "Add assets",
-      icon: <Briefcase className="h-3.5 w-3.5" />,
-      completed: hasAssets,
-    },
-    {
-      id: "insurance",
-      label: "Add an insurance policy",
-      description: "Know your coverage, never miss a renewal.",
-      href: "/dashboard/insurance",
-      actionLabel: "Add policy",
-      icon: <ShieldCheck className="h-3.5 w-3.5" />,
-      completed: hasInsurance,
-    },
-  ];
-
-  const totalItems = basicsItems.length + completePictureItems.length;
-  const completedItems =
-    basicsItems.filter((i) => i.completed).length +
-    completePictureItems.filter((i) => i.completed).length;
+  const {
+    basicsItems,
+    completePictureItems,
+    completedItems,
+    totalItems,
+    score,
+  } = useProfileChecklistUI({ onRiskQuiz: openRiskQuiz });
 
   return (
     <AnimatePresence>

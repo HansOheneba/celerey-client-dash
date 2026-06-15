@@ -149,7 +149,7 @@ export default function ConciergePage() {
     <div className="w-full">
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* LEFT PANEL (LIST) */}
-        <div className="rounded-2xl border border-black/10 bg-white p-3">
+        <div className="rounded-2xl border border-black/10 bg-white p-3" data-tour="primary-action">
           <p className="px-3 pb-3 text-sm font-semibold text-neutral-900">
             Advisory services
           </p>

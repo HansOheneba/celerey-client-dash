@@ -54,13 +54,7 @@ function useRiskQuiz() {
       if (submitted) {
         const riskProfile = submitted.result?.risk_band;
         if (riskProfile) {
-          const storeUser = useFinancialStore.getState().user;
-          if (storeUser) {
-            useFinancialStore.getState().setUser({
-              ...storeUser,
-              risk_profile: riskProfile as any,
-            });
-          }
+          useFinancialStore.getState().setRiskAssessment(submitted);
         }
         onSuccess(submitted);
       } else {
@@ -367,6 +361,16 @@ export default function QuizCard() {
   const [resultLoading, setResultLoading] = useState(true);
   const { openRiskQuiz, riskQuizOpen } = useProfilePanel();
   const prevQuizOpen = useRef(false);
+  const setRiskAssessment = useFinancialStore((s) => s.setRiskAssessment);
+
+  const applyResult = React.useCallback(
+    (r: RiskAssessmentResult | null) => {
+      if (!r) return;
+      setResult(r);
+      setRiskAssessment(r);
+    },
+    [setRiskAssessment],
+  );
 
   useEffect(() => {
     if (!getAuth().loggedIn) {
@@ -374,21 +378,20 @@ export default function QuizCard() {
       return;
     }
     fetchLatestRiskAssessment()
-      .then((r) => {
-        if (r) setResult(r);
+      .then((r) => applyResult(r))
+      .catch(() => {
+        /* session-expired modal handled globally */
       })
       .finally(() => setResultLoading(false));
-  }, []);
+  }, [applyResult]);
 
   // Re-fetch when the quiz panel closes in case the user submitted
   useEffect(() => {
     if (prevQuizOpen.current && !riskQuizOpen && getAuth().loggedIn) {
-      fetchLatestRiskAssessment().then((r) => {
-        if (r) setResult(r);
-      });
+      fetchLatestRiskAssessment().then((r) => applyResult(r));
     }
     prevQuizOpen.current = riskQuizOpen;
-  }, [riskQuizOpen]);
+  }, [riskQuizOpen, applyResult]);
 
   const profileLabel = result ? (result.result?.risk_band ?? "Unknown") : null;
   const scoreValue = result?.scoring?.final_score;
@@ -402,7 +405,7 @@ export default function QuizCard() {
         <p className="mt-1 text-sm text-muted-foreground">
           {result
             ? "Retake the quiz any time to update your profile."
-            : "Take 10 quick questions to understand your investment comfort level."}
+            : "Take a quick questionnaire to understand your investment comfort level."}
         </p>
       </CardHeader>
 
