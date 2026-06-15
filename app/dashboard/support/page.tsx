@@ -155,9 +155,7 @@ function GuidedTourSection() {
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground leading-relaxed max-w-xl">
-            Walk through every section of Celerey step by step. Empty tabs show
-            example data during the tour so you can see what a filled-in
-            dashboard looks like.
+            Walk through every section of Celerey step by step. 
           </p>
           <Button
             size="sm"
