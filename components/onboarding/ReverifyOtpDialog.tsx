@@ -17,6 +17,7 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { sanitizeAuthApiMessage } from "@/lib/auth-api-errors";
 
 const OTP_MESSAGE_TYPE = "OTPAuthMessage:HTML";
 const REQUEST_OTP_ENDPOINT = "/api/proxy/onboarding.generate-otp";
@@ -67,7 +68,10 @@ export function ReverifyOtpDialog({
 
       if (!response.ok || !payload?.success) {
         throw new Error(
-          payload?.message || "Unable to send verification code.",
+          sanitizeAuthApiMessage(
+            payload?.message,
+            "Unable to send verification code.",
+          ),
         );
       }
 
@@ -121,7 +125,12 @@ export function ReverifyOtpDialog({
       } | null;
 
       if (!response.ok || !payload?.success) {
-        throw new Error(payload?.message || "Invalid or expired code.");
+        throw new Error(
+          sanitizeAuthApiMessage(
+            payload?.message,
+            "Invalid or expired code.",
+          ),
+        );
       }
 
       const onboardingToken = payload?.data?.onboarding_token;

@@ -7,6 +7,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+
 const PUBLIC_PATHS = new Set([
   "onboarding.generate-otp",
   "onboarding.verify-otp",
@@ -58,6 +60,24 @@ async function proxyPublicPath(req: NextRequest, path: string) {
 
   const data = await upstream.json().catch(() => null);
   return NextResponse.json(data ?? {}, { status: upstream.status });
+}
+
+function methodNotAllowed(path: string) {
+  return NextResponse.json(
+    {
+      success: false,
+      message: `Endpoint '${path}' only accepts POST requests.`,
+    },
+    { status: 405 },
+  );
+}
+
+export async function GET(
+  _req: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+) {
+  const { path: segments } = await context.params;
+  return methodNotAllowed(segments.join("/"));
 }
 
 export async function POST(

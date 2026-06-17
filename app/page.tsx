@@ -25,6 +25,7 @@ import {
   fetchSubscription,
   prefetchDashboardSummary,
 } from "../lib/dashboard-api";
+import { sanitizeAuthApiMessage } from "../lib/auth-api-errors";
 
 const OTP_MESSAGE_TYPE = "OTPAuthMessage:HTML";
 
@@ -140,7 +141,12 @@ export default function Home() {
           throw new Error("Unable to send verification code.");
         }
 
-        throw new Error(msg || "Unable to send verification code.");
+        throw new Error(
+          sanitizeAuthApiMessage(
+            msg,
+            "Unable to send verification code.",
+          ),
+        );
       }
 
       setStep("otp");
@@ -180,7 +186,12 @@ export default function Home() {
       } | null;
 
       if (!response.ok || !payload?.success) {
-        throw new Error(payload?.message || "Unable to verify code.");
+        throw new Error(
+          sanitizeAuthApiMessage(
+            payload?.message,
+            "Unable to verify code.",
+          ),
+        );
       }
 
       if (mode === "login") {
