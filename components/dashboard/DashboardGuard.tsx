@@ -11,6 +11,7 @@ import {
 } from "@/lib/client-data";
 import { fetchSubscription } from "@/lib/dashboard-api";
 import { CelereyLoader } from "@/components/login/celerey-loader";
+import { isDemoPath } from "@/lib/demo-mode";
 
 type GuardState = "checking" | "allowed" | "redirecting";
 
@@ -19,6 +20,11 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GuardState>("checking");
 
   useEffect(() => {
+    if (typeof window !== "undefined" && isDemoPath(window.location.pathname)) {
+      setState("allowed");
+      return;
+    }
+
     const auth = getAuth();
     if (!auth.loggedIn) {
       router.replace("/");

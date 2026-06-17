@@ -338,12 +338,7 @@ export function CashFlowChart({
     const actualByMonth = new Map(data.map((d) => [d.month, d]));
     const points: EnrichedPoint[] = [];
 
-    // ── Historical: synthetic from configured rows, cashFlowHistory as fallback ──
-    // Synthetic (row-based) always wins when it exists - cashFlowHistory
-    // snapshots are stale by definition (they predate any row edits the user
-    // makes, especially for the current month which may not be over yet).
-    // Only fall back to cashFlowHistory actuals for months that have zero
-    // synthetic coverage (i.e. no rows start on or before that month).
+    // ── Historical: cashFlowHistory wins; synthetic fills gaps only ──
     let m = earliestHistoricalMonth;
     while (m <= currentMonth) {
       const actual = actualByMonth.get(m);
@@ -353,20 +348,29 @@ export function CashFlowChart({
         m,
       );
 
-      // Prefer synthetic; fall back to actual only when rows give us nothing
-      const finalIncome = synthIncome > 0 ? synthIncome : (actual?.income ?? 0);
+      // Prefer recorded history when available; synthetic is fallback only
+      const finalIncome =
+        actual?.income != null
+          ? actual.income
+          : synthIncome > 0
+            ? synthIncome
+            : 0;
       const finalExpenses =
-        synthExpenses > 0 ? synthExpenses : (actual?.expenses ?? 0);
+        actual?.expenses != null
+          ? actual.expenses
+          : synthExpenses > 0
+            ? synthExpenses
+            : 0;
 
       if (actual || finalIncome > 0 || finalExpenses > 0) {
         points.push({
           month: m,
           income: finalIncome,
           expenses: finalExpenses,
-          // Keep recorded surplus only when we're using actual data
+          // Keep recorded surplus when using history
           surplus:
-            synthIncome === 0 && synthExpenses === 0
-              ? actual?.surplus
+            actual?.income != null
+              ? (actual.surplus ?? actual.income - actual.expenses)
               : undefined,
           isProjected: false,
           label: toLabel(m),

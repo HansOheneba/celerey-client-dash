@@ -22,10 +22,12 @@ import { useProfilePanel } from "@/components/dashboard/ProfilePanelContext";
 import { dashboardTheme } from "@/lib/dashboard-theme";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { AskCelereyAIButton } from "@/components/dashboard/ask-celerey-ai-button";
+import { isDemoMode } from "@/lib/demo-mode";
 
 /** Triggers zustand-persist rehydration from localStorage after mount. */
 function StoreHydrator() {
   useEffect(() => {
+    if (isDemoMode()) return;
     useFinancialStore.persist.rehydrate();
   }, []);
   return null;

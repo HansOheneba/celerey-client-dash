@@ -22,6 +22,7 @@ import {
 import { useFinancialStore } from "@/store/financialStore";
 import { hasCompletedRiskAssessment } from "@/lib/profile-checklist";
 import { getAuth } from "@/lib/client-data";
+import { isDemoMode } from "@/lib/demo-mode";
 import { useProfilePanel } from "@/components/dashboard/ProfilePanelContext";
 
 const START_DELAY_MS = 600;
@@ -269,6 +270,7 @@ export function DashboardTour({ layoutReady }: DashboardTourProps) {
 
   React.useEffect(() => {
     if (!layoutReady || !userId || startedRef.current) return;
+    if (isDemoMode()) return;
     if (isTourCompleted(userId)) return;
 
     // Only auto-start for users arriving from onboarding (pending flag set),

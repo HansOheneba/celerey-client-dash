@@ -564,7 +564,7 @@ export default function DashboardPage() {
       store.cashFlowHistory.map((d: CashFlowPoint) => [d.month, d]),
     );
 
-    // ── Historical: synthetic wins; stale cashFlowHistory is fallback only ──
+    // ── Historical: cashFlowHistory wins; synthetic fills gaps only ──
     type ChartPoint = {
       month: string;
       label: string;
@@ -584,11 +584,19 @@ export default function DashboardPage() {
         store.expenseCategories,
         m,
       );
-      // Synthetic rows always win; only fall back to recorded actuals when
-      // the rows themselves produce nothing (e.g. months before any row exists)
-      const finalIncome = synthIncome > 0 ? synthIncome : (actual?.income ?? 0);
+      // Prefer recorded history when available; synthetic is fallback only
+      const finalIncome =
+        actual?.income != null
+          ? actual.income
+          : synthIncome > 0
+            ? synthIncome
+            : 0;
       const finalExpenses =
-        synthExpenses > 0 ? synthExpenses : (actual?.expenses ?? 0);
+        actual?.expenses != null
+          ? actual.expenses
+          : synthExpenses > 0
+            ? synthExpenses
+            : 0;
 
       if (actual || finalIncome > 0 || finalExpenses > 0) {
         points.push({
@@ -1081,7 +1089,7 @@ export default function DashboardPage() {
                           {/* Actual data lines */}
                           <Line
                             dataKey="income"
-                            type="monotone"
+                            type="linear"
                             stroke={INCOME_COLOR}
                             strokeWidth={2}
                             dot={false}
@@ -1089,7 +1097,7 @@ export default function DashboardPage() {
                           />
                           <Line
                             dataKey="expenses"
-                            type="monotone"
+                            type="linear"
                             stroke={EXPENSES_COLOR}
                             strokeWidth={2}
                             dot={false}
@@ -1098,7 +1106,7 @@ export default function DashboardPage() {
                           {/* Projected lines - dashed */}
                           <Line
                             dataKey="projIncome"
-                            type="monotone"
+                            type="linear"
                             stroke={INCOME_COLOR}
                             strokeWidth={2}
                             strokeDasharray="4 3"
@@ -1109,7 +1117,7 @@ export default function DashboardPage() {
                           />
                           <Line
                             dataKey="projExpenses"
-                            type="monotone"
+                            type="linear"
                             stroke={EXPENSES_COLOR}
                             strokeWidth={2}
                             strokeDasharray="4 3"

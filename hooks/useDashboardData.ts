@@ -24,6 +24,7 @@ import {
 } from "@/lib/client-data";
 import { markPageKeysFetched } from "@/hooks/usePageData";
 import { mergeUserWithRiskAssessment } from "@/lib/map-api-user";
+import { isDemoMode } from "@/lib/demo-mode";
 
 // Module-level — survives component remounts (e.g. React StrictMode double-fire,
 // layout re-renders). Resets only on a hard page reload.
@@ -36,6 +37,7 @@ export function useDashboardData() {
 
   useEffect(() => {
     if (_bootstrapped) return;
+    if (isDemoMode()) return;
     // Skip all API calls if there's no valid session — DashboardGuard will redirect.
     if (!getAuth().loggedIn) return;
     _bootstrapped = true;

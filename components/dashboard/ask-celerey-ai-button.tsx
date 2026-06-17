@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useProfilePanel } from "@/components/dashboard/ProfilePanelContext";
+import { fromDemoPath, isDemoPath, toDemoPath } from "@/lib/demo-mode";
 
 const PROMPT_MAP: Record<string, string> = {
   "/dashboard":
@@ -40,15 +41,26 @@ export function AskCelereyAIButton() {
   const router = useRouter();
   const { isOpen } = useProfilePanel();
 
-  // Hide on the AI page itself, and when the profile panel is open
-  if (pathname === "/dashboard/ai" || isOpen) return null;
+  const inDemo = isDemoPath(pathname);
 
+  // Hide on the AI page itself, and when the profile panel is open
+  if (
+    pathname === "/dashboard/ai" ||
+    pathname === "/dashboard/demo/ai" ||
+    isOpen
+  )
+    return null;
+
+  const promptKey = fromDemoPath(pathname);
   const prompt =
-    PROMPT_MAP[pathname] ??
+    PROMPT_MAP[promptKey] ??
     "Give me a personalised summary of my financial health.";
 
   function handleClick() {
-    router.push(`/dashboard/ai?prompt=${encodeURIComponent(prompt)}`);
+    const aiHref = inDemo
+      ? toDemoPath("/dashboard/ai")
+      : "/dashboard/ai";
+    router.push(`${aiHref}?prompt=${encodeURIComponent(prompt)}`);
   }
 
   return (

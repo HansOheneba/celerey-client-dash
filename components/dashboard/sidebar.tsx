@@ -66,6 +66,7 @@ import { useClientGate } from "@/lib/useClientGate";
 import { useEffect, useMemo, useState } from "react";
 import { useProfilePanel } from "./ProfilePanelContext";
 import { useMockUpgrade } from "@/hooks/useMockUpgrade";
+import { isDemoPath, toDemoPath } from "@/lib/demo-mode";
 
 const nav = [
   { label: "Overview", href: "/dashboard", icon: faChartPie },
@@ -118,6 +119,9 @@ export default function DashboardSidebar() {
     (s) => s.profileCompletionScore,
   );
   const { isOpen, open: openProfilePanel } = useProfilePanel();
+  const inDemo = isDemoPath(pathname);
+  const navHref = (href: string) => (inDemo ? toDemoPath(href) : href);
+  const homeHref = inDemo ? toDemoPath("/dashboard") : "/dashboard";
 
   // ── Attention badges: incomplete checklist items mapped to their nav href ──
   const store = useFinancialStore();
@@ -176,7 +180,7 @@ export default function DashboardSidebar() {
 
       {/* ── Header: Logo ── */}
       <SidebarHeader className="sticky top-0 z-10 h-14 flex-row items-center justify-center p-0 px-3 border-b border-white/10 bg-white/5 backdrop-blur-xl">
-        <Link href="/dashboard" className="flex items-center">
+        <Link href={homeHref} className="flex items-center">
           {/* Full logo and symbol overlap and crossfade simultaneously - no stutter */}
           <div className="relative">
             <motion.div
@@ -215,10 +219,11 @@ export default function DashboardSidebar() {
       <SidebarContent className="relative z-10 px-2 overflow-hidden">
         <SidebarMenu className="flex flex-col gap-1 mt-2">
           {nav.map((item) => {
+            const href = navHref(item.href);
             const active =
-              item.href === "/dashboard"
-                ? pathname === "/dashboard"
-                : pathname.startsWith(item.href);
+              href === homeHref
+                ? pathname === homeHref
+                : pathname.startsWith(href);
 
             const tourNavId =
               item.href === "/dashboard"
@@ -239,7 +244,7 @@ export default function DashboardSidebar() {
                 >
                   <Link
                     className="flex items-center gap-2.5"
-                    href={item.href}
+                    href={href}
                     data-tour-nav={tourNavId}
                   >
                     <span className="shrink-0">
@@ -396,7 +401,7 @@ export default function DashboardSidebar() {
               className="h-9 hover:bg-white/8"
             >
               <Link
-                href="/dashboard/support"
+                href={navHref("/dashboard/support")}
                 className="flex items-center gap-2.5 px-2.5"
               >
                 <FontAwesomeIcon

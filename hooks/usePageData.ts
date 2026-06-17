@@ -31,6 +31,7 @@ import {
   applySubscriptionFromApiUser,
   mergeUserWithRiskAssessment,
 } from "@/lib/map-api-user";
+import { isDemoMode } from "@/lib/demo-mode";
 
 export type PageDataKey =
   | "goals"
@@ -86,6 +87,12 @@ export function usePageData(key: PageDataKey) {
     // Prevent double-fire in React StrictMode
     if (mounted.current) return;
     mounted.current = true;
+
+    if (isDemoMode()) {
+      setLoading(false);
+      _lastFetched.set(key, Date.now());
+      return;
+    }
 
     // Skip if this key was already fetched recently
     const lastFetch = _lastFetched.get(key) ?? 0;
