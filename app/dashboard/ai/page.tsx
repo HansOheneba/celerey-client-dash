@@ -19,7 +19,9 @@ import {
   Copy,
   Check,
   Square,
+  CalendarDays,
 } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useClientGate } from "@/lib/useClientGate";
 import {
@@ -27,6 +29,8 @@ import {
 } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
 import { useSearchParams } from "next/navigation";
+import { isDemoMode, toDemoPath } from "@/lib/demo-mode";
+import { streamAiChatReply } from "@/lib/ai-chat-client";
 import {
   buildFinancialSnapshot,
   buildGreeting,
@@ -165,7 +169,13 @@ function InsightCard({
 
 // ── Message bubble ────────────────────────────────────────────────────────────
 
-function MessageBubble({ msg }: { msg: ChatMessage }) {
+function MessageBubble({
+  msg,
+  isStreaming = false,
+}: {
+  msg: ChatMessage;
+  isStreaming?: boolean;
+}) {
   const isAI = msg.role === "ai";
   const [copied, setCopied] = React.useState(false);
 
@@ -218,9 +228,15 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                     part
                   ),
                 )}
+                {isStreaming && i === msg.text.split("\n").length - 1 ? (
+                  <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-foreground/70 align-middle" />
+                ) : null}
               </p>
             );
           })}
+          {isStreaming && msg.text.length === 0 ? (
+            <span className="inline-block h-4 w-0.5 animate-pulse bg-foreground/70" />
+          ) : null}
         </div>
         {isAI && (
           <button
@@ -255,16 +271,21 @@ export default function AIInsightsPage() {
   const searchParams = useSearchParams();
   const { ready, auth } = useClientGate();
   const store = useFinancialStore();
+  const demoMode = isDemoMode();
+  const advisorHref = toDemoPath("/dashboard/advisor");
 
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
   const [input, setInput] = React.useState("");
   const [typing, setTyping] = React.useState(false);
+  const [streamingMessageId, setStreamingMessageId] = React.useState<
+    string | null
+  >(null);
   const [activeKind, setActiveKind] = React.useState<InsightKind | "all">(
     "all",
   );
   const endRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const typingTimeoutRef = React.useRef<number | null>(null);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
 
   const snapshot = React.useMemo(
     () =>
@@ -416,11 +437,6 @@ export default function AIInsightsPage() {
     return list;
   }, [snapshot]);
 
-  const respond = React.useCallback(
-    (q: string) => generateLocalAiResponse(q, snapshot),
-    [snapshot],
-  );
-
   const greetingSet = React.useRef(false);
   const promptAutoSent = React.useRef(false);
 
@@ -438,22 +454,31 @@ export default function AIInsightsPage() {
   }, [snapshot]);
 
   React.useEffect(() => {
-    if (!ready || !auth.loggedIn || promptAutoSent.current) return;
+    if (!ready || (!auth.loggedIn && !demoMode) || promptAutoSent.current)
+      return;
     const urlPrompt = searchParams.get("prompt")?.trim();
     if (!urlPrompt) return;
     promptAutoSent.current = true;
     const timer = window.setTimeout(() => send(urlPrompt), 450);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, auth.loggedIn, searchParams]);
+  }, [ready, auth.loggedIn, demoMode, searchParams]);
 
   React.useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typing]);
 
-  function send(text: string) {
+  async function send(text: string) {
     const t = text.trim();
     if (!t || typing) return;
+
+    const history = messages
+      .filter((m) => m.id !== "greeting")
+      .map((m) => ({
+        role: m.role === "user" ? ("user" as const) : ("assistant" as const),
+        content: m.text,
+      }));
+
     setMessages((prev) => [
       ...prev,
       { id: `u-${Date.now()}`, role: "user", text: t, timestamp: new Date() },
@@ -462,38 +487,86 @@ export default function AIInsightsPage() {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     setTyping(true);
-    typingTimeoutRef.current = window.setTimeout(
-      () => {
+
+    const aiId = `a-${Date.now()}`;
+    let streamed = false;
+
+    try {
+      await streamAiChatReply({
+        messages: [...history, { role: "user", content: t }],
+        snapshot,
+        isDemo: demoMode,
+        signal: controller.signal,
+        onDelta: (text) => {
+          if (!streamed) {
+            streamed = true;
+            setTyping(false);
+            setStreamingMessageId(aiId);
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: aiId,
+                role: "ai",
+                text,
+                timestamp: new Date(),
+              },
+            ]);
+            return;
+          }
+
+          setMessages((prev) =>
+            prev.map((m) => (m.id === aiId ? { ...m, text } : m)),
+          );
+        },
+      });
+    } catch (error) {
+      if (controller.signal.aborted) return;
+
+      const fallback = generateLocalAiResponse(t, snapshot);
+      const reply = fallback.includes("financial advice")
+        ? fallback
+        : `${fallback}\n\n*This is educational guidance only, not financial advice. For personalised advice, book a session with a Celerey advisor.*`;
+
+      if (streamed) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === aiId ? { ...m, text: reply } : m)),
+        );
+      } else {
+        setTyping(false);
         setMessages((prev) => [
           ...prev,
           {
-            id: `a-${Date.now()}`,
+            id: aiId,
             role: "ai",
-            text: respond(t),
+            text: reply,
             timestamp: new Date(),
           },
         ]);
-        setTyping(false);
-        typingTimeoutRef.current = null;
-      },
-      1100 + Math.random() * 700,
-    );
+      }
+    } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
+      setStreamingMessageId(null);
+      setTyping(false);
+    }
   }
 
   function stopGenerating() {
-    if (typingTimeoutRef.current != null) {
-      window.clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-    }
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setStreamingMessageId(null);
     setTyping(false);
   }
 
   function newChat() {
-    if (typingTimeoutRef.current != null) {
-      window.clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-    }
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setStreamingMessageId(null);
     setTyping(false);
     greetingSet.current = false;
     setMessages([]);
@@ -523,7 +596,7 @@ export default function AIInsightsPage() {
       ? insights
       : insights.filter((i) => i.kind === activeKind);
 
-  if (!ready || !auth.loggedIn) return null;
+  if (!ready || (!auth.loggedIn && !demoMode)) return null;
 
   const isEmptyState = messages.length <= 1 && messages[0]?.id === "greeting";
 
@@ -581,6 +654,22 @@ export default function AIInsightsPage() {
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             Online
           </span>
+        </div>
+      </div>
+
+      <div className="shrink-0 border-b border-border/60 bg-amber-50/80 px-4 py-2 sm:px-6">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[11px] leading-relaxed text-amber-950/80">
+            Celerey AI helps you understand your finances. It does not provide
+            financial advice.
+          </p>
+          <Link
+            href={advisorHref}
+            className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-[#1e3a5f] hover:underline"
+          >
+            <CalendarDays className="h-3.5 w-3.5" />
+            Book an advisor session
+          </Link>
         </div>
       </div>
 
@@ -698,7 +787,11 @@ export default function AIInsightsPage() {
             <div className="space-y-5">
               <AnimatePresence initial={false}>
                 {messages.map((msg) => (
-                  <MessageBubble key={msg.id} msg={msg} />
+                  <MessageBubble
+                    key={msg.id}
+                    msg={msg}
+                    isStreaming={msg.id === streamingMessageId}
+                  />
                 ))}
                 {typing && (
                   <motion.div
@@ -780,8 +873,8 @@ export default function AIInsightsPage() {
             )}
           </div>
           <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
-            Celerey AI uses your live financial data. Verify important figures
-            with your advisor.
+            Educational guidance only. Verify important figures with your
+            advisor.
           </p>
         </div>
       </div>
