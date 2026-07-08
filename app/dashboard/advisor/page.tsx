@@ -8,6 +8,7 @@ import { Lock, ArrowRight, CalendarDays } from "lucide-react";
 import { useClientGate } from "@/lib/useClientGate";
 import { canAccessFeature, formatCurrency } from "@/lib/client-data";
 import { useFinancialStore } from "@/store/financialStore";
+import { isDemoMode } from "@/lib/demo-mode";
 import { Button } from "@/components/ui/button";
 import {
   DashCard,
@@ -64,6 +65,7 @@ const ACCENT = "rgb(140, 128, 248)";
 export default function AdvisoryPage() {
   const router = useRouter();
   const { ready, auth, sub } = useClientGate();
+  const demoMode = isDemoMode();
   const currency = useFinancialStore((s) => s.user?.currency ?? "USD");
 
   const isTrial = sub.status === "trialing" || sub.status === "none";
@@ -114,7 +116,7 @@ export default function AdvisoryPage() {
     );
   }
 
-  if (!ready || !auth.loggedIn) return null;
+  if (!ready || (!auth.loggedIn && !demoMode)) return null;
 
   if (!canAccessFeature(sub, "advisorChat")) {
     return (

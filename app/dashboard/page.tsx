@@ -34,6 +34,7 @@ import { fetchSubscription } from "../../lib/dashboard-api";
 import { useMonthlySnapshot } from "@/hooks/useMonthlySnapshot";
 import { usePageData } from "@/hooks/usePageData";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { isDemoMode } from "@/lib/demo-mode";
 import {
   canAccessFeature,
   type FeatureKey,
@@ -388,7 +389,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!ready) return;
-    if (!auth.loggedIn) {
+    // Demo visitors are not logged in / onboarded - keep them on the demo
+    // dashboard instead of bouncing to login.
+    if (!auth.loggedIn && !isDemoMode()) {
       router.replace("/");
       return;
     }
