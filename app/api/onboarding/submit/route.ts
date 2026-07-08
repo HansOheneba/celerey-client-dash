@@ -122,13 +122,29 @@ export async function POST(req: NextRequest) {
 
   // If the API returned a session_token, store it as an HttpOnly cookie
   // so JS never has to read or store it on the client.
-  const sessionToken = data?.data?.session_token;
+  const sessionToken =
+    (typeof data?.data?.session_token === "string"
+      ? data.data.session_token
+      : undefined) ??
+    (typeof (data as { session_token?: unknown } | null)?.session_token ===
+    "string"
+      ? (data as { session_token: string }).session_token
+      : undefined);
+
   if (typeof sessionToken === "string" && sessionToken.length > 0) {
     res.cookies.set(SESSION_TOKEN_COOKIE, sessionToken, {
       httpOnly: true,
       secure: isProd,
       sameSite: "strict",
       path: "/",
+    });
+    // Prefer session cookie going forward - drop the short-lived onboarding token.
+    res.cookies.set(ONBOARDING_TOKEN_COOKIE, "", {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "strict",
+      path: "/",
+      maxAge: 0,
     });
   }
 

@@ -237,9 +237,11 @@ export function Step7Review({
         setSubmitError("");
         setReverifyOpen(true);
       } else {
-        setSubmitError(
-          "Something went wrong. Please try again. Your progress is saved.",
-        );
+        const detail =
+          err instanceof Error && err.message.trim().length > 0
+            ? err.message
+            : "Something went wrong. Please try again.";
+        setSubmitError(`${detail} Your progress is saved.`);
       }
     } finally {
       setIsSubmitting(false);
