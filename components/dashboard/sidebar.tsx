@@ -179,7 +179,7 @@ export default function DashboardSidebar() {
       />
 
       {/* ── Header: Logo ── */}
-      <SidebarHeader className="sticky top-0 z-10 h-14 flex-row items-center justify-center p-0 px-3 border-b border-white/10 bg-white/5 backdrop-blur-xl">
+      <SidebarHeader className="sticky top-0 z-10 h-16 flex-row items-center justify-center p-0 px-3 border-b border-white/10 bg-white/5 backdrop-blur-xl">
         <Link href={homeHref} className="flex items-center">
           {/* Full logo and symbol overlap and crossfade simultaneously - no stutter */}
           <div className="relative">
