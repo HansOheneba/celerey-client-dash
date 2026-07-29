@@ -7,18 +7,6 @@ import {
 const isProd = process.env.NODE_ENV === "production";
 
 export async function POST(req: NextRequest) {
-  // Token is in an HttpOnly cookie — JS never touches it.
-  const token = req.cookies.get(ONBOARDING_TOKEN_COOKIE)?.value;
-  if (!token) {
-    return NextResponse.json(
-      {
-        error:
-          "Unauthorized — onboarding session expired. Please log in again.",
-      },
-      { status: 401 },
-    );
-  }
-
   const baseUrl = process.env.NEXT_PUBLIC_BASE_API_URL?.replace(/\/$/, "");
   if (!baseUrl) {
     return NextResponse.json(
@@ -27,9 +15,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: unknown;
+  let body: { invite_token?: unknown; [key: string]: unknown };
   try {
-    body = await req.json();
+    body = (await req.json()) as typeof body;
   } catch {
     return NextResponse.json(
       { error: "Invalid request body." },
@@ -37,7 +25,30 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const endpoint = `${baseUrl}/onboarding.create-user`;
+  // Admin-invited clients complete onboarding via a dedicated route that is
+  // NOT gated by the OTP-verified onboarding token — possession of the
+  // invite_token is itself the proof of identity, validated server-side.
+  const isInvite =
+    typeof body.invite_token === "string" && body.invite_token.length > 0;
+
+  let token: string | undefined;
+  if (!isInvite) {
+    // Token is in an HttpOnly cookie — JS never touches it.
+    token = req.cookies.get(ONBOARDING_TOKEN_COOKIE)?.value;
+    if (!token) {
+      return NextResponse.json(
+        {
+          error:
+            "Unauthorized — onboarding session expired. Please log in again.",
+        },
+        { status: 401 },
+      );
+    }
+  }
+
+  const endpoint = isInvite
+    ? `${baseUrl}/onboarding.create-user-via-invite`
+    : `${baseUrl}/onboarding.create-user`;
 
   console.log("\n── [onboarding/submit] Outgoing request ──────────────────");
   console.log("URL    :", endpoint);
@@ -54,7 +65,7 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(body),
         signal: controller.signal,

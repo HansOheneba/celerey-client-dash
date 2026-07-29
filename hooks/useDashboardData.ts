@@ -13,6 +13,7 @@ import {
   fetchDashboardSummary,
   consumeDashboardSummaryPrefetch,
   fetchLatestRiskAssessment,
+  isCompleteRiskAssessment,
   type DashboardSummaryData,
   SessionExpiredError,
 } from "@/lib/dashboard-api";
@@ -52,14 +53,17 @@ export function useDashboardData() {
         if (!summary) return;
 
         let riskAssessment = summary.riskAssessment;
-        if (!riskAssessment) {
-          riskAssessment = await fetchLatestRiskAssessment();
+        if (!isCompleteRiskAssessment(riskAssessment)) {
+          const latest = await fetchLatestRiskAssessment();
+          if (isCompleteRiskAssessment(latest)) {
+            riskAssessment = latest;
+          }
         }
 
         if (summary.user) {
           setUser(mergeUserWithRiskAssessment(summary.user, riskAssessment));
         }
-        if (riskAssessment) {
+        if (isCompleteRiskAssessment(riskAssessment)) {
           setRiskAssessment(riskAssessment);
         }
 

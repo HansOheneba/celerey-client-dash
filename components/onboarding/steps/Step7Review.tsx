@@ -33,6 +33,8 @@ interface Step7ReviewProps {
   onEditStep: (step: number) => void;
   onBack?: () => void;
   email: string;
+  /** Set for admin-invited clients completing onboarding from an invite link. */
+  inviteToken?: string;
 }
 
 function SectionCard({
@@ -125,7 +127,7 @@ function SetupOverlay() {
           }}
         />
         <Image
-          src="https://i.ibb.co/d0v22fZp/logo-Dark.png"
+          src="/logos/logoDark.png"
           alt="Celerey"
           width={110}
           height={110}
@@ -163,6 +165,7 @@ export function Step7Review({
   onEditStep,
   onBack,
   email,
+  inviteToken,
 }: Step7ReviewProps) {
   const store = useOnboardingStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -201,7 +204,7 @@ export function Step7Review({
     setSubmitError("");
 
     try {
-      const result = await submitOnboarding(payload);
+      const result = await submitOnboarding(payload, inviteToken);
 
       // Kick off the dashboard summary fetch immediately so it's already
       // in-flight / ready by the time the user reaches /dashboard.
@@ -232,8 +235,10 @@ export function Step7Review({
       setOnboarded();
       onComplete();
     } catch (err) {
-      if (err instanceof TokenExpiredError) {
+      if (err instanceof TokenExpiredError && !inviteToken) {
         // Open the in-place reverify dialog instead of bouncing the user home.
+        // Not applicable to invited clients - they never hold an
+        // OTP-verified onboarding token to begin with.
         setSubmitError("");
         setReverifyOpen(true);
       } else {

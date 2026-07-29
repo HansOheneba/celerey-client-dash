@@ -15,6 +15,9 @@ import { isDemoPath } from "@/lib/demo-mode";
 
 type GuardState = "checking" | "allowed" | "redirecting";
 
+/** Prevents a /dashboard ↔ /choose-plan bounce if localStorage is stale. */
+const PAYWALL_REDIRECT_KEY = "celerey:paywall-redirect";
+
 export function DashboardGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [state, setState] = useState<GuardState>("checking");
@@ -27,10 +30,12 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
 
     const auth = getAuth();
     if (!auth.loggedIn) {
+      setState("redirecting");
       router.replace("/");
       return;
     }
     if (!isOnboarded()) {
+      setState("redirecting");
       router.replace("/onboarding");
       return;
     }
@@ -40,6 +45,11 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("sub") === "success") {
+        try {
+          sessionStorage.removeItem(PAYWALL_REDIRECT_KEY);
+        } catch {
+          /* noop */
+        }
         setState("allowed");
         return;
       }
@@ -48,13 +58,15 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
     // Verify subscription status with the backend.
     // Race against an 8-second timeout so a slow backend never leaves the
     // user staring at the loader indefinitely.
-    const timeoutId = { current: 0 };
+    let cancelled = false;
+    let timeoutId = 0;
     const timeoutPromise = new Promise<null>((resolve) => {
-      timeoutId.current = window.setTimeout(() => resolve(null), 8_000);
+      timeoutId = window.setTimeout(() => resolve(null), 8_000);
     });
 
     Promise.race([fetchSubscription(), timeoutPromise]).then((data) => {
-      clearTimeout(timeoutId.current);
+      clearTimeout(timeoutId);
+      if (cancelled) return;
 
       if (data === null) {
         // API error or timeout - fall back to cached subscription to avoid
@@ -63,24 +75,47 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
         if (local.status === "trialing" || local.status === "active") {
           setState("allowed");
         } else {
-          router.replace("/choose-plan");
           setState("redirecting");
+          router.replace("/choose-plan");
         }
         return;
       }
 
+      // Always persist the API payload so a stale local mock trial ("trialing")
+      // cannot fight the backend "none" and bounce /choose-plan → /dashboard.
+      setSubscriptionData(data);
+
       const status = data.subscription_status;
       if (status === "trialing" || status === "active") {
-        setSubscriptionData(data);
+        try {
+          sessionStorage.removeItem(PAYWALL_REDIRECT_KEY);
+        } catch {
+          /* noop */
+        }
         setState("allowed");
-      } else {
-        router.replace("/choose-plan");
-        setState("redirecting");
+        return;
       }
+
+      // Mark that we are intentionally sending the user to the paywall so
+      // choose-plan does not immediately send them back on stale local state.
+      try {
+        sessionStorage.setItem(PAYWALL_REDIRECT_KEY, String(Date.now()));
+      } catch {
+        /* noop */
+      }
+      setState("redirecting");
+      router.replace("/choose-plan");
     });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
   }, [router]);
 
   if (state === "checking") return <CelereyLoader />;
   if (state !== "allowed") return null;
   return <>{children}</>;
 }
+
+export { PAYWALL_REDIRECT_KEY };

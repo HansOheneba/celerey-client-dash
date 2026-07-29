@@ -38,10 +38,6 @@ import type {
   ApiCashFlowSummary,
   RiskAssessmentResult,
 } from "@/lib/dashboard-api";
-import {
-  getRiskBand,
-  preferRiskAssessment,
-} from "@/lib/dashboard-api";
 import { type GoalsMeta, EMPTY_GOALS_META } from "@/lib/goals-meta";
 
 // ── Legacy types ──────────────────────────────────────────────────────────────
@@ -332,32 +328,23 @@ export const useFinancialStore = create<FinancialState>()(
 
       setUser: (user) =>
         set((s) => {
-          const band = getRiskBand(s.riskAssessment);
-          const mergedUser =
-            user && band && !user.risk_profile
-              ? { ...user, risk_profile: band as User["risk_profile"] }
-              : user;
-          const n = { ...s, user: mergedUser };
+          const n = { ...s, user };
           return {
-            user: mergedUser,
+            user,
             profileCompletionScore: computeProfileCompletionScore(n),
           };
         }),
 
       setRiskAssessment: (riskAssessment) =>
         set((s) => {
-          const resolved = preferRiskAssessment(
-            riskAssessment,
-            s.riskAssessment,
-          );
-          const band = getRiskBand(resolved);
+          const band = riskAssessment?.result?.risk_band;
           const user =
             s.user && band
               ? { ...s.user, risk_profile: band as User["risk_profile"] }
               : s.user;
-          const n = { ...s, riskAssessment: resolved, user };
+          const n = { ...s, riskAssessment, user };
           return {
-            riskAssessment: resolved,
+            riskAssessment,
             user,
             profileCompletionScore: computeProfileCompletionScore(n),
           };
@@ -889,11 +876,9 @@ export const useFinancialStore = create<FinancialState>()(
             activeGoals: activeGoals.length,
           };
 
-          const resolvedRiskAssessment = preferRiskAssessment(
-            riskAssessment,
-            s.riskAssessment,
-          );
-          const band = getRiskBand(resolvedRiskAssessment);
+          const resolvedRiskAssessment =
+            riskAssessment !== undefined ? riskAssessment : s.riskAssessment;
+          const band = resolvedRiskAssessment?.result?.risk_band;
           const user =
             s.user && band
               ? { ...s.user, risk_profile: band as User["risk_profile"] }

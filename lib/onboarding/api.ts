@@ -187,11 +187,20 @@ function toUserProfile(raw: Record<string, unknown>): UserProfile {
  * Submits the full onboarding payload to the backend via the secure
  * server-side route, which attaches the HttpOnly onboarding_token cookie
  * as a Bearer token header so JS never has to read it.
+ *
+ * If `inviteToken` is provided (admin-invited client completing onboarding
+ * from an invite link), the server route instead calls
+ * onboarding.create-user-via-invite, which needs no onboarding-token cookie -
+ * the invite_token itself is the proof of identity.
  */
 export async function submitOnboarding(
   payload: OnboardingPayload,
+  inviteToken?: string,
 ): Promise<SubmitOnboardingResult> {
-  const body = buildApiPayload(payload);
+  const body = {
+    ...buildApiPayload(payload),
+    ...(inviteToken ? { invite_token: inviteToken } : {}),
+  };
 
   const response = await fetch("/api/onboarding/submit", {
     method: "POST",

@@ -1,17 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "ibb.co",
-      },
-      {
-        protocol: "https",
-        hostname: "i.ibb.co",
-      },
-    ],
-  },
   // OTP auth used to rely on a /api/proxy/:path* rewrite here. That baked
   // NEXT_PUBLIC_BASE_API_URL in at build time, so Preview deploys (or any build
   // without the env var) proxied to "undefined/..." and users saw errors like

@@ -8,7 +8,7 @@ import { Info, ArrowRight } from "lucide-react";
 import { useClientGate } from "../../lib/useClientGate";
 import { isOnboarded } from "../../lib/client-data";
 import { createCheckoutSession } from "../../lib/dashboard-api";
-import { CelereyLoader } from "../../components/login/celerey-loader";
+import { PAYWALL_REDIRECT_KEY } from "../../components/dashboard/DashboardGuard";
 
 type FeatureRow = {
   label: string;
@@ -160,7 +160,7 @@ function LogoSplash({ onDone }: { onDone: () => void }) {
           }}
         >
           <img
-            src="https://i.ibb.co/d0v22fZp/logo-Dark.png"
+            src="/logos/logoDark.png"
             alt="Celerey"
             style={{
               width: 120, // ⬅️ bigger logo
@@ -206,7 +206,23 @@ export default function ChoosePlanPage() {
       return;
     }
 
-    if (sub.status === "trialing" || sub.status === "active") {
+    // DashboardGuard just sent us here because the API reported no
+    // subscription. Do not bounce back to /dashboard on a stale local
+    // "trialing" mock - that is what caused the loading-screen loop.
+    let fromPaywallGuard = false;
+    try {
+      fromPaywallGuard = !!sessionStorage.getItem(PAYWALL_REDIRECT_KEY);
+      if (fromPaywallGuard) {
+        sessionStorage.removeItem(PAYWALL_REDIRECT_KEY);
+      }
+    } catch {
+      /* noop */
+    }
+
+    if (
+      !fromPaywallGuard &&
+      (sub.status === "trialing" || sub.status === "active")
+    ) {
       router.replace("/dashboard");
       return;
     }

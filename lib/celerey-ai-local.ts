@@ -1,5 +1,7 @@
 import type {
   AssetHolding,
+  CashFlowPoint,
+  CashFlowRow,
   EmergencyFundConfig,
   ExpenseCategory,
   Goal,
@@ -9,18 +11,20 @@ import type {
   RetirementConfig,
   TaxProfile,
   User,
+  Account,
 } from "@/lib/client-data";
 import {
   calculateNetWorth,
   currentValue,
   formatCurrency,
 } from "@/lib/client-data";
+import type { ApiCashFlowSummary } from "@/lib/dashboard-api";
 
 // ── Snapshot ─────────────────────────────────────────────────────────────────
 
 export type AiStoreSnapshot = {
   user: User | null;
-  incomeRows: { amount: number; label?: string }[];
+  incomeRows: CashFlowRow[];
   expenseCategories: ExpenseCategory[];
   goals: Goal[];
   retirement: RetirementConfig;
@@ -31,10 +35,25 @@ export type AiStoreSnapshot = {
   propertyAssets: Property[];
   taxProfile: TaxProfile;
   profileCompletionScore: number;
+  cashFlowHistory?: CashFlowPoint[];
+  cashFlowSummary?: ApiCashFlowSummary | null;
+  accounts?: Account[];
+};
+
+export type CashFlowHistoryPoint = {
+  month: string;
+  income: number;
+  expenses: number;
+  surplus: number;
 };
 
 export type FinancialSnapshot = {
   firstName: string;
+  currency: string;
+  country: string | null;
+  occupation: string | null;
+  maritalStatus: string | null;
+  dependents: number | null;
   netWorth: number;
   monthlyIncome: number;
   monthlyExpenses: number;
@@ -69,6 +88,65 @@ export type FinancialSnapshot = {
   holdingsCount: number;
   largestHolding: AssetHolding | null;
   liabilities: Liability[];
+  /** Full month-by-month cash flow (not just current month). */
+  cashFlowHistory: CashFlowHistoryPoint[];
+  /** Server averages / MoM when available. */
+  cashFlowSummary: {
+    currentMonth: ApiCashFlowSummary["current_month"] | null;
+    monthOverMonth: ApiCashFlowSummary["month_over_month"] | null;
+    averages: ApiCashFlowSummary["averages"] | null;
+  } | null;
+  incomeSources: { name: string; amount: number; recurring: boolean }[];
+  expenseBreakdown: {
+    name: string;
+    amount: number;
+    essential: boolean;
+    recurring: boolean;
+  }[];
+  holdings: {
+    name: string;
+    symbol?: string;
+    assetType: string;
+    value: number;
+    costBasis: number;
+    gainPct: number | null;
+  }[];
+  properties: {
+    name: string;
+    type: string;
+    marketValue: number;
+    mortgageBalance: number;
+    equity: number;
+    country: string;
+    city: string;
+    insured: boolean;
+  }[];
+  insurance: {
+    name: string;
+    category: string;
+    provider: string;
+    coverageAmount: number;
+    premiumMonthly: number;
+  }[];
+  accounts: { name: string; type: string; balance: number; institution: string }[];
+  retirementDetails: {
+    lifeExpectancy: number;
+    existingPensionBalance: number;
+    monthlyPensionContribution: number;
+    expectedReturnPct: number;
+    inflationPct: number;
+    safeWithdrawalRatePct: number;
+  };
+  goalsDetail: {
+    title: string;
+    category: string;
+    target: number;
+    current: number;
+    completed: boolean;
+    yearsRemaining: number;
+    monthlyContributionNeeded: number;
+    probability: number;
+  }[];
 };
 
 function projectRetirement(
@@ -84,15 +162,42 @@ function projectRetirement(
   );
 }
 
+function isRecurringRow(row: {
+  isRecurring?: boolean;
+  recurringType?: string | null;
+}): boolean {
+  if (row.recurringType === "one-time") return false;
+  return row.isRecurring !== false;
+}
+
 export function buildFinancialSnapshot(store: AiStoreSnapshot): FinancialSnapshot {
   const activeProperties = store.propertyAssets.filter((p) => p.is_active);
   const activeHoldings = store.holdings.filter((h) => h.is_active);
-  const monthlyIncome = store.incomeRows.reduce((s, i) => s + i.amount, 0);
-  const monthlyExpenses = store.expenseCategories.reduce(
-    (s, e) => s + e.amount,
-    0,
-  );
-  const surplus = monthlyIncome - monthlyExpenses;
+  // Prefer recurring rows so one-off bonuses/spikes do not distort "monthly" AI maths.
+  const recurringIncome = store.incomeRows
+    .filter(isRecurringRow)
+    .reduce((s, i) => s + i.amount, 0);
+  const recurringExpenses = store.expenseCategories
+    .filter(isRecurringRow)
+    .reduce((s, e) => s + e.amount, 0);
+  const summaryIncome = store.cashFlowSummary?.monthly_income;
+  const summaryExpenses = store.cashFlowSummary?.monthly_expenses;
+  const monthlyIncome =
+    typeof summaryIncome === "number" && summaryIncome > 0
+      ? summaryIncome
+      : recurringIncome > 0
+        ? recurringIncome
+        : store.incomeRows.reduce((s, i) => s + i.amount, 0);
+  const monthlyExpenses =
+    typeof summaryExpenses === "number" && summaryExpenses > 0
+      ? summaryExpenses
+      : recurringExpenses > 0
+        ? recurringExpenses
+        : store.expenseCategories.reduce((s, e) => s + e.amount, 0);
+  const surplus =
+    typeof store.cashFlowSummary?.monthly_surplus === "number"
+      ? store.cashFlowSummary.monthly_surplus
+      : monthlyIncome - monthlyExpenses;
   const nw = calculateNetWorth(
     store.holdings,
     [],
@@ -126,7 +231,8 @@ export function buildFinancialSnapshot(store: AiStoreSnapshot): FinancialSnapsho
   const emergencyBalance = store.emergencyFund.currentCashBalance;
   const emergencyTargetMonths = store.emergencyFund.targetMonths || 6;
   const emergencyRunwayMonths =
-    monthlyExpenses > 0 ? emergencyBalance / monthlyExpenses : 0;
+    store.emergencyFund.computed?.runwayMonths ??
+    (monthlyExpenses > 0 ? emergencyBalance / monthlyExpenses : 0);
 
   const currentAge = store.retirement.currentAge || 0;
   const retirementAge = store.retirement.retirementAge || 0;
@@ -139,11 +245,13 @@ export function buildFinancialSnapshot(store: AiStoreSnapshot): FinancialSnapsho
     currentInvested,
     monthlySavings,
     yrs,
+    (store.retirement.expectedReturnPct || 7) / 100,
   );
   const desiredMonthlyIncome = store.retirement.desiredMonthlyIncome || 0;
+  const swr = (store.retirement.safeWithdrawalRatePct || 4) / 100;
   const retirementOnTrack =
     desiredMonthlyIncome > 0
-      ? (projectedRetirement * 0.04) / 12 >= desiredMonthlyIncome
+      ? (projectedRetirement * swr) / 12 >= desiredMonthlyIncome
       : projectedRetirement > 0;
 
   const activeInsurance = store.insurancePolicies.filter((p) => p.is_active);
@@ -162,8 +270,25 @@ export function buildFinancialSnapshot(store: AiStoreSnapshot): FinancialSnapsho
     store.user?.display_name?.split(" ")[0] ??
     "there";
 
+  const history = [...(store.cashFlowHistory ?? [])]
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .slice(-24)
+    .map((p) => ({
+      month: p.month,
+      income: p.income,
+      expenses: p.expenses,
+      surplus: p.surplus ?? p.income - p.expenses,
+    }));
+
+  const summary = store.cashFlowSummary ?? null;
+
   return {
     firstName,
+    currency: store.user?.currency ?? "USD",
+    country: store.user?.resident_country ?? null,
+    occupation: store.user?.occupation ?? null,
+    maritalStatus: store.user?.marital_status ?? null,
+    dependents: store.user?.dependents ?? null,
     netWorth: nw.netWorth,
     monthlyIncome,
     monthlyExpenses,
@@ -202,6 +327,82 @@ export function buildFinancialSnapshot(store: AiStoreSnapshot): FinancialSnapsho
     holdingsCount: activeHoldings.length,
     largestHolding,
     liabilities: store.liabilities,
+    cashFlowHistory: history,
+    cashFlowSummary: summary
+      ? {
+          currentMonth: summary.current_month ?? null,
+          monthOverMonth: summary.month_over_month ?? null,
+          averages: summary.averages ?? null,
+        }
+      : null,
+    incomeSources: store.incomeRows.map((r) => ({
+      name: r.name,
+      amount: r.amount,
+      recurring: r.isRecurring !== false && r.recurringType !== "one-time",
+    })),
+    expenseBreakdown: store.expenseCategories.map((e) => ({
+      name: e.name,
+      amount: e.amount,
+      essential: e.essential,
+      recurring: e.isRecurring !== false && e.recurringType !== "one-time",
+    })),
+    holdings: activeHoldings.map((h) => {
+      const value = currentValue(h, []);
+      const costBasis = h.cost_basis ?? h.initial_value ?? 0;
+      const gainPct =
+        costBasis > 0
+          ? Math.round(((value - costBasis) / costBasis) * 1000) / 10
+          : null;
+      return {
+        name: h.name,
+        symbol: h.symbol ?? undefined,
+        assetType: h.asset_type,
+        value,
+        costBasis,
+        gainPct,
+      };
+    }),
+    properties: activeProperties.map((p) => ({
+      name: p.name,
+      type: p.property_type,
+      marketValue: p.market_value,
+      mortgageBalance: p.mortgage?.balance ?? p.mortgage_balance ?? 0,
+      equity: p.market_value - (p.mortgage?.balance ?? p.mortgage_balance ?? 0),
+      country: p.country,
+      city: p.city,
+      insured: p.insurance.length > 0,
+    })),
+    insurance: activeInsurance.map((p) => ({
+      name: p.name,
+      category: p.category,
+      provider: p.provider,
+      coverageAmount: p.coverage_amount,
+      premiumMonthly: p.premium_monthly,
+    })),
+    accounts: (store.accounts ?? []).map((a) => ({
+      name: a.name,
+      type: a.type,
+      balance: a.balance,
+      institution: a.institution,
+    })),
+    retirementDetails: {
+      lifeExpectancy: store.retirement.lifeExpectancy,
+      existingPensionBalance: store.retirement.existingPensionBalance,
+      monthlyPensionContribution: store.retirement.monthlyPensionContribution,
+      expectedReturnPct: store.retirement.expectedReturnPct,
+      inflationPct: store.retirement.inflationPct,
+      safeWithdrawalRatePct: store.retirement.safeWithdrawalRatePct,
+    },
+    goalsDetail: store.goals.map((g) => ({
+      title: g.title,
+      category: g.category,
+      target: g.target,
+      current: g.current ?? 0,
+      completed: g.completed,
+      yearsRemaining: g.yearsRemaining,
+      monthlyContributionNeeded: g.monthlyContributionNeeded,
+      probability: g.probability,
+    })),
   };
 }
 
@@ -217,12 +418,16 @@ export function buildSuggestedPrompts(s: FinancialSnapshot): string[] {
     s.surplus > 0
       ? `What if I invest an extra ${formatCurrency(extra)}/month?`
       : "How can I improve my monthly surplus?",
-    s.portfolioValue > 0
-      ? "How should I rebalance my portfolio?"
-      : "Where should I start investing?",
-    s.insurancePolicies > 0 || s.uninsuredProperties.length > 0
-      ? "Am I adequately insured?"
-      : "What insurance should I prioritise?",
+    s.holdingsCount >= 5
+      ? "Which of my holdings are doing best, and am I too concentrated?"
+      : s.portfolioValue > 0
+        ? "How should I rebalance my portfolio?"
+        : "Where should I start investing?",
+    s.cashFlowHistory.length >= 6
+      ? "What does my cash flow history say about my progress?"
+      : s.insurancePolicies > 0 || s.uninsuredProperties.length > 0
+        ? "Am I adequately insured?"
+        : "What insurance should I prioritise?",
     s.totalDebt > 0
       ? "What's the fastest way to eliminate my debt?"
       : "How do I stay debt-free while building wealth?",
@@ -321,7 +526,20 @@ function assets(s: FinancialSnapshot): string {
   const riskNote = s.riskProfile
     ? `Your **${s.riskProfile}** risk profile suggests keeping equities within a band that matches your comfort with volatility.`
     : "Complete your **risk assessment** so allocation advice matches your tolerance.";
-  return `Portfolio value: **${formatCurrency(s.portfolioValue)}** across ${s.holdingsCount} holding${s.holdingsCount === 1 ? "" : "s"}.\n\n${top ? `**Largest position**: ${top.name} (~${topShare}% of portfolio)${topShare > 35 ? " - consider trimming if this creates single-name concentration risk." : "."}` : ""}\n\n**Rebalancing checklist:**\n1. No single holding above **25-30%** of investable assets.\n2. Align stock/bond mix with your time horizon and risk profile.\n3. Review annually or after any position moves **5%+** from target.\n\n${riskNote}`;
+  const ranked = [...s.holdings].sort((a, b) => b.value - a.value);
+  const topLines = ranked
+    .slice(0, 5)
+    .map((h, i) => {
+      const share = Math.round((h.value / s.portfolioValue) * 100);
+      const gain =
+        h.gainPct == null
+          ? ""
+          : ` · ${h.gainPct >= 0 ? "+" : ""}${h.gainPct}% vs cost`;
+      return `${i + 1}. **${h.name}**${h.symbol ? ` (${h.symbol})` : ""} - ${formatCurrency(h.value)} (${share}%)${gain}`;
+    })
+    .join("\n");
+  const winners = ranked.filter((h) => (h.gainPct ?? 0) > 0).length;
+  return `Portfolio value: **${formatCurrency(s.portfolioValue)}** across ${s.holdingsCount} holding${s.holdingsCount === 1 ? "" : "s"}${winners > 0 ? ` · **${winners}** position${winners === 1 ? "" : "s"} above cost basis` : ""}.\n\n${top ? `**Largest position**: ${top.name} (~${topShare}% of portfolio)${topShare > 35 ? " - consider trimming if this creates single-name concentration risk." : "."}` : ""}\n\n**Top holdings:**\n${topLines}\n\n**Rebalancing checklist:**\n1. No single holding above **25-30%** of investable assets.\n2. Align stock/bond mix with your time horizon and risk profile.\n3. Review annually or after any position moves **5%+** from target.\n\n${riskNote}`;
 }
 
 function properties(s: FinancialSnapshot): string {

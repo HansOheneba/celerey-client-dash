@@ -13,17 +13,26 @@ interface Step8CompleteProps {
   displayName: string;
   goalCount: number;
   totalIncome: number;
+  /**
+   * Where the CTA sends the user next. Invited users (who typically already
+   * have a subscription) skip the plan-picker and go straight to /dashboard -
+   * DashboardGuard still verifies their real subscription status there.
+   */
+  nextHref?: string;
+  ctaLabel?: string;
 }
 
 export function Step8Complete({
   displayName,
   goalCount,
   totalIncome,
+  nextHref = "/choose-plan",
+  ctaLabel = "Choose your plan",
 }: Step8CompleteProps) {
   const router = useRouter();
 
   function handleCta() {
-    router.push("/choose-plan");
+    router.push(nextHref);
   }
 
   useEffect(() => {
@@ -112,7 +121,7 @@ export function Step8Complete({
           onClick={handleCta}
           className="w-full bg-white hover:bg-white/90 text-[#0b0a23] h-12 text-base rounded-xl"
         >
-          Choose your plan
+          {ctaLabel}
         </Button>
 
         <p className="mt-3 text-xs text-white/50">

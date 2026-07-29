@@ -5,6 +5,10 @@ import { isTourCompleted, WELCOME_SESSION_KEY } from "@/lib/dashboard-tour";
 import { useFinancialStore } from "@/store/financialStore";
 import { getAuth } from "@/lib/client-data";
 
+/** Set when the tour ends by opening the risk quiz - open the profile
+ *  sheet once the quiz is closed (completed or dismissed). */
+const PROFILE_AFTER_RISK_KEY = "celerey:profile-after-risk";
+
 interface ProfilePanelContextValue {
   /** Side-sheet checklist panel */
   isOpen: boolean;
@@ -18,6 +22,11 @@ interface ProfilePanelContextValue {
   riskQuizOpen: boolean;
   openRiskQuiz: () => void;
   closeRiskQuiz: () => void;
+  /**
+   * Open the profile setup sheet after the guided tour. If the tour hands
+   * off to the risk quiz first, the sheet opens when that quiz closes.
+   */
+  openProfileAfterTour: (opts?: { deferForRiskQuiz?: boolean }) => void;
 }
 
 const ProfilePanelContext = createContext<ProfilePanelContextValue>({
@@ -30,6 +39,7 @@ const ProfilePanelContext = createContext<ProfilePanelContextValue>({
   riskQuizOpen: false,
   openRiskQuiz: () => {},
   closeRiskQuiz: () => {},
+  openProfileAfterTour: () => {},
 });
 
 export function ProfilePanelProvider({
@@ -65,6 +75,31 @@ export function ProfilePanelProvider({
     }
   }
 
+  function openProfileAfterTour(opts?: { deferForRiskQuiz?: boolean }) {
+    if (opts?.deferForRiskQuiz) {
+      try {
+        sessionStorage.setItem(PROFILE_AFTER_RISK_KEY, "true");
+      } catch {
+        /* noop */
+      }
+      return;
+    }
+    setIsOpen(true);
+  }
+
+  function closeRiskQuiz() {
+    setRiskQuizOpen(false);
+    try {
+      if (sessionStorage.getItem(PROFILE_AFTER_RISK_KEY) === "true") {
+        sessionStorage.removeItem(PROFILE_AFTER_RISK_KEY);
+        // Defer one tick so the quiz dialog unmounts before the sheet opens.
+        window.setTimeout(() => setIsOpen(true), 0);
+      }
+    } catch {
+      /* noop */
+    }
+  }
+
   return (
     <ProfilePanelContext.Provider
       value={{
@@ -76,7 +111,8 @@ export function ProfilePanelProvider({
         dismissWelcome,
         riskQuizOpen,
         openRiskQuiz: () => setRiskQuizOpen(true),
-        closeRiskQuiz: () => setRiskQuizOpen(false),
+        closeRiskQuiz,
+        openProfileAfterTour,
       }}
     >
       {children}

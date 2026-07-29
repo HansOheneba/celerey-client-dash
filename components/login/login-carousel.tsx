@@ -16,37 +16,11 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 
-import type { Slide } from "./types";
+import { LOGIN_SLIDES } from "./slides";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
-
-const slides: Slide[] = [
-  {
-    id: "s1",
-    imageSrc: "/login/img1.jpg",
-    headline:
-      "Good financial decisions start with a clear picture, not a gut feeling.",
-    subline:
-      "When your goals are visible and tracked, confidence follows naturally.",
-  },
-  {
-    id: "s2",
-    imageSrc: "/login/img2.jpg",
-    headline:
-      "Most people don't have a cashflow problem, they have a clarity problem.",
-    subline:
-      "Knowing where your money goes each month is the first step to taking control of it.",
-  },
-  {
-    id: "s3",
-    imageSrc: "/login/img3.jpg",
-    headline: "The best time to adjust your plan is before you need to.",
-    subline:
-      "Reviewing regularly means you're never starting over, just course-correcting.",
-  },
-];
 
 export function LoginCarousel() {
   const autoplayRef = React.useRef(
@@ -86,7 +60,7 @@ export function LoginCarousel() {
         onMouseLeave={() => autoplayRef.current.play()}
       >
         <CarouselContent className="h-full ml-0">
-          {slides.map((s) => (
+          {LOGIN_SLIDES.map((s) => (
             <CarouselItem key={s.id} className="h-full pl-0">
               <div className="relative h-full w-full">
                 <Image
@@ -144,7 +118,7 @@ export function LoginCarousel() {
 
         {/* Dots */}
         <div className="absolute inset-x-6 top-16 z-20 flex items-center gap-2">
-          {slides.map((_, idx) => (
+          {LOGIN_SLIDES.map((_, idx) => (
             <button
               key={idx}
               type="button"

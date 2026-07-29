@@ -197,7 +197,7 @@ function MessageBubble({
       {isAI && (
         <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#18163f] overflow-hidden">
           <img
-            src="https://i.ibb.co/mCs0QnX1/Celerey-Secondary-Symbol-Light-1.png"
+            src="/logos/CelereySymbolLight.png"
             alt="Celerey"
             className="h-5 w-5 object-contain"
           />
@@ -302,6 +302,9 @@ export default function AIInsightsPage() {
         propertyAssets: store.propertyAssets,
         taxProfile: store.taxProfile,
         profileCompletionScore: store.profileCompletionScore,
+        cashFlowHistory: store.cashFlowHistory,
+        cashFlowSummary: store.cashFlowSummary,
+        accounts: store.accounts,
       }),
     [
       store.user,
@@ -316,6 +319,9 @@ export default function AIInsightsPage() {
       store.propertyAssets,
       store.taxProfile,
       store.profileCompletionScore,
+      store.cashFlowHistory,
+      store.cashFlowSummary,
+      store.accounts,
     ],
   );
 
@@ -629,7 +635,7 @@ export default function AIInsightsPage() {
       <div className="flex shrink-0 items-center gap-3 border-b border-border/60 px-4 py-3 sm:px-6">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#18163f]">
           <img
-            src="https://i.ibb.co/mCs0QnX1/Celerey-Secondary-Symbol-Light-1.png"
+            src="/logos/CelereySymbolLight.png"
             alt="Celerey"
             className="h-5 w-5 object-contain"
           />
@@ -803,7 +809,7 @@ export default function AIInsightsPage() {
                   >
                     <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#18163f]">
                       <img
-                        src="https://i.ibb.co/mCs0QnX1/Celerey-Secondary-Symbol-Light-1.png"
+                        src="/logos/CelereySymbolLight.png"
                         alt="Celerey"
                         className="h-5 w-5 object-contain"
                       />

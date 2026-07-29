@@ -77,7 +77,7 @@ export function AskCelereyAIButton() {
     >
       <div className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full">
         <img
-          src="https://i.ibb.co/mCs0QnX1/Celerey-Secondary-Symbol-Light-1.png"
+          src="/logos/CelereySymbolLight.png"
           alt="Celerey"
           className="h-4 w-4 object-contain"
         />

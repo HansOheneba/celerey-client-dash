@@ -46,8 +46,13 @@ export function useClientGate(): {
 
     read();
     // Re-read whenever subscription data is written (e.g. after API fetch)
+    // or auth state changes (e.g. invite-link onboarding sets it directly).
     window.addEventListener("celerey:sub-updated", read);
-    return () => window.removeEventListener("celerey:sub-updated", read);
+    window.addEventListener("celerey:auth-updated", read);
+    return () => {
+      window.removeEventListener("celerey:sub-updated", read);
+      window.removeEventListener("celerey:auth-updated", read);
+    };
   }, []);
 
   return { ready, auth, sub, userType };

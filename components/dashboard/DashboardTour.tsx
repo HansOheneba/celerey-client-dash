@@ -2,11 +2,10 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { createRoot, type Root } from "react-dom/client";
 import { driver, type Driver } from "driver.js";
 import "driver.js/dist/driver.css";
 
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   getActiveTourSteps,
   type DashboardTourStep,
@@ -30,11 +29,8 @@ const ELEMENT_WAIT_MS = 5000;
 const ELEMENT_POLL_MS = 100;
 
 let activeDriver: Driver | null = null;
-let footerActionRoot: Root | null = null;
 
 function destroyActiveDriver() {
-  footerActionRoot?.unmount();
-  footerActionRoot = null;
   if (activeDriver?.isActive()) {
     activeDriver.destroy();
   }
@@ -75,27 +71,25 @@ type TourFooterAction = {
   onClick: () => void;
 };
 
+/** Imperative buttons (no nested createRoot) so tour teardown can't race React. */
 function mountTourFooterActions(
   container: HTMLElement,
   actions: TourFooterAction[],
 ) {
-  footerActionRoot?.unmount();
-  footerActionRoot = createRoot(container);
-  footerActionRoot.render(
-    <>
-      {actions.map((action) => (
-        <Button
-          key={action.label}
-          type="button"
-          size="sm"
-          variant={action.variant ?? "default"}
-          onClick={action.onClick}
-        >
-          {action.label}
-        </Button>
-      ))}
-    </>
-  );
+  container.replaceChildren();
+
+  for (const action of actions) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = action.label;
+    button.setAttribute("data-slot", "button");
+    button.className = buttonVariants({
+      variant: action.variant ?? "default",
+      size: "sm",
+    });
+    button.addEventListener("click", action.onClick);
+    container.appendChild(button);
+  }
 }
 
 type DashboardTourProps = {
@@ -109,7 +103,7 @@ export function DashboardTour({ layoutReady }: DashboardTourProps) {
   const riskAssessment = useFinancialStore((s) => s.riskAssessment);
   const hasRiskProfile = hasCompletedRiskAssessment({ user, riskAssessment });
   const userId = user?.user_id ?? getAuth().email ?? null;
-  const { openRiskQuiz } = useProfilePanel();
+  const { openRiskQuiz, openProfileAfterTour } = useProfilePanel();
 
   const tourSteps = React.useMemo(
     () => getActiveTourSteps(hasRiskProfile),
@@ -127,16 +121,22 @@ export function DashboardTour({ layoutReady }: DashboardTourProps) {
     setTourProgress(index, "nav");
   }, []);
 
-  const finishTour = React.useCallback(() => {
-    destroyActiveDriver();
-    markTourCompleted(userId);
-    setTourActive(false);
-    try {
-      sessionStorage.removeItem(TOUR_STORAGE.active);
-    } catch {
-      /* noop */
-    }
-  }, [userId]);
+  const finishTour = React.useCallback(
+    (opts?: { deferProfileForRiskQuiz?: boolean }) => {
+      destroyActiveDriver();
+      markTourCompleted(userId);
+      setTourActive(false);
+      try {
+        sessionStorage.removeItem(TOUR_STORAGE.active);
+      } catch {
+        /* noop */
+      }
+      openProfileAfterTour({
+        deferForRiskQuiz: opts?.deferProfileForRiskQuiz,
+      });
+    },
+    [openProfileAfterTour, userId],
+  );
 
   const showStep = React.useCallback(
     async (index: number) => {
@@ -234,7 +234,7 @@ export function DashboardTour({ layoutReady }: DashboardTourProps) {
                   label: "Take assessment now",
                   onClick: () => {
                     destroyActiveDriver();
-                    finishTour();
+                    finishTour({ deferProfileForRiskQuiz: true });
                     openRiskQuiz();
                   },
                 },

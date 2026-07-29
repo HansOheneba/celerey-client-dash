@@ -2,7 +2,10 @@
 
 import type { User } from "@/lib/client-data";
 import { setSubscriptionData } from "@/lib/client-data";
-import type { RiskAssessmentResult } from "@/lib/dashboard-api";
+import {
+  getRiskBand,
+  type RiskAssessmentResult,
+} from "@/lib/dashboard-api";
 
 /** Fields shared by user.get and dashboard.summary user objects. */
 export type ApiUserLike = {
@@ -63,7 +66,7 @@ export function mergeUserWithRiskAssessment(
   assessment: RiskAssessmentResult | null | undefined,
 ): User {
   const mapped = mapApiUserToStore(user);
-  const band = assessment?.result?.risk_band;
+  const band = getRiskBand(assessment);
   if (!band) return mapped;
   return { ...mapped, risk_profile: band as User["risk_profile"] };
 }

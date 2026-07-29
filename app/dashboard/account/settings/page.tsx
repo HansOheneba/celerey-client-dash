@@ -12,6 +12,7 @@ import {
   submitRiskAssessment,
   updateRiskProfileFactors,
   deleteAccount,
+  getRiskBand,
 } from "@/lib/dashboard-api";
 import { resetSession } from "@/lib/session-reset";
 import { toast } from "sonner";
@@ -347,7 +348,7 @@ export default function AccountSettingsPage() {
         responses: result.responses,
       });
       if (submitted) {
-        const riskProfile = submitted.result?.risk_band;
+        const riskProfile = getRiskBand(submitted);
         if (riskProfile) {
           useFinancialStore.getState().setRiskAssessment(submitted);
           setForm((f) => ({

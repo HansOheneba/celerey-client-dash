@@ -5,7 +5,8 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { useClientGate } from "../../lib/useClientGate";
-import { setOnboarded, isOnboarded } from "../../lib/client-data";
+import { setOnboarded, isOnboarded, setAuth, getAuth } from "../../lib/client-data";
+import { resetSession } from "../../lib/session-reset";
 import { scheduleTourForNewUser } from "@/lib/dashboard-tour";
 import { CelereyLoader } from "@/components/login/celerey-loader";
 import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
@@ -42,9 +43,63 @@ import type { AccountMode } from "@/lib/onboarding/copy";
 //   9  -> Complete                (Step8Complete - bypasses shell)
 const TOTAL_STEPS = 9;
 
+// Admin-invited clients (/onboarding?invite=<token>&email=<email>) complete
+// onboarding via onboarding.create-user-via-invite, which needs no
+// OTP-verified onboarding token - the invite_token itself is the proof of
+// identity. Persisted (not just React state) so the token survives a
+// refresh mid-onboarding, after it's been stripped from the URL.
+const INVITE_TOKEN_KEY = "onboarding_invite_token";
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { ready, auth } = useClientGate();
+  const [inviteToken, setInviteTokenState] = React.useState<string | null>(
+    () =>
+      typeof window === "undefined"
+        ? null
+        : window.localStorage.getItem(INVITE_TOKEN_KEY),
+  );
+  // Captured before resetOnboarding() so Step8Complete still has a name
+  // after the store is wiped.
+  const [completedDisplayName, setCompletedDisplayName] = React.useState<
+    string | null
+  >(null);
+
+  // Invite-link onboarding: skip straight into onboarding as this invited
+  // user, without going through OTP verification first.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const invite = params.get("invite");
+    if (!invite) return;
+
+    const inviteEmail = params.get("email") ?? "";
+
+    // If the browser has stale data for a different account, wipe it first -
+    // same safeguard used for account switches during normal OTP login.
+    const previous = getAuth();
+    const accountSwitched =
+      !!previous.email &&
+      !!inviteEmail &&
+      previous.email.toLowerCase() !== inviteEmail.toLowerCase();
+    if (accountSwitched) {
+      resetSession();
+    }
+
+    setAuth(inviteEmail);
+    try {
+      window.localStorage.setItem(INVITE_TOKEN_KEY, invite);
+    } catch {
+      /* noop */
+    }
+    setInviteTokenState(invite);
+
+    // Strip invite/email from the URL so a refresh doesn't re-run this.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("invite");
+    url.searchParams.delete("email");
+    window.history.replaceState({}, "", url.toString());
+  }, []);
 
   const store = useOnboardingStore();
   const seedFromOnboarding = useFinancialStore((s) => s.seedFromOnboarding);
@@ -141,6 +196,18 @@ export default function OnboardingPage() {
   }
 
   function handleStep8Complete() {
+    // Capture the name before wiping the store - Step8Complete still needs it.
+    const nameFromIdentity =
+      identity?.display_name?.trim() ||
+      [identity?.first_name, identity?.last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim() ||
+      null;
+    if (nameFromIdentity) {
+      setCompletedDisplayName(nameFromIdentity);
+    }
+
     // Seed the financial store from onboarding data before marking complete
     if (identity) {
       seedFromOnboarding({
@@ -165,6 +232,11 @@ export default function OnboardingPage() {
     // Clear all persisted form data now that submission has succeeded.
     // This ensures the next onboarding run (e.g. a test reset) starts fresh.
     resetOnboarding();
+    try {
+      window.localStorage.removeItem(INVITE_TOKEN_KEY);
+    } catch {
+      /* noop */
+    }
     setStep(9);
   }
 
@@ -174,8 +246,9 @@ export default function OnboardingPage() {
     .filter((i) => i.is_recurring)
     .reduce((s, i) => s + Number(i.amount_monthly), 0);
 
-  // display_name is the single source of truth for names across all account modes
-  const displayName = identity?.display_name ?? "there";
+  // Prefer the name captured at submit - identity is cleared by resetOnboarding.
+  const displayName =
+    completedDisplayName ?? identity?.display_name ?? "there";
 
   return (
     <OnboardingShell currentStep={currentStep} totalSteps={TOTAL_STEPS}>
@@ -234,6 +307,7 @@ export default function OnboardingPage() {
           onEditStep={(step) => setStep(step)}
           onBack={handleBack}
           email={auth.email ?? ""}
+          inviteToken={inviteToken ?? undefined}
         />
       )}
       {currentStep === 9 && (
@@ -241,6 +315,8 @@ export default function OnboardingPage() {
           displayName={displayName}
           goalCount={goals.length}
           totalIncome={totalIncome}
+          nextHref={inviteToken ? "/dashboard" : "/choose-plan"}
+          ctaLabel={inviteToken ? "Go to dashboard" : "Choose your plan"}
         />
       )}
     </OnboardingShell>

@@ -1260,7 +1260,7 @@ function mapSummaryToDashboardData(
     propertyAssets: (s.properties ?? []).map(coerceProperty),
     liabilities: (s.liabilities ?? []).map(apiLiabilityToStore),
     retirement,
-    riskAssessment: s.risk_assessment ?? null,
+    riskAssessment: unwrapRiskAssessmentPayload(s.risk_assessment),
   };
 }
 
@@ -1341,8 +1341,85 @@ export interface RiskAssessmentResult {
     description?: string;
     strategy?: string;
   };
+  /** Some endpoints return the band at the top level. */
+  risk_band?: string;
+  risk_profile?: string;
+  band?: string;
   is_recalculation?: boolean;
   created_at?: string;
+}
+
+/** Read risk band from nested or flat API shapes. */
+export function getRiskBand(
+  assessment: RiskAssessmentResult | null | undefined,
+): string | null {
+  if (!assessment) return null;
+  const candidates = [
+    assessment.result?.risk_band,
+    assessment.risk_band,
+    assessment.risk_profile,
+    assessment.band,
+  ];
+  for (const value of candidates) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+/** True when the payload represents a finished quiz, not an empty summary stub. */
+export function isCompleteRiskAssessment(
+  assessment: RiskAssessmentResult | null | undefined,
+): boolean {
+  if (!assessment) return false;
+  if (getRiskBand(assessment)) return true;
+  return (
+    !!assessment.assessment_id &&
+    typeof assessment.scoring?.final_score === "number"
+  );
+}
+
+/** Prefer a complete assessment over null/stub payloads from other endpoints. */
+export function preferRiskAssessment(
+  incoming: RiskAssessmentResult | null | undefined,
+  existing: RiskAssessmentResult | null | undefined,
+): RiskAssessmentResult | null {
+  if (isCompleteRiskAssessment(incoming)) return incoming!;
+  if (isCompleteRiskAssessment(existing)) return existing!;
+  if (incoming !== undefined) return incoming;
+  return existing ?? null;
+}
+
+function normalizeRiskAssessment(
+  raw: RiskAssessmentResult,
+): RiskAssessmentResult {
+  const band = getRiskBand(raw);
+  if (!band || raw.result?.risk_band === band) return raw;
+  return {
+    ...raw,
+    result: { ...raw.result, risk_band: band },
+  };
+}
+
+function unwrapRiskAssessmentPayload(
+  payload: unknown,
+): RiskAssessmentResult | null {
+  if (!payload || typeof payload !== "object") return null;
+  const obj = payload as Record<string, unknown>;
+  const nested = obj.assessment;
+  if (nested && typeof nested === "object") {
+    return normalizeRiskAssessment(nested as RiskAssessmentResult);
+  }
+  if (
+    obj.assessment_id ||
+    obj.result ||
+    obj.scoring ||
+    obj.risk_band ||
+    obj.risk_profile ||
+    obj.band
+  ) {
+    return normalizeRiskAssessment(obj as unknown as RiskAssessmentResult);
+  }
+  return null;
 }
 
 export async function fetchRiskQuestions(): Promise<RiskQuestion[]> {
@@ -1384,7 +1461,7 @@ export async function submitRiskAssessment(payload: {
       "[submitRiskAssessment] ◀ raw response:",
       JSON.stringify(res, null, 2),
     );
-    const result = (res as any)?.data ?? null;
+    const result = unwrapRiskAssessmentPayload((res as any)?.data ?? res);
     console.log("[submitRiskAssessment] ◀ result:", result);
     return result;
   } catch (err) {
@@ -1399,7 +1476,8 @@ export async function fetchLatestRiskAssessment(): Promise<RiskAssessmentResult 
       success?: boolean;
       data?: RiskAssessmentResult;
     }>("risk.latest");
-    return (res as { data?: RiskAssessmentResult }).data ?? null;
+    const data = (res as { data?: unknown }).data ?? res;
+    return unwrapRiskAssessmentPayload(data);
   } catch (err) {
     if (err instanceof SessionExpiredError) throw err;
     warnUnavailable("risk.latest", err);

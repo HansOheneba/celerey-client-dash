@@ -27,6 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import RiskAttitudeQuiz from "@/components/dashboard/risk/quiz";
 import {
   fetchLatestRiskAssessment,
+  getRiskBand,
   submitRiskAssessment,
   type RiskAssessmentResult,
 } from "@/lib/dashboard-api";
@@ -52,7 +53,7 @@ function useRiskQuiz() {
         responses,
       });
       if (submitted) {
-        const riskProfile = submitted.result?.risk_band;
+        const riskProfile = getRiskBand(submitted);
         if (riskProfile) {
           useFinancialStore.getState().setRiskAssessment(submitted);
         }
@@ -77,7 +78,7 @@ export function RiskResultScreen({
   result: RiskAssessmentResult;
   onDone: () => void;
 }) {
-  const band = result.result?.risk_band ?? "Unknown";
+  const band = getRiskBand(result) ?? "Unknown";
   const description = result.result?.description;
   const strategy = result.result?.strategy;
   const finalScore = result.scoring?.final_score;
@@ -357,16 +358,20 @@ export function RiskQuizDialog({
 // ─── Card (used on the overview page) ────────────────────────────────────────
 
 export default function QuizCard() {
-  const [result, setResult] = useState<RiskAssessmentResult | null>(null);
+  const [localResult, setLocalResult] = useState<RiskAssessmentResult | null>(
+    null,
+  );
   const [resultLoading, setResultLoading] = useState(true);
   const { openRiskQuiz, riskQuizOpen } = useProfilePanel();
   const prevQuizOpen = useRef(false);
   const setRiskAssessment = useFinancialStore((s) => s.setRiskAssessment);
+  const storeAssessment = useFinancialStore((s) => s.riskAssessment);
+  const result = localResult ?? storeAssessment;
 
   const applyResult = React.useCallback(
     (r: RiskAssessmentResult | null) => {
       if (!r) return;
-      setResult(r);
+      setLocalResult(r);
       setRiskAssessment(r);
     },
     [setRiskAssessment],
@@ -393,7 +398,7 @@ export default function QuizCard() {
     prevQuizOpen.current = riskQuizOpen;
   }, [riskQuizOpen, applyResult]);
 
-  const profileLabel = result ? (result.result?.risk_band ?? "Unknown") : null;
+  const profileLabel = result ? (getRiskBand(result) ?? "Unknown") : null;
   const scoreValue = result?.scoring?.final_score;
 
   return (
@@ -410,7 +415,7 @@ export default function QuizCard() {
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {resultLoading ? (
+        {resultLoading && !result ? (
           <div className="space-y-2">
             <Skeleton className="h-16 w-full rounded-md" />
             <Skeleton className="h-9 w-full rounded-md" />

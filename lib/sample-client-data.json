@@ -17,20 +17,29 @@
       "gender": "male",
       "prefix": "Mr",
       "dependents": 2,
-      "citizenships": ["GB", "NG"],
+      "citizenships": [
+        "GB",
+        "NG"
+      ],
       "risk_profile": "growth",
       "account_mode": "solo",
-      "bio": "Nigerian-British management consultant based in London. Maintains property in the UK, family home in Lagos, and a rental in Accra. Sends regular remittances and has been actively tracking finances on Celerey for 6 months.",
+      "bio": "Nigerian-British management consultant based in London. Maintains property in the UK, family home in Lagos, and a rental in Accra. Sends regular remittances and has been tracking finances on Celerey with a consistently healthy surplus.",
       "is_active": true,
       "user_type": "regular",
       "created_at": "2024-01-10T09:00:00.000Z",
-      "updated_at": "2026-06-01T10:00:00.000Z"
+      "updated_at": "2026-07-15T10:00:00.000Z"
     },
-
     "riskAssessment": {
       "assessment_id": "ra-9988-aabb-ccdd-eeff00112233",
       "questionnaire_version": "1.0",
-      "responses": { "q1": 4, "q2": 3, "q3": 4, "q4": 3, "q5": 4, "q6": 3 },
+      "responses": {
+        "q1": 4,
+        "q2": 3,
+        "q3": 4,
+        "q4": 3,
+        "q5": 4,
+        "q6": 3
+      },
       "profile_snapshot": {
         "age": 37,
         "dependents": 2,
@@ -41,8 +50,13 @@
       "scoring": {
         "time_horizon_avg": 3.83,
         "questionnaire_score": 3.8,
-        "modifiers": { "age": 0.1, "dependents": -0.2, "debt": -0.1, "emergency_fund": 0.2 },
-        "modifier_total": 0.0,
+        "modifiers": {
+          "age": 0.1,
+          "dependents": -0.2,
+          "debt": -0.1,
+          "emergency_fund": 0.2
+        },
+        "modifier_total": 0,
         "final_score": 3.4
       },
       "result": {
@@ -53,7 +67,6 @@
       "is_recalculation": false,
       "created_at": "2026-02-18T11:00:00.000Z"
     },
-
     "incomeRows": [
       {
         "id": "inc-001",
@@ -117,9 +130,17 @@
         "recurringType": "one-time",
         "startDate": "2026-04-01",
         "endDate": null
+      },
+      {
+        "id": "inc-008",
+        "name": "Mid-year retention bonus",
+        "amount": 2200,
+        "isRecurring": false,
+        "recurringType": "one-time",
+        "startDate": "2026-07-01",
+        "endDate": null
       }
     ],
-
     "expenseCategories": [
       {
         "id": "exp-001",
@@ -241,7 +262,7 @@
       {
         "id": "exp-013",
         "name": "Lagos property exterior repaint",
-        "amount": 2200,
+        "amount": 900,
         "essential": false,
         "isRecurring": false,
         "recurringType": "one-time",
@@ -250,7 +271,7 @@
       {
         "id": "exp-014",
         "name": "Emergency plumber (burst pipe)",
-        "amount": 320,
+        "amount": 180,
         "essential": true,
         "isRecurring": false,
         "recurringType": "one-time",
@@ -259,7 +280,7 @@
       {
         "id": "exp-015",
         "name": "Christmas gifts & family hosting",
-        "amount": 1400,
+        "amount": 780,
         "essential": false,
         "isRecurring": false,
         "recurringType": "one-time",
@@ -277,7 +298,7 @@
       {
         "id": "exp-017",
         "name": "Car MOT & brake pads",
-        "amount": 680,
+        "amount": 420,
         "essential": true,
         "isRecurring": false,
         "recurringType": "one-time",
@@ -295,7 +316,7 @@
       {
         "id": "exp-019",
         "name": "Accra tenant turnover repairs",
-        "amount": 890,
+        "amount": 420,
         "essential": false,
         "isRecurring": false,
         "recurringType": "one-time",
@@ -304,7 +325,7 @@
       {
         "id": "exp-021",
         "name": "Back-to-school kit (Chidi & Adaeze)",
-        "amount": 1850,
+        "amount": 640,
         "essential": true,
         "isRecurring": false,
         "recurringType": "one-time",
@@ -313,7 +334,7 @@
       {
         "id": "exp-022",
         "name": "Emergency flight to Lagos (father's surgery)",
-        "amount": 2400,
+        "amount": 680,
         "essential": true,
         "isRecurring": false,
         "recurringType": "one-time",
@@ -322,14 +343,13 @@
       {
         "id": "exp-023",
         "name": "HMRC payment on account",
-        "amount": 2100,
+        "amount": 950,
         "essential": true,
         "isRecurring": false,
         "recurringType": "one-time",
         "startDate": "2026-03-01"
       }
     ],
-
     "goals": [
       {
         "id": "goal-001",
@@ -338,15 +358,15 @@
         "category": "housing",
         "priority": 1,
         "description": "Move from Stratford flat before Chidi starts secondary school.",
-        "yearsRemaining": 2.5,
-        "current": 72000,
+        "yearsRemaining": 2.2,
+        "current": 98000,
         "target": 130000,
         "completed": false,
         "targetDate": "2028-09-01",
-        "monthlyContributionNeeded": 1933,
-        "probability": 68,
+        "monthlyContributionNeeded": 1212,
+        "probability": 91,
         "createdAt": "2024-03-01T10:00:00.000Z",
-        "updatedAt": "2026-06-01T10:00:00.000Z"
+        "updatedAt": "2026-07-15T10:00:00.000Z"
       },
       {
         "id": "goal-002",
@@ -356,14 +376,14 @@
         "priority": 2,
         "description": "Tuition and living costs for Chidi and Adaeze.",
         "yearsRemaining": 9,
-        "current": 26500,
+        "current": 38500,
         "target": 90000,
         "completed": false,
         "targetDate": "2035-09-01",
-        "monthlyContributionNeeded": 588,
-        "probability": 85,
+        "monthlyContributionNeeded": 477,
+        "probability": 94,
         "createdAt": "2024-06-15T10:00:00.000Z",
-        "updatedAt": "2026-06-01T10:00:00.000Z"
+        "updatedAt": "2026-07-15T10:00:00.000Z"
       },
       {
         "id": "goal-003",
@@ -372,15 +392,15 @@
         "category": "other",
         "priority": 3,
         "description": "Clear remaining GTBank balance on Lekki property.",
-        "yearsRemaining": 3,
-        "current": 8000,
+        "yearsRemaining": 2.8,
+        "current": 16800,
         "target": 38000,
         "completed": false,
         "targetDate": "2029-04-01",
-        "monthlyContributionNeeded": 833,
-        "probability": 74,
+        "monthlyContributionNeeded": 631,
+        "probability": 89,
         "createdAt": "2025-02-01T10:00:00.000Z",
-        "updatedAt": "2026-06-01T10:00:00.000Z"
+        "updatedAt": "2026-07-15T10:00:00.000Z"
       },
       {
         "id": "goal-004",
@@ -401,14 +421,12 @@
         "updatedAt": "2025-12-28T10:00:00.000Z"
       }
     ],
-
     "goalsMeta": {
-      "totalMonthlyNeeded": 3354,
+      "totalMonthlyNeeded": 2320,
       "totalGoals": 4,
       "completedGoals": 1,
       "activeGoals": 3
     },
-
     "holdings": [
       {
         "holding_id": "hold-001",
@@ -417,14 +435,15 @@
         "valuation_method": "market",
         "name": "Vanguard FTSE All-World ETF",
         "symbol": "VWRL",
-        "quantity": 120,
+        "quantity": 128,
         "cost_basis": 22400,
-        "current_value": 28680,
+        "current_value": 36200,
         "initial_value": 22400,
         "initial_value_date": "2021-06-01",
         "is_active": true,
         "created_at": "2021-06-01T10:00:00.000Z",
-        "updated_at": "2026-06-01T10:00:00.000Z"
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
       },
       {
         "holding_id": "hold-002",
@@ -433,14 +452,15 @@
         "valuation_method": "market",
         "name": "Alphabet Inc.",
         "symbol": "GOOGL",
-        "quantity": 55,
+        "quantity": 58,
         "cost_basis": 11800,
-        "current_value": 15400,
+        "current_value": 20100,
         "initial_value": 11800,
         "initial_value_date": "2022-08-01",
         "is_active": true,
         "created_at": "2022-08-01T10:00:00.000Z",
-        "updated_at": "2026-06-01T10:00:00.000Z"
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
       },
       {
         "holding_id": "hold-003",
@@ -449,14 +469,15 @@
         "valuation_method": "market",
         "name": "iShares MSCI Emerging Markets ETF",
         "symbol": "EEM",
-        "quantity": 180,
+        "quantity": 190,
         "cost_basis": 7200,
-        "current_value": 8100,
+        "current_value": 11200,
         "initial_value": 7200,
         "initial_value_date": "2023-04-01",
         "is_active": true,
         "created_at": "2023-04-01T10:00:00.000Z",
-        "updated_at": "2026-06-01T10:00:00.000Z"
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
       },
       {
         "holding_id": "hold-004",
@@ -465,14 +486,15 @@
         "valuation_method": "market",
         "name": "Ethereum",
         "symbol": "ETH",
-        "quantity": 2.8,
+        "quantity": 2.9,
         "cost_basis": 8400,
-        "current_value": 11200,
+        "current_value": 15800,
         "initial_value": 8400,
         "initial_value_date": "2023-11-01",
         "is_active": true,
         "created_at": "2023-11-01T10:00:00.000Z",
-        "updated_at": "2026-06-01T10:00:00.000Z"
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
       },
       {
         "holding_id": "hold-005",
@@ -481,14 +503,15 @@
         "valuation_method": "market",
         "name": "Nigeria Equity Fund (Stanbic IBTC)",
         "symbol": "SBNICF",
-        "quantity": 4200,
+        "quantity": 4500,
         "cost_basis": 6500,
-        "current_value": 7800,
+        "current_value": 11100,
         "initial_value": 6500,
         "initial_value_date": "2024-02-01",
         "is_active": true,
         "created_at": "2024-02-01T10:00:00.000Z",
-        "updated_at": "2026-06-01T10:00:00.000Z"
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
       },
       {
         "holding_id": "hold-006",
@@ -498,39 +521,183 @@
         "name": "Barclays ISA Cash",
         "symbol": null,
         "quantity": null,
-        "cost_basis": 18500,
-        "current_value": 18500,
+        "cost_basis": 20500,
+        "current_value": 22400,
         "coupon_rate": 4.2,
-        "initial_value": 18500,
+        "initial_value": 20500,
         "initial_value_date": "2024-01-01",
-        "last_updated": "2026-06-01T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z",
         "is_active": true,
         "created_at": "2024-01-01T10:00:00.000Z",
-        "updated_at": "2026-06-01T10:00:00.000Z"
+        "updated_at": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "holding_id": "hold-007",
+        "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "asset_type": "bond",
+        "valuation_method": "market",
+        "name": "iShares Core UK Gilts UCITS ETF",
+        "symbol": "IGLT",
+        "quantity": 420,
+        "cost_basis": 9800,
+        "current_value": 10480,
+        "initial_value": 9800,
+        "initial_value_date": "2024-05-01",
+        "is_active": true,
+        "created_at": "2024-05-01T10:00:00.000Z",
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "holding_id": "hold-008",
+        "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "asset_type": "stock",
+        "valuation_method": "market",
+        "name": "Microsoft Corp.",
+        "symbol": "MSFT",
+        "quantity": 28,
+        "cost_basis": 9200,
+        "current_value": 14860,
+        "initial_value": 9200,
+        "initial_value_date": "2023-01-15",
+        "is_active": true,
+        "created_at": "2023-01-15T10:00:00.000Z",
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "holding_id": "hold-009",
+        "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "asset_type": "etf",
+        "valuation_method": "market",
+        "name": "Vanguard S&P 500 UCITS ETF",
+        "symbol": "VUSA",
+        "quantity": 95,
+        "cost_basis": 14200,
+        "current_value": 19640,
+        "initial_value": 14200,
+        "initial_value_date": "2022-03-01",
+        "is_active": true,
+        "created_at": "2022-03-01T10:00:00.000Z",
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "holding_id": "hold-010",
+        "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "asset_type": "crypto",
+        "valuation_method": "market",
+        "name": "Bitcoin",
+        "symbol": "BTC",
+        "quantity": 0.18,
+        "cost_basis": 6200,
+        "current_value": 11480,
+        "initial_value": 6200,
+        "initial_value_date": "2024-01-20",
+        "is_active": true,
+        "created_at": "2024-01-20T10:00:00.000Z",
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "holding_id": "hold-011",
+        "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "asset_type": "mutual_fund",
+        "valuation_method": "market",
+        "name": "Fidelity Global Dividend Fund",
+        "symbol": "FGDF",
+        "quantity": 1850,
+        "cost_basis": 11800,
+        "current_value": 13920,
+        "initial_value": 11800,
+        "initial_value_date": "2023-09-01",
+        "is_active": true,
+        "created_at": "2023-09-01T10:00:00.000Z",
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "holding_id": "hold-012",
+        "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "asset_type": "alternative",
+        "valuation_method": "manual",
+        "name": "Peer-to-peer SME loans (Funding Circle)",
+        "symbol": null,
+        "quantity": null,
+        "cost_basis": 5000,
+        "current_value": 5480,
+        "initial_value": 5000,
+        "initial_value_date": "2024-08-01",
+        "is_active": true,
+        "created_at": "2024-08-01T10:00:00.000Z",
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "holding_id": "hold-013",
+        "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "asset_type": "cash",
+        "valuation_method": "manual",
+        "name": "NS&I Premium Bonds",
+        "symbol": null,
+        "quantity": null,
+        "cost_basis": 15000,
+        "current_value": 15000,
+        "coupon_rate": 4,
+        "initial_value": 15000,
+        "initial_value_date": "2025-02-01",
+        "is_active": true,
+        "created_at": "2025-02-01T10:00:00.000Z",
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "holding_id": "hold-014",
+        "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "asset_type": "stock",
+        "valuation_method": "market",
+        "name": "Unilever PLC",
+        "symbol": "ULVR",
+        "quantity": 160,
+        "cost_basis": 6400,
+        "current_value": 7520,
+        "initial_value": 6400,
+        "initial_value_date": "2023-06-01",
+        "is_active": true,
+        "created_at": "2023-06-01T10:00:00.000Z",
+        "updated_at": "2026-07-15T10:00:00.000Z",
+        "last_updated": "2026-07-15T10:00:00.000Z"
       }
     ],
-
     "accounts": [
       {
         "id": "acc-001",
         "name": "Barclays Current Account",
         "institution": "Barclays",
         "type": "cash",
-        "balance": 9800,
+        "balance": 13200,
         "currency": "GBP",
-        "updatedAt": "2026-06-01T10:00:00.000Z"
+        "updatedAt": "2026-07-15T10:00:00.000Z"
       },
       {
         "id": "acc-002",
         "name": "Vanguard Stocks & Shares ISA",
         "institution": "Vanguard",
         "type": "taxable",
-        "balance": 49880,
+        "balance": 133412,
         "currency": "GBP",
-        "updatedAt": "2026-06-01T10:00:00.000Z"
+        "updatedAt": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "id": "acc-003",
+        "name": "AJ Bell SIPP",
+        "institution": "AJ Bell",
+        "type": "retirement",
+        "balance": 44800,
+        "currency": "GBP",
+        "updatedAt": "2026-07-15T10:00:00.000Z"
       }
     ],
-
     "propertyAssets": [
       {
         "property_id": "prop-001",
@@ -541,7 +708,7 @@
         "city": "London",
         "purchase_date": "2021-03-10",
         "purchase_price": 425000,
-        "market_value": 510000,
+        "market_value": 528000,
         "value_uncertain": false,
         "mortgage_balance": 318000,
         "mortgage": {
@@ -568,7 +735,7 @@
           }
         ],
         "created_at": "2021-03-10T10:00:00.000Z",
-        "updated_at": "2026-03-01T10:00:00.000Z"
+        "updated_at": "2026-07-15T10:00:00.000Z"
       },
       {
         "property_id": "prop-002",
@@ -579,7 +746,7 @@
         "city": "Lagos",
         "purchase_date": "2019-04-10",
         "purchase_price": 58000,
-        "market_value": 105000,
+        "market_value": 112000,
         "value_uncertain": false,
         "mortgage_balance": 38000,
         "mortgage": {
@@ -606,7 +773,7 @@
           }
         ],
         "created_at": "2019-04-10T10:00:00.000Z",
-        "updated_at": "2026-04-01T10:00:00.000Z"
+        "updated_at": "2026-07-15T10:00:00.000Z"
       },
       {
         "property_id": "prop-003",
@@ -633,10 +800,9 @@
           }
         ],
         "created_at": "2023-06-01T10:00:00.000Z",
-        "updated_at": "2026-01-15T10:00:00.000Z"
+        "updated_at": "2026-07-15T10:00:00.000Z"
       }
     ],
-
     "liabilities": [
       {
         "id": "liab-001",
@@ -665,7 +831,6 @@
         "updatedAt": "2026-06-01T10:00:00.000Z"
       }
     ],
-
     "insurancePolicies": [
       {
         "policy_id": "pol-001",
@@ -742,91 +907,236 @@
         "updated_at": "2026-01-01T10:00:00.000Z"
       }
     ],
-
     "retirement": {
       "currentAge": 37,
       "retirementAge": 60,
       "lifeExpectancy": 88,
-      "currentInvested": 89680,
-      "monthlySavings": 850,
-      "existingPensionBalance": 38500,
-      "monthlyPensionContribution": 480,
+      "currentInvested": 215180,
+      "monthlySavings": 1100,
+      "existingPensionBalance": 44800,
+      "monthlyPensionContribution": 520,
       "expectedReturnPct": 7,
       "inflationPct": 2.5,
       "safeWithdrawalRatePct": 4,
       "desiredMonthlyIncome": 4200
     },
-
     "emergencyFund": {
       "targetMonths": 6,
-      "currentCashBalance": 35400,
+      "currentCashBalance": 38600,
       "storageLocation": "Barclays easy-access savings",
-      "includeAccountIds": ["acc-001"],
-      "updatedAt": "2026-06-01T10:00:00.000Z",
+      "includeAccountIds": [
+        "acc-001"
+      ],
+      "updatedAt": "2026-07-15T10:00:00.000Z",
       "computed": {
         "monthlyBaseline": 5902,
-        "targetAmount": 35310,
-        "runwayMonths": 6.0,
+        "targetAmount": 35412,
+        "runwayMonths": 6.5,
         "fundedPct": 100,
         "shortfall": 0
       }
     },
-
     "cashFlowHistory": [
-      { "month": "2025-07", "income": 10530, "expenses": 7180, "surplus": 3350 },
-      { "month": "2025-08", "income": 8820, "expenses": 10940, "surplus": -2120 },
-      { "month": "2025-09", "income": 10530, "expenses": 6240, "surplus": 4290 },
-      { "month": "2025-10", "income": 9480, "expenses": 13200, "surplus": -3720 },
-      { "month": "2025-11", "income": 10530, "expenses": 6120, "surplus": 4410 },
-      { "month": "2025-12", "income": 14830, "expenses": 11840, "surplus": 2990 },
-      { "month": "2026-01", "income": 10530, "expenses": 9890, "surplus": 640 },
-      { "month": "2026-02", "income": 10530, "expenses": 7280, "surplus": 3250 },
-      { "month": "2026-03", "income": 7980, "expenses": 9680, "surplus": -1700 },
-      { "month": "2026-04", "income": 12130, "expenses": 6820, "surplus": 5310 },
-      { "month": "2026-05", "income": 14120, "expenses": 5902, "surplus": 8218 },
-      { "month": "2026-06", "income": 10530, "expenses": 5902, "surplus": 4628 }
+      {
+        "month": "2025-08",
+        "income": 10530,
+        "expenses": 7120,
+        "surplus": 3410
+      },
+      {
+        "month": "2025-09",
+        "income": 10530,
+        "expenses": 6240,
+        "surplus": 4290
+      },
+      {
+        "month": "2025-10",
+        "income": 10530,
+        "expenses": 7840,
+        "surplus": 2690
+      },
+      {
+        "month": "2025-11",
+        "income": 10530,
+        "expenses": 6120,
+        "surplus": 4410
+      },
+      {
+        "month": "2025-12",
+        "income": 14830,
+        "expenses": 8920,
+        "surplus": 5910
+      },
+      {
+        "month": "2026-01",
+        "income": 10530,
+        "expenses": 6680,
+        "surplus": 3850
+      },
+      {
+        "month": "2026-02",
+        "income": 10530,
+        "expenses": 6420,
+        "surplus": 4110
+      },
+      {
+        "month": "2026-03",
+        "income": 10530,
+        "expenses": 7240,
+        "surplus": 3290
+      },
+      {
+        "month": "2026-04",
+        "income": 12130,
+        "expenses": 6820,
+        "surplus": 5310
+      },
+      {
+        "month": "2026-05",
+        "income": 14120,
+        "expenses": 5902,
+        "surplus": 8218
+      },
+      {
+        "month": "2026-06",
+        "income": 10530,
+        "expenses": 6050,
+        "surplus": 4480
+      },
+      {
+        "month": "2026-07",
+        "income": 12730,
+        "expenses": 6180,
+        "surplus": 6550
+      }
     ],
-
     "cashFlowSummary": {
+      "dashboard_currency": "GBP",
+      "current_month": {
+        "totalIncome": 12730,
+        "totalExpenses": 6180,
+        "surplus": 6550,
+        "savingsRate": 51.5,
+        "burnRate": 6180
+      },
+      "month_over_month": {
+        "incomeChange_pct": 20.9,
+        "expenseChange_pct": 2.1,
+        "surplusChange_pct": 46.2
+      },
+      "averages": {
+        "avgMonthlyIncome": 11504,
+        "avgMonthlyExpenses": 6794,
+        "avgMonthlySurplus": 4710,
+        "based_on_months": 12
+      },
       "monthly_income": 10530,
       "monthly_expenses": 5902,
       "monthly_surplus": 4628,
       "savings_rate_pct": 43.9,
       "currency": "GBP"
     },
-
     "portfolioPerformance": [
-      { "month": "2025-07", "value": 94800, "contributions": 850 },
-      { "month": "2025-08", "value": 96200, "contributions": 850 },
-      { "month": "2025-09", "value": 98100, "contributions": 850 },
-      { "month": "2025-10", "value": 95200, "contributions": 850 },
-      { "month": "2025-11", "value": 97800, "contributions": 850 },
-      { "month": "2025-12", "value": 100400, "contributions": 850 },
-      { "month": "2026-01", "value": 101200, "contributions": 850 },
-      { "month": "2026-02", "value": 103600, "contributions": 850 },
-      { "month": "2026-03", "value": 98800, "contributions": 850 },
-      { "month": "2026-04", "value": 104200, "contributions": 850 },
-      { "month": "2026-05", "value": 108400, "contributions": 850 },
-      { "month": "2026-06", "value": 109680, "contributions": 850 }
+      {
+        "month": "2025-08",
+        "value": 154930,
+        "contributions": 1250
+      },
+      {
+        "month": "2025-09",
+        "value": 156175,
+        "contributions": 1250
+      },
+      {
+        "month": "2025-10",
+        "value": 158266,
+        "contributions": 1250
+      },
+      {
+        "month": "2025-11",
+        "value": 161204,
+        "contributions": 1250
+      },
+      {
+        "month": "2025-12",
+        "value": 164988,
+        "contributions": 1250
+      },
+      {
+        "month": "2026-01",
+        "value": 169619,
+        "contributions": 1250
+      },
+      {
+        "month": "2026-02",
+        "value": 175096,
+        "contributions": 1250
+      },
+      {
+        "month": "2026-03",
+        "value": 181420,
+        "contributions": 1250
+      },
+      {
+        "month": "2026-04",
+        "value": 188590,
+        "contributions": 1250
+      },
+      {
+        "month": "2026-05",
+        "value": 196607,
+        "contributions": 1250
+      },
+      {
+        "month": "2026-06",
+        "value": 205470,
+        "contributions": 1250
+      },
+      {
+        "month": "2026-07",
+        "value": 215180,
+        "contributions": 1250
+      }
     ],
-
     "allocation": [
-      { "label": "Global Equities", "percentage": 42, "value": 44080 },
-      { "label": "Emerging Markets", "percentage": 12, "value": 15900 },
-      { "label": "Crypto", "percentage": 10, "value": 11200 },
-      { "label": "Nigeria Fund", "percentage": 7, "value": 7800 },
-      { "label": "Cash / ISA", "percentage": 17, "value": 18500 },
-      { "label": "Property equity (UK)", "percentage": 12, "value": 12300 }
+      {
+        "label": "Global Equities",
+        "value": 109520,
+        "percentage": 51
+      },
+      {
+        "label": "Crypto",
+        "value": 27280,
+        "percentage": 13
+      },
+      {
+        "label": "Income Funds",
+        "value": 25020,
+        "percentage": 12
+      },
+      {
+        "label": "Cash & Equivalents",
+        "value": 37400,
+        "percentage": 17
+      },
+      {
+        "label": "Bonds / Gilts",
+        "value": 10480,
+        "percentage": 5
+      },
+      {
+        "label": "Alternatives",
+        "value": 5480,
+        "percentage": 3
+      }
     ],
-
     "taxProfile": {
       "effectiveTaxRatePct": 32,
       "marginalTaxRatePct": 40,
       "filingStatus": "married",
       "stateOrRegion": "England",
-      "updatedAt": "2026-01-01T10:00:00.000Z"
+      "updatedAt": "2026-07-15T10:00:00.000Z"
     },
-
     "dependents": [
       {
         "id": "dep-001",
@@ -845,31 +1155,58 @@
         "notes": "Year 1 primary. Starting swimming lessons in September."
       }
     ],
-
     "freshness": [
-      { "section": "income", "updatedAt": "2026-06-01T10:00:00.000Z" },
-      { "section": "expenses", "updatedAt": "2026-06-01T10:00:00.000Z" },
-      { "section": "goals", "updatedAt": "2026-06-01T10:00:00.000Z" },
-      { "section": "assets", "updatedAt": "2026-06-01T10:00:00.000Z" },
-      { "section": "properties", "updatedAt": "2026-06-01T10:00:00.000Z" },
-      { "section": "insurance", "updatedAt": "2026-06-01T10:00:00.000Z" },
-      { "section": "retirement", "updatedAt": "2026-06-01T10:00:00.000Z" },
-      { "section": "liabilities", "updatedAt": "2026-06-01T10:00:00.000Z" }
+      {
+        "section": "income",
+        "updatedAt": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "section": "expenses",
+        "updatedAt": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "section": "goals",
+        "updatedAt": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "section": "assets",
+        "updatedAt": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "section": "properties",
+        "updatedAt": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "section": "insurance",
+        "updatedAt": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "section": "retirement",
+        "updatedAt": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "section": "liabilities",
+        "updatedAt": "2026-07-15T10:00:00.000Z"
+      },
+      {
+        "section": "portfolio",
+        "updatedAt": "2026-07-15T10:00:00.000Z"
+      }
     ],
-
     "profileCompletionScore": 100
   },
   "version": 0,
-
   "_meta": {
-    "description": "Demo client Bill Richardson. Nigerian-British diaspora professional in London. 12 months of realistic, non-linear cash flow with deficit months (Aug, Oct, Mar), bonuses, one-offs, remittances, and multi-country property.",
+    "description": "Demo client Bill Richardson. Nigerian-British diaspora professional in London with a diversified 14-holding portfolio, 12 months of healthy surplus cash flow, remittances, and multi-country property. Tuned for positive presentation metrics and Celerey AI demos.",
     "currency": "GBP",
-    "generatedAt": "2026-06-15T00:00:00.000Z",
+    "generatedAt": "2026-07-15T00:00:00.000Z",
     "monthlyCashFlow": {
       "recurringIncome": 10530,
       "recurringExpenses": 5902,
       "recurringSurplus": 4628,
       "savingsRatePct": 43.9
-    }
+    },
+    "portfolioHoldings": 14,
+    "portfolioValue": 215180
   }
 }

@@ -1,6 +1,10 @@
 /** Shared profile checklist used by the setup panel and welcome-back dialog. */
 
-import type { RiskAssessmentResult } from "@/lib/dashboard-api";
+import {
+  getRiskBand,
+  isCompleteRiskAssessment,
+  type RiskAssessmentResult,
+} from "@/lib/dashboard-api";
 
 export type ProfileChecklistItem = {
   id: string;
@@ -47,9 +51,10 @@ export type ProfileStoreSnapshot = {
 export function hasCompletedRiskAssessment(
   store: Pick<ProfileStoreSnapshot, "user" | "riskAssessment">,
 ): boolean {
-  return (
-    !!store.riskAssessment?.result?.risk_band || !!store.user?.risk_profile
-  );
+  if (isCompleteRiskAssessment(store.riskAssessment)) return true;
+  if (getRiskBand(store.riskAssessment)) return true;
+  const profile = store.user?.risk_profile;
+  return typeof profile === "string" && profile.trim().length > 0;
 }
 
 export function buildProfileChecklist(

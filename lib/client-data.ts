@@ -539,11 +539,17 @@ export function getAuth(): AuthState {
 export function setAuth(email: string): void {
   safeSetItem(AUTH_EMAIL_KEY, email);
   safeSetItem(AUTH_LOGGED_IN_KEY, "true");
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("celerey:auth-updated"));
+  }
 }
 
 export function clearAuth(): void {
   safeRemoveItem(AUTH_EMAIL_KEY);
   safeSetItem(AUTH_LOGGED_IN_KEY, "false");
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("celerey:auth-updated"));
+  }
 }
 
 export function getSubscription(): SubState {

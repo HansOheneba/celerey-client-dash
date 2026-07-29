@@ -25,6 +25,7 @@ import {
   fetchDashboardSummary,
   fetchLatestRiskAssessment,
   fetchLiabilities,
+  isCompleteRiskAssessment,
   SessionExpiredError,
 } from "@/lib/dashboard-api";
 import {
@@ -195,7 +196,7 @@ export function usePageData(key: PageDataKey) {
               store.setUser(mergeUserWithRiskAssessment(user, riskAssessment));
               applySubscriptionFromApiUser(user);
             }
-            if (riskAssessment) {
+            if (isCompleteRiskAssessment(riskAssessment)) {
               store.setRiskAssessment(riskAssessment);
             }
             break;
@@ -209,15 +210,18 @@ export function usePageData(key: PageDataKey) {
             const summary = await fetchDashboardSummary();
             if (!summary) break;
             let riskAssessment = summary.riskAssessment;
-            if (!riskAssessment) {
-              riskAssessment = await fetchLatestRiskAssessment();
+            if (!isCompleteRiskAssessment(riskAssessment)) {
+              const latest = await fetchLatestRiskAssessment();
+              if (isCompleteRiskAssessment(latest)) {
+                riskAssessment = latest;
+              }
             }
             if (summary.user) {
               store.setUser(
                 mergeUserWithRiskAssessment(summary.user, riskAssessment),
               );
             }
-            if (riskAssessment) {
+            if (isCompleteRiskAssessment(riskAssessment)) {
               store.setRiskAssessment(riskAssessment);
             }
             store.hydrateFromApi({ ...summary, riskAssessment });
