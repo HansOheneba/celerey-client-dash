@@ -714,13 +714,11 @@
         "mortgage": {
           "lender": "Nationwide",
           "balance": 318000,
-          "original_amount": 340000,
-          "monthly_payment": 1980,
+          "original_loan_amount": 340000,
+          "min_payment_monthly": 1980,
           "interest_rate_pct": 4.12,
-          "term_years": 25,
-          "start_date": "2021-03-10",
-          "end_date": "2046-03-10",
-          "type": "repayment"
+          "due_day": 1,
+          "expected_payoff_date": "2046-03-10"
         },
         "is_primary": true,
         "is_active": true,
@@ -752,13 +750,11 @@
         "mortgage": {
           "lender": "GTBank",
           "balance": 38000,
-          "original_amount": 48000,
-          "monthly_payment": 340,
+          "original_loan_amount": 48000,
+          "min_payment_monthly": 340,
           "interest_rate_pct": 18.5,
-          "term_years": 15,
-          "start_date": "2019-04-10",
-          "end_date": "2034-04-10",
-          "type": "repayment"
+          "due_day": 1,
+          "expected_payoff_date": "2034-04-10"
         },
         "is_primary": false,
         "is_active": true,

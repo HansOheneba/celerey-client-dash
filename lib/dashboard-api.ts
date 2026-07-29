@@ -912,16 +912,24 @@ function coerceProperty(p: Record<string, unknown>): Property {
     purchase_price:
       p.purchase_price != null ? Number(p.purchase_price) || 0 : null,
     mortgage: p.mortgage
-      ? {
-          ...(p.mortgage as Record<string, unknown>),
-          balance: coerceNum((p.mortgage as Record<string, unknown>).balance),
-          monthly_payment: coerceNum(
-            (p.mortgage as Record<string, unknown>).monthly_payment,
-          ),
-          original_amount: coerceNum(
-            (p.mortgage as Record<string, unknown>).original_amount,
-          ),
-        }
+      ? (() => {
+          const m = p.mortgage as Record<string, unknown>;
+          return {
+            lender: String(m.lender ?? ""),
+            balance: coerceNum(m.balance),
+            interest_rate_pct: coerceNum(m.interest_rate_pct),
+            min_payment_monthly: coerceNum(
+              m.min_payment_monthly ?? m.monthly_payment,
+            ),
+            due_day: m.due_day != null ? Number(m.due_day) || undefined : undefined,
+            original_loan_amount: coerceNum(
+              m.original_loan_amount ?? m.original_amount,
+            ) || undefined,
+            expected_payoff_date:
+              (m.expected_payoff_date as string | undefined) ??
+              (m.end_date as string | undefined),
+          };
+        })()
       : undefined,
     additional_liens: Array.isArray(p.additional_liens)
       ? (p.additional_liens as Record<string, unknown>[]).map((l) => ({
